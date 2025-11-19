@@ -1,5 +1,4 @@
-#「仕様駆動開発 (Specification Driven Development)」
-# Specification Driven Development (SDD) Web Project
+# 仕様駆動開発 Specification Driven Development (SDD) Web Project
 
 「仕様駆動開発 (Specification Driven Development)」書籍のためのWebサイトおよびデモアプリケーションのリポジトリです。
 Cloudflareのエコシステムを活用し、サーバーレスかつハイパフォーマンスな構成で構築されています。
