@@ -68,6 +68,7 @@
 SDD/
 ├── README.md                    # このファイル（メインの仕様書として使用）
 ├── docs/                        # 補足資料
+│   ├── cursor-videos.md        # Cursor関連動画一覧
 │   └── troubleshooting.md      # トラブルシューティング
 └── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
     ├── 01-principle-definition.md      # 原則決定工程
@@ -76,7 +77,8 @@ SDD/
     ├── 04-task-breakdown.md              # タスク分割工程
     ├── 05-implementation.md             # 実装工程
     ├── 06-verification-acceptance.md    # 検証・受入工程
-    └── 07-migration-operation.md        # 移行・運用工程
+    ├── 07-migration-operation.md        # 移行・運用工程
+    └── README.md                        # サンプルファイルの説明
 ```
 
 ## 仕様駆動開発の4つの原則と7つの工程
