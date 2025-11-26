@@ -6,8 +6,6 @@
 
 **再生リスト**: [Cursor関連動画の再生リスト](https://www.youtube.com/watch?v=0U9PPY1tGU8&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
-**詳細情報**: [Cursor入門シリーズ全18回の詳細ページ](https://note.com/techsenichiya/m/m78be35970c0d)
-
 ---
 
 ## 動画一覧
@@ -20,8 +18,6 @@
 
 **説明**: 初めてCursorを使う方向けに、基本的な使い方を解説しています。AIと一緒にシステム開発を始める方法を学べます。
 
-**公開日**: 2024年11月12日
-
 ---
 
 ### 〖Cursor入門2〗画面の見方のコツ伝授！AIエディターでプログラミング入門！
@@ -29,10 +25,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/_l98VrllHgY/0.jpg)](https://www.youtube.com/watch?v=_l98VrllHgY&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorの画面構成や操作方法について詳しく説明しています。AIエディターを使ったプログラミングの入門編です。
-
-**公開日**: 2024年11月19日
-
-**詳細**: [note.comの詳細ページ](https://note.com/techsenichiya/n/n7362148059e1)
 
 ---
 
@@ -42,10 +34,6 @@
 
 **説明**: Cursorを使ってPythonのプログラミングを実践的に学びます。AIを活用したコーディングの方法を解説しています。
 
-**公開日**: 2024年11月20日
-
-**詳細**: [note.comの詳細ページ](https://note.com/techsenichiya/n/nc8e4a6f09ad7)
-
 ---
 
 ### 〖Cursor入門4〗AIで開発の環境整備をやってみよう！
@@ -53,10 +41,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/NmQlnQYeDeE/0.jpg)](https://www.youtube.com/watch?v=NmQlnQYeDeE&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: AIを活用した開発環境の整備方法を紹介しています。効率的な開発環境の構築方法を学べます。
-
-**公開日**: 2024年11月27日
-
-**詳細**: [note.comの詳細ページ](https://note.com/techsenichiya/n/nc0bc701f63d8)
 
 ---
 
@@ -66,8 +50,6 @@
 
 **説明**: CursorのPro版のメリットや、使い続けるならPro版がおすすめな理由を解説しています。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門6〗AIを呼び出す！超便利な「Command + K」を使いこなそう！
@@ -75,8 +57,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/EUjzRc_s-po/0.jpg)](https://www.youtube.com/watch?v=EUjzRc_s-po&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorの超便利な機能「Command + K」の使い方を詳しく解説しています。AIを効率的に呼び出す方法を学べます。
-
-**公開日**: 未公開
 
 ---
 
@@ -86,8 +66,6 @@
 
 **説明**: Cursorを使ってWordPressを無料で簡単に始める方法を解説しています。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門8〗面倒なデバッグもAIですぐ終わらせる！
@@ -95,10 +73,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/vQYgB6IBIZI/0.jpg)](https://www.youtube.com/watch?v=vQYgB6IBIZI&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: AI機能を活用した効率的なデバッグ方法を解説しています。面倒なデバッグ作業をAIで素早く解決する方法を学べます。
-
-**公開日**: 2025年1月17日
-
-**詳細**: [note.comの詳細ページ](https://note.com/techsenichiya/n/n42691dcc926b)
 
 ---
 
@@ -108,8 +82,6 @@
 
 **説明**: CursorのAI拡張機能「Cline」を使った開発効率の向上方法を解説しています。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門10〗ローカルでリポジトリを動かす〜Cursorで学ぶGitHub①〜
@@ -117,8 +89,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/2E-KgolVxhM/0.jpg)](https://www.youtube.com/watch?v=2E-KgolVxhM&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorを使ってローカルでリポジトリを動かす方法を解説しています。GitHub連携の第一歩を学べます。
-
-**公開日**: 未公開
 
 ---
 
@@ -128,8 +98,6 @@
 
 **説明**: Cursorを使ったリポジトリの履歴管理方法を解説しています。GitHubの基本的な使い方を学べます。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門12〗ブランチを切ってマージする〜Cursorで学ぶGitHub③〜
@@ -137,8 +105,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/PhZvUy6ZSCE/0.jpg)](https://www.youtube.com/watch?v=PhZvUy6ZSCE&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorを使ったブランチの切り方とマージ方法を解説しています。GitHubのブランチ管理を学べます。
-
-**公開日**: 未公開
 
 ---
 
@@ -148,8 +114,6 @@
 
 **説明**: Cursorを使ったGitHubコンフリクトの解決方法を解説しています。マージ時のコンフリクトを効率的に解決する方法を学べます。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門14〗様々なファイル形式の表示方法
@@ -157,8 +121,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/Vsd1JSZSkPk/0.jpg)](https://www.youtube.com/watch?v=Vsd1JSZSkPk&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorで様々なファイル形式を表示する方法を解説しています。
-
-**公開日**: 未公開
 
 ---
 
@@ -168,8 +130,6 @@
 
 **説明**: CursorのAI機能を使ったコード補完の活用方法を解説しています。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門16〗ターミナル機能を使いこなそう！
@@ -177,8 +137,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/Ge--dK-WGBY/0.jpg)](https://www.youtube.com/watch?v=Ge--dK-WGBY&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursorのターミナル機能の使い方を解説しています。ターミナルを効率的に活用する方法を学べます。
-
-**公開日**: 未公開
 
 ---
 
@@ -188,8 +146,6 @@
 
 **説明**: Cursorのプラグイン機能を使った機能拡張の方法を解説しています。
 
-**公開日**: 未公開
-
 ---
 
 ### 〖Cursor入門18〗まとめと次のステップ
@@ -197,8 +153,6 @@
 [![動画サムネイル](https://img.youtube.com/vi/Cyd8j_oH_wA/0.jpg)](https://www.youtube.com/watch?v=Cyd8j_oH_wA&list=PLv-ekZfLyxXF0bQKFJfdQaYUquBOVXPPa)
 
 **説明**: Cursor入門シリーズのまとめと、次のステップについて解説しています。
-
-**公開日**: 未公開
 
 ---
 
@@ -219,5 +173,4 @@
 ## 関連リンク
 
 - [チャンネルトップページ](https://www.youtube.com/@tech1018/)
-- [Cursor入門シリーズ詳細ページ（note.com）](https://note.com/techsenichiya/m/m78be35970c0d)
 - [README.md](../README.md) - リポジトリのトップページに戻る
