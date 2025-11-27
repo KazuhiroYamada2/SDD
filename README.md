@@ -71,6 +71,7 @@ SDD/
 ├── README.md                    # このファイル（メインの仕様書として使用）
 ├── docs/                        # 補足資料
 │   ├── cursor-videos.md        # Cursor関連動画一覧
+│   ├── git-commands.md         # Gitコマンド一覧
 │   └── troubleshooting.md      # トラブルシューティング
 └── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
     ├── 01-principle-definition.md      # 原則決定工程
