@@ -100,6 +100,7 @@ Cursor の最新版では、**メニューに「File > Clone Repository」が表
 SDD/
 ├── README.md                    # このファイル（メインの仕様書として使用）
 ├── docs/                        # 補足資料
+│   ├── word-excel-conversion-guide.md # Word/ExcelからMarkdownへの変換ガイド
 │   ├── cursor-videos.md        # Cursor関連動画一覧
 │   ├── git-commands.md         # Gitコマンド一覧
 │   └── troubleshooting.md      # トラブルシューティング
