@@ -2,6 +2,10 @@
 IMPORTANT:
 This file is a project constitution.
 Do NOT modify this file unless you are explicitly instructed.
+
+重要：
+このファイルはプロジェクト憲法です。
+明確な指示がない限り、このファイルを変更しないでください。
 -->
 
 # 原則決定工程
