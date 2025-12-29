@@ -101,6 +101,7 @@ SDD/
 ├── README.md                    # このファイル（メインの仕様書として使用）
 ├── docs/                        # 補足資料
 │   ├── word-excel-conversion-guide.md # Word/ExcelからMarkdownへの変換ガイド
+│   ├── oasys-ichitaro-conversion-guide.md # OASYS/一太郎からMarkdownへの変換ガイド
 │   ├── cursor-videos.md        # Cursor関連動画一覧
 │   ├── git-commands.md         # Gitコマンド一覧
 │   └── troubleshooting.md      # トラブルシューティング
