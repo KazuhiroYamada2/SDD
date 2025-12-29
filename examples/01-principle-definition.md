@@ -1,3 +1,9 @@
+<!--
+IMPORTANT:
+This file is a project constitution.
+Do NOT modify this file unless you are explicitly instructed.
+-->
+
 # 原則決定工程
 
 このファイルは、仕様駆動開発の**原則決定工程**で作成されるプロジェクト憲章（Constitution）です。
