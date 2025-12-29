@@ -16,7 +16,7 @@
 
 **実装日**: 2025-12-15
 **担当者**: 開発チーム
-**関連タスク**: 04-task-breakdown.md のタスク1.1〜1.4
+**関連タスク**: [04-task-breakdown.md](./04-task-breakdown.md) のタスク1.1〜1.4
 
 **実装内容**:
 - データベーススキーマの作成
@@ -33,11 +33,13 @@
 - `feat: 顧客情報管理機能の実装`
 - `test: 顧客情報管理機能のテスト追加`
 
+> **Tip**: コミットメッセージには [Conventional Commits](https://www.conventionalcommits.org/) の形式（feat, fix, docs, style, refactor, test, choreなど）を採用すると、履歴が読みやすくなります。
+
 ### 実装2: 営業活動履歴機能
 
 **実装日**: 2025-12-20
 **担当者**: 開発チーム
-**関連タスク**: 04-task-breakdown.md のタスク2.1〜2.2
+**関連タスク**: [04-task-breakdown.md](./04-task-breakdown.md) のタスク2.1〜2.2
 
 **実装内容**:
 - 営業活動履歴データベーススキーマの作成
@@ -58,7 +60,7 @@
 ### AI活用例1: 顧客情報登録APIの生成
 
 **AIへの指示**:
-「02-planning-requirement.mdの仕様に基づいて、顧客情報登録APIを実装してください。使用技術は03-design-planning.mdで決定した技術スタックを使用してください。」
+「[02-planning-requirement.md](./02-planning-requirement.md)の仕様に基づいて、顧客情報登録APIを実装してください。使用技術は[03-design-planning.md](./03-design-planning.md)で決定した技術スタックを使用してください。」
 
 **AIの出力**:
 - コードの生成

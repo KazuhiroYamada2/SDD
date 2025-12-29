@@ -10,7 +10,7 @@
 
 ### マイルストーン1: 原則決定工程完了（2週間後）
 
-- [ ] プロジェクト憲章（01-principle-definition.md）の策定
+- [ ] プロジェクト憲章（[01-principle-definition.md](./01-principle-definition.md)）の策定
 - [ ] ステークホルダーとの合意形成
 - [ ] 基本原則の明確化
 
@@ -103,20 +103,18 @@
 
 ## 依存関係の整理
 
-```
-原則決定工程
-  ↓
-企画・要件定義工程
-  ↓
-設計計画工程
-  ↓
-タスク分割工程
-  ↓
-実装工程
-  ↓
-検証・受入工程
-  ↓
-移行・運用工程
+```mermaid
+gantt
+    title 仕様駆動開発プロジェクトスケジュール
+    dateFormat  YYYY-MM-DD
+    section フェーズ
+    原則決定       :a1, 2025-11-10, 2w
+    企画・要件定義  :a2, after a1, 2w
+    設計計画       :a3, after a2, 3w
+    タスク分割     :a4, after a3, 2w
+    実装           :a5, after a4, 8w
+    検証・受入     :a6, after a5, 2w
+    移行・運用     :a7, after a6, 1w
 ```
 
 ## 進捗管理

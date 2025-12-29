@@ -53,8 +53,8 @@
 **内容**: 外出先からも顧客情報を確認したい
 
 **対応**:
-- 01-principle-definition.mdのOut of Scopeに記載されていたが、要望が強いため、第2フェーズとして計画に追加
-- 02-planning-requirement.mdに「モバイルアプリの要件」を追加
+- [01-principle-definition.md](./01-principle-definition.md)のOut of Scopeに記載されていたが、要望が強いため、第2フェーズとして計画に追加
+- [02-planning-requirement.md](./02-planning-requirement.md)に「モバイルアプリの要件」を追加
 
 ### フィードバック2: レポート機能の改善
 
@@ -63,7 +63,7 @@
 **内容**: より詳細な分析レポートが必要
 
 **対応**:
-- 02-planning-requirement.mdの「レポート・分析機能」を詳細化
+- [02-planning-requirement.md](./02-planning-requirement.md)の「レポート・分析機能」を詳細化
 - 次の開発サイクルで実装予定
 
 ## 運用改善サイクル
@@ -75,13 +75,13 @@
   ↓
 フィードバック収集
   ↓
-仕様の更新（02-planning-requirement.mdなど）
+仕様の更新（[02-planning-requirement.md](./02-planning-requirement.md)など）
   ↓
-設計計画の見直し（03-design-planning.mdなど）
+設計計画の見直し（[03-design-planning.md](./03-design-planning.md)など）
   ↓
-実装（05-implementation.md）
+実装（[05-implementation.md](./05-implementation.md)）
   ↓
-検証（06-verification-acceptance.md）
+検証（[06-verification-acceptance.md](./06-verification-acceptance.md)）
   ↓
 本番反映
   ↓
