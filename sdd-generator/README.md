@@ -1,0 +1,210 @@
+# SDD Generator - 仕様駆動開発 インタビュー & 生成システム
+
+LLM APIを使用してユーザーにインタビューを行い、仕様駆動開発（Specification Driven Development）の7つの仕様書を自動生成するPythonプログラムです。
+
+## 特徴
+
+- 🤖 **LLMによる対話形式のインタビュー**: Claude、OpenAI、AWS Bedrockに対応
+- 📝 **7つのフェーズを段階的に実施**: 原則定義から移行・運用まで
+- 📄 **Markdown仕様書を自動生成**: 各フェーズ終了時に生成
+- 🔄 **Git自動コミット**: 生成された仕様書を自動的にコミット
+- 💾 **中断・再開機能**: インタビューを途中で保存して後で再開可能
+
+## 7つのフェーズ
+
+1. **原則定義** (`01-principle-definition.md`) - プロジェクト憲章
+2. **企画・要件定義** (`02-planning-requirement.md`) - 要件仕様書
+3. **設計計画** (`03-design-planning.md`) - 設計計画書
+4. **タスク分割** (`04-task-breakdown.md`) - タスク分割書
+5. **実装** (`05-implementation.md`) - 実装記録
+6. **検証・受入** (`06-verification-acceptance.md`) - 検証記録
+7. **移行・運用** (`07-migration-operation.md`) - 運用記録
+
+## インストール
+
+### 前提条件
+
+- Python 3.9以上
+- LLM APIキー（Claude、OpenAI、またはAWS Bedrockのいずれか）
+
+### セットアップ
+
+1. リポジトリをクローン:
+```bash
+git clone <repository-url>
+cd sdd-generator
+```
+
+2. 仮想環境を作成・有効化:
+```bash
+python -m venv venv
+source venv/bin/activate  # Windowsの場合: venv\Scripts\activate
+```
+
+3. 依存パッケージをインストール:
+```bash
+pip install -r requirements.txt
+```
+
+または開発版として:
+```bash
+pip install -e ".[dev]"
+```
+
+4. 環境変数を設定:
+```bash
+cp .env.example .env
+# .envファイルを編集してAPIキーを設定
+```
+
+### 環境変数の設定
+
+`.env`ファイルで以下を設定してください:
+
+```env
+# LLM APIキー（使用するプロバイダーのキーのみ設定すればOK）
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+
+# AWS Bedrock用（Bedrockを使用する場合）
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
+AWS_REGION=us-west-2
+
+# 設定
+DEFAULT_LLM_PROVIDER=claude  # claude, openai, bedrockから選択
+OUTPUT_DIR=./sdd_output
+AUTO_GIT_COMMIT=true
+TEMPERATURE=0.7
+```
+
+## 使用方法
+
+### 基本的な使い方
+
+1. **初期設定** (初回のみ):
+```bash
+sdd init
+```
+
+対話形式で設定を行います。
+
+2. **インタビュー開始**:
+```bash
+sdd start my-project
+```
+
+`my-project`はプロジェクト名です。LLMが7つのフェーズについて順番に質問を行います。
+
+3. **インタビュー再開**:
+```bash
+sdd resume my-project
+```
+
+中断したインタビューを再開できます。
+
+### コマンド一覧
+
+- `sdd init` - 初期設定ウィザード
+- `sdd start <project-name>` - 新規インタビュー開始
+- `sdd resume <project-name>` - インタビュー再開
+- `sdd list` - 保存されているプロジェクト一覧
+- `sdd status <project-name>` - プロジェクトの進捗状況表示
+
+## プロジェクト構造
+
+```
+sdd-generator/
+├── config/
+│   ├── settings.py              # 設定管理
+│   └── prompts/                 # 各フェーズのシステムプロンプト
+├── sdd_generator/
+│   ├── core/
+│   │   ├── interview_engine.py  # インタビュー制御の中核
+│   │   ├── phase_manager.py     # 7フェーズの進行管理
+│   │   └── context_manager.py   # コンテキスト管理
+│   ├── llm/
+│   │   ├── base.py              # LLM抽象インターフェース
+│   │   ├── claude_client.py     # Claude API実装
+│   │   ├── openai_client.py     # OpenAI API実装 (予定)
+│   │   ├── bedrock_client.py    # AWS Bedrock実装 (予定)
+│   │   └── factory.py           # LLMクライアントファクトリ
+│   ├── generators/
+│   │   └── markdown_generator.py # Markdown生成
+│   └── git/
+│       └── git_manager.py       # Git操作
+└── templates/                   # Jinja2テンプレート
+    ├── 01-principle-definition.md.jinja2
+    ├── 02-planning-requirement.md.jinja2
+    └── ...
+```
+
+## 開発
+
+### 開発環境のセットアップ
+
+```bash
+pip install -e ".[dev]"
+```
+
+### テストの実行
+
+```bash
+pytest
+```
+
+### コードフォーマット
+
+```bash
+black sdd_generator/ config/
+flake8 sdd_generator/ config/
+```
+
+### 型チェック
+
+```bash
+mypy sdd_generator/
+```
+
+## アーキテクチャ
+
+### コアコンポーネント
+
+1. **InterviewEngine**: インタビュー全体のオーケストレーション
+2. **PhaseManager**: 7フェーズのワークフロー管理
+3. **ContextManager**: 質問・回答履歴の管理と永続化
+4. **LLMClients**: 複数のLLM API統合
+5. **MarkdownGenerator**: テンプレートからMarkdown生成
+6. **GitManager**: Git自動コミット
+
+### データフロー
+
+```
+User Input → Interview Engine → LLM Client → Question
+                ↓
+User Answer → Context Manager → Save to .interview_state/
+                ↓
+Phase Complete → Markdown Generator → Generate Spec File
+                ↓
+            Git Manager → Auto Commit
+```
+
+## ライセンス
+
+MIT License
+
+## 貢献
+
+プルリクエストを歓迎します。大きな変更の場合は、まずissueで議論してください。
+
+## サポート
+
+問題が発生した場合は、GitHubのIssuesで報告してください。
+
+## 関連プロジェクト
+
+- [SDD](https://github.com/elvezjp/SDD) - 仕様駆動開発のサンプルリポジトリ
+
+## クレジット
+
+このプロジェクトは『仕様駆動開発 実践入門』の内容に基づいて開発されました。
