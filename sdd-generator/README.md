@@ -103,6 +103,72 @@ sdd resume my-project
 
 中断したインタビューを再開できます。
 
+### LLMプロバイダーの選択
+
+#### Claude (Anthropic API)
+
+`.env`ファイル:
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-...
+DEFAULT_LLM_PROVIDER=claude
+```
+
+#### OpenAI (予定)
+
+`.env`ファイル:
+```env
+OPENAI_API_KEY=sk-...
+DEFAULT_LLM_PROVIDER=openai
+```
+
+#### AWS Bedrock (エンタープライズ向け)
+
+AWS Bedrockを使用すると、既存のAWSインフラ内でClaudeモデルを実行できます。
+
+**必要な設定:**
+
+1. AWS認証情報を設定:
+```env
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-west-2
+DEFAULT_LLM_PROVIDER=bedrock
+```
+
+2. boto3をインストール (必須):
+```bash
+pip install boto3
+```
+
+3. AWS Bedrockでモデルアクセスを有効化:
+   - AWS Console → Bedrock → Model access
+   - Claude 3.5 Sonnetを有効化
+
+**利用可能なモデル:**
+- `anthropic.claude-3-5-sonnet-20241022-v2:0` (デフォルト)
+- `anthropic.claude-3-sonnet-20240229-v1:0`
+- `anthropic.claude-3-haiku-20240307-v1:0`
+
+**対応リージョン:**
+- us-west-2 (推奨)
+- us-east-1
+- ap-northeast-1
+- eu-central-1
+
+**IAMロール使用時:**
+
+EC2やLambdaでIAMロールを使用する場合、APIキーは不要です:
+```env
+# AWS_ACCESS_KEY_ID と AWS_SECRET_ACCESS_KEY は不要
+AWS_REGION=us-west-2
+DEFAULT_LLM_PROVIDER=bedrock
+```
+
+**セキュリティのベストプラクティス:**
+- 最小権限の原則: `bedrock:InvokeModel`権限のみ付与
+- VPC Endpointを使用してインターネット経由のアクセスを回避
+- CloudTrailでAPI呼び出しを監査
+
 ### コマンド一覧
 
 - `sdd init` - 初期設定ウィザード
@@ -127,7 +193,7 @@ sdd-generator/
 │   │   ├── base.py              # LLM抽象インターフェース
 │   │   ├── claude_client.py     # Claude API実装
 │   │   ├── openai_client.py     # OpenAI API実装 (予定)
-│   │   ├── bedrock_client.py    # AWS Bedrock実装 (予定)
+│   │   ├── bedrock_client.py    # AWS Bedrock実装
 │   │   └── factory.py           # LLMクライアントファクトリ
 │   ├── generators/
 │   │   └── markdown_generator.py # Markdown生成

@@ -102,14 +102,14 @@ class LLMFactory:
             from .bedrock_client import BedrockClient
         except ImportError:
             raise ImportError(
-                "Bedrock client not yet implemented. "
-                "This will be added in a future version."
+                "boto3 is required for Bedrock integration. "
+                "Install it with: pip install boto3"
             )
 
         return BedrockClient(
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
-            aws_region=settings.aws_region,
+            region=settings.aws_region,
             temperature=settings.temperature
         )
 
