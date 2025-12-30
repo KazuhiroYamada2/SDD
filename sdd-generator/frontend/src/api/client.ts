@@ -2,6 +2,7 @@
  * API Client for SDD Generator Backend
  *
  * Provides typed methods for interacting with FastAPI backend
+ * Supports mock mode when VITE_USE_MOCK_API=true
  */
 
 import axios, { AxiosInstance } from 'axios';
@@ -17,8 +18,10 @@ import type {
   SpecificationResponse,
   SpecificationListResponse,
 } from '@/types';
+import { mockApiClient } from './mockClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 class APIClient {
   private client: AxiosInstance;
@@ -132,5 +135,6 @@ class APIClient {
   }
 }
 
-export const apiClient = new APIClient();
+// Export appropriate client based on environment
+export const apiClient = USE_MOCK_API ? mockApiClient : new APIClient();
 export default apiClient;

@@ -1,5 +1,6 @@
 /**
  * WebSocket Manager for Real-time Interview
+ * Supports mock mode when VITE_USE_MOCK_API=true
  */
 
 import type { WebSocketMessage } from '@/types';
@@ -7,6 +8,7 @@ import type { WebSocketMessage } from '@/types';
 const WS_BASE_URL =
   import.meta.env.VITE_WS_BASE_URL ||
   `ws://${window.location.hostname}:8000`;
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 export type WebSocketCallback = (message: WebSocketMessage) => void;
 
@@ -16,10 +18,35 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private mockInterval: number | null = null;
+  private mockAnswerCount = 0;
 
   constructor(private projectName: string) {}
 
   connect(): Promise<void> {
+    if (USE_MOCK_API) {
+      // Mock mode: simulate WebSocket connection
+      console.log('Using mock WebSocket mode');
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          // Send initial question
+          const initialMessage: WebSocketMessage = {
+            type: 'question',
+            content: `こんにちは！フェーズ1「原則定義」のインタビューを開始します。\n\nまず、プロジェクトの概要について教えてください。`,
+            metadata: {
+              phase_num: 1,
+              phase_name: '原則定義',
+              qa_count: 0,
+            },
+          };
+          setTimeout(() => {
+            this.callbacks.forEach((callback) => callback(initialMessage));
+          }, 500);
+          resolve();
+        }, 300);
+      });
+    }
+
     return new Promise((resolve, reject) => {
       const url = `${WS_BASE_URL}/api/interview/ws/${this.projectName}`;
       console.log('Connecting to WebSocket:', url);
@@ -74,6 +101,49 @@ export class WebSocketManager {
   }
 
   sendAnswer(answer: string): void {
+    if (USE_MOCK_API) {
+      // Mock mode: simulate response
+      this.mockAnswerCount++;
+      const mockQuestions = [
+        'ありがとうございます。次に、プロジェクトの主要な目的について詳しく教えてください。',
+        '理解しました。では、このプロジェクトで最も重要な成功基準は何でしょうか？',
+        '素晴らしいですね。最後に、プロジェクトの制約事項があれば教えてください。',
+        '承知いたしました。それでは、次のフェーズに進みましょう。',
+      ];
+      
+      setTimeout(() => {
+        const isPhaseComplete = this.mockAnswerCount >= 3;
+        const question: WebSocketMessage = {
+          type: isPhaseComplete ? 'phase_complete' : 'question',
+          content: isPhaseComplete 
+            ? 'フェーズ1「原則定義」が完了しました！'
+            : mockQuestions[Math.min(this.mockAnswerCount - 1, mockQuestions.length - 1)],
+          metadata: {
+            phase_num: 1,
+            phase_name: '原則定義',
+            qa_count: this.mockAnswerCount,
+          },
+        };
+        this.callbacks.forEach((callback) => callback(question));
+
+        if (isPhaseComplete) {
+          setTimeout(() => {
+            const specMessage: WebSocketMessage = {
+              type: 'spec_generated',
+              content: '仕様書「01-principle-definition.md」を生成しました。',
+              metadata: {
+                phase_num: 1,
+                phase_name: '原則定義',
+                filename: '01-principle-definition.md',
+              },
+            };
+            this.callbacks.forEach((callback) => callback(specMessage));
+          }, 1000);
+        }
+      }, 800);
+      return;
+    }
+
     this.sendMessage({
       type: 'answer',
       content: answer,
@@ -89,6 +159,15 @@ export class WebSocketManager {
   }
 
   disconnect(): void {
+    if (USE_MOCK_API) {
+      if (this.mockInterval) {
+        clearInterval(this.mockInterval);
+        this.mockInterval = null;
+      }
+      this.callbacks.clear();
+      return;
+    }
+
     if (this.ws) {
       this.ws.close(1000, 'User initiated disconnect');
       this.ws = null;
@@ -97,6 +176,9 @@ export class WebSocketManager {
   }
 
   isConnected(): boolean {
+    if (USE_MOCK_API) {
+      return true; // Always connected in mock mode
+    }
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 }

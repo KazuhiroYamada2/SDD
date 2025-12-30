@@ -69,8 +69,30 @@ export default function Dashboard() {
     );
   };
 
+  const isMockMode = import.meta.env.VITE_USE_MOCK_API === 'true';
+
   return (
     <div className="space-y-6">
+      {/* Mock Mode Banner */}
+      {isMockMode && (
+        <div className="card bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <span className="text-2xl">🎭</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900 dark:text-yellow-200">
+                モックモードで動作中
+              </h3>
+              <p className="text-sm text-yellow-800 dark:text-yellow-300 mt-1">
+                実際のLLM APIを呼び出さずに、サンプルデータでUIを確認できます。
+                実際の機能を使用するには、環境変数 <code className="bg-yellow-100 dark:bg-yellow-900/50 px-1 rounded">VITE_USE_MOCK_API</code> を削除してバックエンドサーバーを起動してください。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

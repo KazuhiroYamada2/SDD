@@ -86,6 +86,30 @@ TEMPERATURE=0.7
 
 モダンなブラウザUIでインタビューを実施できます。
 
+#### モックモード（APIキー不要）
+
+APIキーを設定せずにUIを確認したい場合は、モックモードを使用できます。
+
+1. **フロントエンド開発サーバー起動**:
+```bash
+cd frontend
+npm install  # 初回のみ
+VITE_USE_MOCK_API=true npm run dev
+```
+
+または、`.env`ファイルを作成:
+```env
+VITE_USE_MOCK_API=true
+```
+
+2. ブラウザで http://localhost:3000 を開きます。
+
+モックモードでは、実際のLLM APIを呼び出さずに、サンプルデータでUIを確認できます。ダッシュボードにはモックモードであることが表示されます。
+
+#### 通常モード（LLM API使用）
+
+実際のLLM APIを使用する場合:
+
 1. **バックエンドサーバー起動**:
 ```bash
 # sdd-generator/ ディレクトリで
