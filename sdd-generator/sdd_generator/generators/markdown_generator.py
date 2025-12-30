@@ -1,22 +1,39 @@
 """Markdown generator for creating specification files."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from jinja2 import Environment, FileSystemLoader, Template
 
 
 class MarkdownGenerator:
     """Generates Markdown specification files from interview data."""
 
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, templates_dir: Optional[str] = None):
         """
         Initialize the Markdown generator.
 
         Args:
             output_dir: Directory to save generated files
+            templates_dir: Directory containing Jinja2 templates
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Setup Jinja2 environment
+        if templates_dir is None:
+            # Default to templates directory in project root
+            project_root = Path(__file__).parent.parent.parent
+            templates_dir = project_root / "templates"
+
+        self.templates_dir = Path(templates_dir)
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(self.templates_dir)),
+            trim_blocks=True,
+            lstrip_blocks=True
+        )
 
     def generate_spec(
         self,
@@ -27,7 +44,7 @@ class MarkdownGenerator:
         project_name: str
     ) -> Path:
         """
-        Generate a Markdown specification file.
+        Generate a Markdown specification file using Jinja2 templates.
 
         Args:
             phase_num: Phase number (1-7)
@@ -39,11 +56,28 @@ class MarkdownGenerator:
         Returns:
             Path to the generated file
         """
-        # Generate markdown content based on phase
-        if phase_num == 1:
-            content = self._generate_phase_01(data, project_name)
+        # Load the appropriate template
+        template_filename = filename.replace('.md', '.md.jinja2')
+
+        try:
+            template = self.jinja_env.get_template(template_filename)
+        except Exception as e:
+            print(f"Warning: Could not load template {template_filename}: {e}")
+            # Fallback to old method
+            if phase_num == 1:
+                content = self._generate_phase_01(data, project_name)
+            else:
+                content = self._generate_generic_phase(phase_num, phase_name, data, project_name)
         else:
-            content = self._generate_generic_phase(phase_num, phase_name, data, project_name)
+            # Prepare template context
+            context = {
+                'project_name': project_name,
+                'generation_date': datetime.now().strftime('%Y-%m-%d'),
+                **data  # Unpack all data fields
+            }
+
+            # Render template
+            content = template.render(context)
 
         # Save to file
         file_path = self.output_dir / filename

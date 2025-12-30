@@ -1,0 +1,123 @@
+<!--
+IMPORTANT:
+This file is a project constitution.
+Do NOT modify this file unless you are explicitly instructed.
+
+重要：
+このファイルはプロジェクト憲法です。
+明確な指示がない限り、このファイルを変更しないでください。
+-->
+
+# 原則決定工程
+
+このファイルは、仕様駆動開発の**原則決定工程**で作成されるプロジェクト憲章（Constitution）です。
+
+## プロジェクトの存在意義（Why）
+
+### 背景
+
+{{ background }}
+
+### 目的
+
+{% if purposes is string %}
+{{ purposes }}
+{% else %}
+{% for purpose in purposes %}
+- {{ purpose }}
+{% endfor %}
+{% endif %}
+
+## 基本原則（Principles）
+
+このプロジェクトでは、以下の原則を優先します：
+
+{% if principles is string %}
+{{ principles }}
+{% else %}
+{% for principle in principles %}
+{{ loop.index }}. **{{ principle }}**
+{% endfor %}
+{% endif %}
+
+## スコープと責任範囲（Scope）
+
+### 含まれるもの（In Scope）
+
+{% if in_scope is string %}
+{{ in_scope }}
+{% else %}
+{% for item in in_scope %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+### 含まれないもの（Out of Scope）
+
+{% if out_scope is string %}
+{{ out_scope }}
+{% else %}
+{% for item in out_scope %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+## 制約条件（Constraints）
+
+{% if constraints is string %}
+{{ constraints }}
+{% elif constraints is mapping %}
+{% for key, value in constraints.items() %}
+### {{ key }}
+
+{{ value }}
+
+{% endfor %}
+{% else %}
+制約条件は収集されませんでした。
+{% endif %}
+
+## ガバナンス（Governance）
+
+{% if governance is defined %}
+### 意思決定プロセス
+
+{{ governance.decision_process if governance.decision_process is defined else "（未定義）" }}
+
+### 承認フロー
+
+{{ governance.approval_flow if governance.approval_flow is defined else "（未定義）" }}
+
+### エスカレーション基準
+
+{{ governance.escalation if governance.escalation is defined else "（未定義）" }}
+{% else %}
+意思決定プロセス、承認フロー、エスカレーション基準については、必要に応じて定義してください。
+{% endif %}
+
+## ステークホルダー
+
+{% if stakeholders is string %}
+{{ stakeholders }}
+{% else %}
+{% for stakeholder in stakeholders %}
+- {{ stakeholder }}
+{% endfor %}
+{% endif %}
+
+## 成功基準（Success Criteria）
+
+{{ success_criteria }}
+
+---
+
+**変更履歴**
+
+| 日付 | 変更内容 | 変更者 |
+|------|----------|--------|
+| {{ generation_date }} | 初版作成 | SDD Generator |
+
+---
+
+*このドキュメントは SDD Generator によって自動生成されました*
+*プロジェクト名: {{ project_name }}*

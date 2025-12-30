@@ -1,0 +1,113 @@
+# 実装工程
+
+このファイルは、仕様駆動開発の**実装工程**で作成される実装記録です。
+
+参照: [要件定義](./02-planning-requirement.md) | [設計計画](./03-design-planning.md) | [タスク分割](./04-task-breakdown.md)
+
+## 実装記録
+
+{% if implementation_records is string %}
+{{ implementation_records }}
+{% elif implementation_records is sequence %}
+{% for record in implementation_records %}
+### {{ record.feature if record is mapping and record.feature is defined else "実装" ~ loop.index }}
+
+- **実装日**: {{ record.date if record is mapping and record.date is defined else "（未記録）" }}
+- **担当者**: {{ record.developer if record is mapping and record.developer is defined else "（未記録）" }}
+- **関連タスク**: {{ record.task_id if record is mapping and record.task_id is defined else "（未記録）" }}
+- **コミットハッシュ**: {{ record.commit if record is mapping and record.commit is defined else "（未記録）" }}
+
+{% if record is mapping and record.description is defined %}
+**内容**:
+{{ record.description }}
+{% endif %}
+
+---
+
+{% endfor %}
+{% else %}
+実装記録は随時追加されます。
+{% endif %}
+
+## レビュー結果
+
+{% if review_results is string %}
+{{ review_results }}
+{% elif review_results is mapping %}
+{% for review_id, review in review_results.items() %}
+### {{ review_id }}
+
+- **レビュー日**: {{ review.date if review.date is defined else "（未記録）" }}
+- **レビュアー**: {{ review.reviewer if review.reviewer is defined else "（未記録）" }}
+- **対象**: {{ review.target if review.target is defined else "（未記録）" }}
+
+**指摘事項**:
+{% if review.issues is defined %}
+{% for issue in review.issues %}
+- {{ issue }}
+{% endfor %}
+{% else %}
+（記載なし）
+{% endif %}
+
+**対応状況**:
+{{ review.resolution if review.resolution is defined else "（未記録）" }}
+
+---
+
+{% endfor %}
+{% else %}
+レビュー結果は随時追加されます。
+{% endif %}
+
+## AI利用記録
+
+{% if ai_usage is string %}
+{{ ai_usage }}
+{% elif ai_usage is sequence %}
+{% for usage in ai_usage %}
+### {{ usage.feature if usage is mapping and usage.feature is defined else "AI利用" ~ loop.index }}
+
+- **AIツール**: {{ usage.tool if usage is mapping and usage.tool is defined else "（未記録）" }}
+- **利用日**: {{ usage.date if usage is mapping and usage.date is defined else "（未記録）" }}
+
+**プロンプト/指示**:
+```
+{{ usage.prompt if usage is mapping and usage.prompt is defined else "（未記録）" }}
+```
+
+**AI生成部分**:
+{{ usage.ai_generated if usage is mapping and usage.ai_generated is defined else "（未記録）" }}
+
+**人間によるレビュー・修正**:
+{{ usage.human_review if usage is mapping and usage.human_review is defined else "（未記録）" }}
+
+---
+
+{% endfor %}
+{% else %}
+AI利用記録は随時追加されます。
+
+**重要**: AIで生成したコードは必ず人間がレビューし、承認してください。
+{% endif %}
+
+## テスト実施状況
+
+{% if test_status is defined %}
+{{ test_status }}
+{% else %}
+テスト実施状況は検証・受入工程（Phase 6）で詳細に記録されます。
+{% endif %}
+
+---
+
+**変更履歴**
+
+| 日付 | 変更内容 | 変更者 |
+|------|----------|--------|
+| {{ generation_date }} | 初版作成 | SDD Generator |
+
+---
+
+*このドキュメントは SDD Generator によって自動生成されました*
+*プロジェクト名: {{ project_name }}*
