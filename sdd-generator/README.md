@@ -145,13 +145,36 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 DEFAULT_LLM_PROVIDER=claude
 ```
 
-#### OpenAI (予定)
+#### OpenAI (GPT-4 / GPT-3.5-turbo)
 
-`.env`ファイル:
+OpenAI APIを使用してGPT-4やGPT-3.5-turboでインタビューを実施できます。
+
+**セットアップ:**
+
+1. OpenAI APIキーを取得: https://platform.openai.com/api-keys
+
+2. `.env`ファイルを設定:
 ```env
 OPENAI_API_KEY=sk-...
 DEFAULT_LLM_PROVIDER=openai
 ```
+
+3. openaiパッケージをインストール:
+```bash
+pip install openai
+```
+
+**利用可能なモデル:**
+- `gpt-4-turbo-preview` (デフォルト) - 最新のGPT-4 Turbo
+- `gpt-4` - GPT-4 (8K context)
+- `gpt-4-32k` - GPT-4 (32K context)
+- `gpt-3.5-turbo` - GPT-3.5 Turbo (コスト効率が良い)
+- `gpt-3.5-turbo-16k` - GPT-3.5 Turbo (16K context)
+
+**料金 (2024年12月時点):**
+- GPT-4 Turbo: 入力 $10/MTok、出力 $30/MTok
+- GPT-4: 入力 $30/MTok、出力 $60/MTok
+- GPT-3.5 Turbo: 入力 $0.50/MTok、出力 $1.50/MTok
 
 #### AWS Bedrock (エンタープライズ向け)
 

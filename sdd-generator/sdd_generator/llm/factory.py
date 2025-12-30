@@ -79,8 +79,8 @@ class LLMFactory:
             from .openai_client import OpenAIClient
         except ImportError:
             raise ImportError(
-                "OpenAI client not yet implemented. "
-                "This will be added in a future version."
+                "openai package is required for OpenAI integration. "
+                "Install it with: pip install openai"
             )
 
         return OpenAIClient(
