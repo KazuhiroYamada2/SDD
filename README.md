@@ -109,7 +109,8 @@ SDD/
 │   ├── git-commands.md         # Gitコマンド一覧
 │   ├── troubleshooting.md      # トラブルシューティング
 │   ├── scripts.md              # スクリプト集（CI/CD設定、Git hooksなど）
-│   └── prompts.md              # プロンプト集（Cursor、GitHub Copilot用）
+│   ├── prompts.md              # プロンプト集（Cursor、GitHub Copilot用）
+│   └── scale-based-practice-guide.md  # 規模別実践ガイド
 ├── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
 │   ├── 01-principle-definition.md      # 原則決定工程
 │   ├── 02-planning-requirement.md      # 企画・要件定義工程
