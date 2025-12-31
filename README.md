@@ -111,7 +111,8 @@ SDD/
 │   ├── scripts.md              # スクリプト集（CI/CD設定、Git hooksなど）
 │   ├── prompts.md              # プロンプト集（Cursor、GitHub Copilot用）
 │   ├── scale-based-practice-guide.md  # 規模別実践ガイド
-│   └── 90-day-introduction-plan.md    # 90日間導入プラン
+│   ├── 90-day-introduction-plan.md    # 90日間導入プラン
+│   └── security-privacy-guide.md      # セキュリティとプライバシーガイド（規制産業・公的機関向け）
 ├── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
 │   ├── 01-principle-definition.md      # 原則決定工程
 │   ├── 02-planning-requirement.md      # 企画・要件定義工程
