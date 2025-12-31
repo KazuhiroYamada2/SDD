@@ -4,7 +4,7 @@
 
 ## はじめに
 
-既存のレガシー文書をMarkdownに変換する方法は、**SDDリポジトリの`docs/word-excel-conversion-guide.md`**や**`docs/oasys-ichitaro-conversion-guide.md`**で詳しく説明しています。
+既存のレガシー文書をMarkdownに変換する方法は、**SDDリポジトリの`docs/conversion/word-excel-conversion-guide.md`**や**`docs/conversion/oasys-ichitaro-conversion-guide.md`**で詳しく説明しています。
 
 しかし、**これから新しく文書を作る際にも、将来のMarkdown変換を意識した作り方**をすることで、変換時の手間を大幅に減らすことができます。このページでは、Word、PowerPoint、Excelそれぞれについて、Markdownに変換しやすい文書の作り方を具体的に説明します。
 
@@ -285,7 +285,7 @@ Wordと同様に、PowerPointでも箇条書き機能を使うことで、Markdo
 
 ## 関連資料
 
-- **SDDリポジトリの`docs/word-excel-conversion-guide.md`**：Word/ExcelからMarkdownへの変換方法の詳細
-- **SDDリポジトリの`docs/oasys-ichitaro-conversion-guide.md`**：OASYS/一太郎からMarkdownへの変換方法の詳細
-- **SDDリポジトリの`docs/markdown-basics.md`**：Markdown記法の基本
+- **SDDリポジトリの`docs/conversion/word-excel-conversion-guide.md`**：Word/ExcelからMarkdownへの変換方法の詳細
+- **SDDリポジトリの`docs/conversion/oasys-ichitaro-conversion-guide.md`**：OASYS/一太郎からMarkdownへの変換方法の詳細
+- **SDDリポジトリの`docs/conversion/markdown-basics.md`**：Markdown記法の基本
 
