@@ -57,7 +57,8 @@ class APIClient {
 
   // Projects API
   async listProjects(): Promise<ProjectListResponse> {
-    const response = await this.client.get<ProjectListResponse>('/api/projects');
+    // Backend route is registered at "/api/projects/" (trailing slash).
+    const response = await this.client.get<ProjectListResponse>('/api/projects/');
     return response.data;
   }
 
@@ -74,7 +75,9 @@ class APIClient {
   }
 
   async createProject(data: ProjectCreate): Promise<Project> {
-    const response = await this.client.post<Project>('/api/projects', data);
+    // Backend route is registered at "/api/projects/" (trailing slash).
+    // Using the trailing slash avoids a 307 redirect on POST.
+    const response = await this.client.post<Project>('/api/projects/', data);
     return response.data;
   }
 

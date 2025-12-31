@@ -52,7 +52,8 @@ def _load_project_context(project_name: str) -> ContextManager:
     context = ContextManager(project_name)
     state_file = _get_project_state_file(project_name)
     if state_file.exists():
-        context.load_from_disk(str(state_file))
+        # ContextManager manages its own storage path; no explicit file path needed.
+        context.load_from_disk()
     return context
 
 
@@ -76,7 +77,8 @@ async def create_project(project: ProjectCreate):
         # Save initial state
         state_dir = _get_interview_state_dir()
         state_dir.mkdir(exist_ok=True)
-        context.save_to_disk(str(_get_project_state_file(project.name)))
+        # ContextManager manages its own storage path; no explicit file path needed.
+        context.save_to_disk()
 
         logger.info(f"Created new project: {project.name}")
 
