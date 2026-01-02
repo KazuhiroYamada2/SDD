@@ -1,7 +1,16 @@
 """Base abstract interface for LLM clients."""
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+
+
+@dataclass
+class Message:
+    """Represents a chat message with role and content."""
+
+    role: str  # "system", "user", or "assistant"
+    content: str
 
 
 class BaseLLMClient(ABC):
