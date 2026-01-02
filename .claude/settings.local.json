@@ -1,10 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd SDD Generator - LLM-based specification interview system\n\nプロジェクト概要:\n- LLM APIを使用して対話形式でインタビューを行い、仕様駆動開発の7つの仕様書を自動生成するシステム\n\n実装済みコンポーネント:\n- プロジェクト構造とセットアップファイル\n  - requirements.txt: 依存パッケージ定義\n  - pyproject.toml: プロジェクトメタデータ\n  - .env.example: 環境変数テンプレート\n  - .gitignore: Git除外設定\n\n- 設定システム \\(config/settings.py\\)\n  - Pydantic-based設定管理\n  - 環境変数からの読み込み\n  - LLM APIキーの検証\n\n- LLM抽象化レイヤー\n  - base.py: 抽象インターフェース定義\n  - claude_client.py: Anthropic Claude API実装\n  - factory.py: マルチプロバイダー対応ファクトリ\n\n- コンテキスト管理 \\(core/context_manager.py\\)\n  - 質問・回答履歴の保存\n  - フェーズ間のデータ受け渡し\n  - JSON形式での永続化\n  - 中断・再開機能\n\n- ドキュメント\n  - README.md: プロジェクト説明と使用方法\n\n次のステップ:\n- PhaseManager実装（7フェーズの管理）\n- InterviewEngine実装（インタビュー制御）\n- システムプロンプト作成\n- Markdownテンプレート作成\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)",
-      "Bash(git restore:*)"
+      "Bash(gh pr view:*)"
     ]
   }
 }
