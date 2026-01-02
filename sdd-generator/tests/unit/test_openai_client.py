@@ -5,7 +5,6 @@ Unit tests for OpenAI Client
 import pytest
 from unittest.mock import Mock, patch
 from sdd_generator.llm.openai_client import OpenAIClient, GPT4_TURBO, GPT35_TURBO
-from sdd_generator.llm.base import Message
 
 
 @pytest.mark.unit
@@ -52,8 +51,8 @@ class TestOpenAIClient:
         # Create client and call chat
         client = OpenAIClient(api_key="test-key")
         messages = [
-            Message(role="system", content="You are a helpful assistant."),
-            Message(role="user", content="こんにちは")
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "こんにちは"}
         ]
 
         response = client.chat(messages)
@@ -75,7 +74,7 @@ class TestOpenAIClient:
         mock_openai.return_value = mock_client_instance
 
         client = OpenAIClient(api_key="test-key")
-        messages = [Message(role="user", content="Test")]
+        messages = [{"role": "user", "content": "Test"}]
 
         client.chat(messages, temperature=0.5)
 
@@ -94,7 +93,7 @@ class TestOpenAIClient:
         mock_openai.return_value = mock_client_instance
 
         client = OpenAIClient(api_key="test-key")
-        messages = [Message(role="user", content="Test")]
+        messages = [{"role": "user", "content": "Test"}]
 
         response = client.chat(messages)
         assert response == ""
@@ -114,7 +113,7 @@ class TestOpenAIClient:
         client = OpenAIClient(api_key="test-key")
         question = client.generate_question(
             system_prompt="You are an interviewer",
-            context="Current phase: 1"
+            context={"conversation_history": "", "missing_fields": [], "qa_count": 0}
         )
 
         assert "目的" in question
@@ -207,7 +206,7 @@ class TestOpenAIClient:
         mock_openai.return_value = mock_client_instance
 
         client = OpenAIClient(api_key="test-key")
-        messages = [Message(role="user", content="Test")]
+        messages = [{"role": "user", "content": "Test"}]
 
         with pytest.raises(RuntimeError, match="OpenAI API call failed"):
             client.chat(messages)

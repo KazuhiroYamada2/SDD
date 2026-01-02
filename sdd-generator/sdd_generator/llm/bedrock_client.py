@@ -59,8 +59,8 @@ class BedrockClient(BaseLLMClient):
                 "Install it with: pip install boto3"
             )
 
-        self.model = model
-        self.temperature = temperature
+        # Note: Bedrock doesn't use api_key, so we pass empty string
+        super().__init__("", model, temperature)
         self.max_tokens = max_tokens
 
         # Create Bedrock Runtime client
@@ -105,6 +105,9 @@ class BedrockClient(BaseLLMClient):
     ) -> str:
         """
         Send chat messages to Claude via Bedrock and get response.
+
+        Bedrock API requires system message to be passed in a separate field,
+        and content must be a list of content blocks.
 
         Args:
             messages: List of message dicts with 'role' and 'content' keys
@@ -181,87 +184,3 @@ class BedrockClient(BaseLLMClient):
         except Exception as e:
             logger.error(f"Unexpected error during Bedrock API call: {e}")
             raise RuntimeError(f"Bedrock API call failed: {e}")
-
-    def generate_question(
-        self,
-        system_prompt: str,
-        context: Dict[str, Any]
-    ) -> str:
-        """
-        Generate next interview question based on context.
-
-        Args:
-            system_prompt: System instructions for question generation
-            context: Dictionary containing conversation history and metadata
-
-        Returns:
-            Generated question text
-        """
-        # Build context prompt using base class method
-        prompt = self._build_context_prompt(system_prompt, context)
-
-        messages = [
-            {
-                "role": "user",
-                "content": prompt + "\n\n次の質問を1つだけ生成してください。質問のみを出力し、説明や前置きは不要です。"
-            }
-        ]
-
-        return self.chat(messages)
-
-    def extract_structured_data(
-        self,
-        conversation: str,
-        schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Extract structured data from conversation using LLM.
-
-        Args:
-            conversation: Full conversation text
-            schema: Expected data schema (field names and descriptions)
-
-        Returns:
-            Extracted structured data as dictionary
-        """
-        # Build extraction prompt
-        schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
-
-        prompt = f"""以下の会話から、指定されたスキーマに従って情報を抽出してJSON形式で出力してください。
-
-会話:
-{conversation}
-
-期待されるスキーマ:
-{schema_str}
-
-注意:
-- JSON形式のみを出力してください（説明や前置きは不要）
-- スキーマに従って正確に抽出してください
-- 情報が不足している場合は、該当フィールドをnullにしてください
-"""
-
-        messages = [{"role": "user", "content": prompt}]
-
-        # Use lower temperature for more consistent extraction
-        response = self.chat(messages, temperature=0.3)
-
-        # Parse JSON response
-        try:
-            # Extract JSON from response (in case there's extra text)
-            json_start = response.find("{")
-            json_end = response.rfind("}") + 1
-            if json_start != -1 and json_end > json_start:
-                json_str = response[json_start:json_end]
-                data = json.loads(json_str)
-            else:
-                data = json.loads(response)
-
-            logger.debug(f"Successfully extracted structured data: {list(data.keys())}")
-            return data
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from LLM response: {e}")
-            logger.debug(f"Raw response: {response}")
-            # Return empty dict as fallback
-            return {field: None for field in schema.keys()}
