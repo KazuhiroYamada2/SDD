@@ -61,8 +61,8 @@ async def start_interview(request: InterviewStartRequest):
         llm_client = LLMFactory.create_client(settings=settings)
         engine = InterviewEngine(
             llm_client=llm_client,
-            context_manager=context,
-            output_dir=settings.output_dir
+            phase_manager=phase_manager,
+            context_manager=context
         )
 
         # Get initial question
@@ -109,8 +109,8 @@ async def submit_answer(request: UserAnswerRequest):
         llm_client = LLMFactory.create_client(settings=settings)
         engine = InterviewEngine(
             llm_client=llm_client,
-            context_manager=context,
-            output_dir=settings.output_dir
+            phase_manager=phase_manager,
+            context_manager=context
         )
 
         # Process answer (this would normally happen in the interview loop)
@@ -191,8 +191,8 @@ async def websocket_interview(websocket: WebSocket, project_name: str):
         llm_client = LLMFactory.create_client(settings=settings)
         engine = InterviewEngine(
             llm_client=llm_client,
-            context_manager=context,
-            output_dir=settings.output_dir
+            phase_manager=phase_manager,
+            context_manager=context
         )
 
         # Store in active sessions

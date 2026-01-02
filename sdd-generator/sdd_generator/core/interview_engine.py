@@ -295,3 +295,102 @@ class InterviewEngine:
         """Save current progress to disk."""
         self.context_mgr.save_to_disk()
         print("進捗を保存しました。")
+
+    # ========== Web API用メソッド ==========
+
+    def _generate_initial_question(self, phase_num: int) -> str:
+        """
+        Generate the initial question for a phase.
+
+        Args:
+            phase_num: Phase number (1-7)
+
+        Returns:
+            Initial question text
+        """
+        system_prompt = self._get_system_prompt_for_phase(phase_num)
+        phase_info = self.phase_mgr.get_phase_info(phase_num)
+
+        context = {
+            "conversation_history": "",
+            "missing_fields": self.phase_mgr.get_required_fields(phase_num),
+            "qa_count": 0
+        }
+
+        try:
+            question = self.llm.generate_question(system_prompt, context)
+            return question.strip() if question else phase_info.description
+        except Exception as e:
+            # Fallback to phase description if LLM fails
+            return f"フェーズ{phase_num}「{phase_info.name}」を開始します。\n\n{phase_info.description}\n\nまず、プロジェクトの概要を教えてください。"
+
+    def _generate_follow_up_question(
+        self,
+        phase_num: int,
+        context_manager: ContextManager
+    ) -> str:
+        """
+        Generate a follow-up question based on conversation context.
+
+        Args:
+            phase_num: Current phase number
+            context_manager: Context manager with conversation history
+
+        Returns:
+            Follow-up question text
+        """
+        system_prompt = self._get_system_prompt_for_phase(phase_num)
+        context = self._build_context_for_question(phase_num)
+
+        try:
+            question = self.llm.generate_question(system_prompt, context)
+            return question.strip() if question else ""
+        except Exception as e:
+            return "もう少し詳しく教えていただけますか？"
+
+    def _is_phase_complete(
+        self,
+        phase_num: int,
+        context_manager: ContextManager
+    ) -> bool:
+        """
+        Check if a phase has enough information to be completed.
+
+        Args:
+            phase_num: Phase number
+            context_manager: Context manager with conversation data
+
+        Returns:
+            True if phase can be completed
+        """
+        phase_context = context_manager.get_phase_context(phase_num)
+        qa_pairs = phase_context.get("qa_pairs", [])
+
+        # Require at least 3 Q&A pairs
+        if len(qa_pairs) < 3:
+            return False
+
+        # Use the existing completion check logic
+        return self._check_phase_completion(phase_num)
+
+    def _generate_and_save_spec(
+        self,
+        phase_num: int,
+        project_name: str
+    ) -> None:
+        """
+        Generate and save the specification document for a phase.
+
+        Args:
+            phase_num: Phase number
+            project_name: Project name for the spec file
+        """
+        # Extract structured data first
+        self._extract_and_save_structured_data(phase_num)
+
+        # Mark phase as complete
+        self.context_mgr.mark_phase_complete(phase_num)
+
+        # TODO: Generate Markdown spec file using templates
+        # This would use the MarkdownGenerator class
+        pass

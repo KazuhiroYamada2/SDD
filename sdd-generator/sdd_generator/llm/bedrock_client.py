@@ -16,7 +16,7 @@ try:
 except ImportError:
     BOTO3_AVAILABLE = False
 
-from .base import BaseLLMClient, Message
+from .base import BaseLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,8 @@ class BedrockClient(BaseLLMClient):
                 "Install it with: pip install boto3"
             )
 
-        self.model = model
-        self.temperature = temperature
+        # Note: Bedrock doesn't use api_key, so we pass empty string
+        super().__init__("", model, temperature)
         self.max_tokens = max_tokens
 
         # Create Bedrock Runtime client
@@ -77,35 +77,40 @@ class BedrockClient(BaseLLMClient):
             logger.error(f"Failed to initialize Bedrock client: {e}")
             raise ValueError(f"Failed to initialize Bedrock client: {e}")
 
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, str]]:
+    def _convert_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         """
-        Convert internal Message format to Bedrock API format.
+        Convert standard message format to Bedrock API format.
+
+        Bedrock API requires content to be a list of content blocks.
 
         Args:
-            messages: List of Message objects
+            messages: List of message dicts with 'role' and 'content' keys
 
         Returns:
             List of message dicts for Bedrock API
         """
         return [
             {
-                "role": msg.role,
-                "content": msg.content
+                "role": msg["role"],
+                "content": [{"type": "text", "text": msg["content"]}]
             }
             for msg in messages
         ]
 
     def chat(
         self,
-        messages: List[Message],
+        messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None
     ) -> str:
         """
         Send chat messages to Claude via Bedrock and get response.
 
+        Bedrock API requires system message to be passed in a separate field,
+        and content must be a list of content blocks.
+
         Args:
-            messages: List of Message objects (system, user, assistant)
+            messages: List of message dicts with 'role' and 'content' keys
             temperature: Override default temperature
             max_tokens: Override default max_tokens
 
@@ -120,8 +125,8 @@ class BedrockClient(BaseLLMClient):
         conversation_messages = []
 
         for msg in messages:
-            if msg.role == "system":
-                system_message = msg.content
+            if msg["role"] == "system":
+                system_message = msg["content"]
             else:
                 conversation_messages.append(msg)
 
@@ -179,96 +184,3 @@ class BedrockClient(BaseLLMClient):
         except Exception as e:
             logger.error(f"Unexpected error during Bedrock API call: {e}")
             raise RuntimeError(f"Bedrock API call failed: {e}")
-
-    def generate_question(
-        self,
-        system_prompt: str,
-        context: str,
-        temperature: Optional[float] = None
-    ) -> str:
-        """
-        Generate next interview question based on context.
-
-        Args:
-            system_prompt: System instructions for question generation
-            context: Current conversation context
-            temperature: Override default temperature
-
-        Returns:
-            Generated question text
-        """
-        messages = [
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=context)
-        ]
-
-        return self.chat(messages, temperature=temperature)
-
-    def extract_structured_data(
-        self,
-        conversation: str,
-        schema: Dict[str, Any],
-        temperature: Optional[float] = None
-    ) -> Dict[str, Any]:
-        """
-        Extract structured data from conversation using LLM.
-
-        Args:
-            conversation: Full conversation text
-            schema: Expected data schema (field names and descriptions)
-            temperature: Override default temperature (lower for more deterministic)
-
-        Returns:
-            Extracted structured data as dictionary
-        """
-        # Build extraction prompt
-        schema_description = "\n".join([
-            f"- {field}: {desc}"
-            for field, desc in schema.items()
-        ])
-
-        system_prompt = """あなたは会話から構造化データを抽出する専門家です。
-与えられた会話から、指定されたスキーマに従ってデータを抽出し、JSON形式で返してください。
-
-重要な指示:
-1. 会話に明示的に含まれていない情報は推測しないでください
-2. リストや配列が適切な場合は配列として返してください
-3. 情報が欠けている場合は null を使用してください
-4. JSON形式で返してください（マークダウンのコードブロックは不要）
-"""
-
-        user_prompt = f"""以下の会話から、次のスキーマに従ってデータを抽出してください:
-
-{schema_description}
-
-会話:
-{conversation}
-
-JSON形式で抽出したデータを返してください:"""
-
-        messages = [
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt)
-        ]
-
-        # Use lower temperature for more consistent extraction
-        response = self.chat(messages, temperature=temperature or 0.3)
-
-        # Parse JSON response
-        try:
-            # Remove potential markdown code blocks
-            cleaned_response = response.strip()
-            if cleaned_response.startswith("```"):
-                # Extract content between code fences
-                lines = cleaned_response.split("\n")
-                cleaned_response = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned_response
-
-            data = json.loads(cleaned_response)
-            logger.debug(f"Successfully extracted structured data: {list(data.keys())}")
-            return data
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON from LLM response: {e}")
-            logger.debug(f"Raw response: {response}")
-            # Return empty dict as fallback
-            return {field: None for field in schema.keys()}
