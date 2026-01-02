@@ -158,6 +158,105 @@ SDD Generator は、LLM（大規模言語モデル）を活用した対話形式
 | OpenAI | gpt-4-turbo-preview | 代替 |
 | AWS Bedrock | claude-3-5-sonnet (リージョン指定) | エンタープライズ |
 
+### 3.7 LLMクライアント インターフェース仕様
+
+#### 3.7.1 クラス構成
+
+```
+BaseLLMClient (抽象基底クラス)
+    ├── ClaudeClient      # Anthropic API
+    ├── OpenAIClient      # OpenAI API
+    └── BedrockClient     # AWS Bedrock API
+```
+
+#### 3.7.2 BaseLLMClient インターフェース
+
+すべてのLLMクライアントは `BaseLLMClient` を継承し、以下のメソッドを実装する。
+
+| メソッド | 引数 | 戻り値 | 説明 |
+|---------|------|--------|------|
+| `chat()` | `messages: List[Dict[str, str]]`, `temperature?`, `max_tokens?` | `str` | チャットメッセージを送信し応答を取得 |
+| `generate_question()` | `system_prompt: str`, `context: Dict[str, Any]` | `str` | インタビュー質問を生成 |
+| `extract_structured_data()` | `conversation: str`, `schema: Dict[str, Any]` | `Dict[str, Any]` | 会話から構造化データを抽出 |
+
+#### 3.7.3 メッセージ形式
+
+`chat()` メソッドに渡すメッセージは以下の形式とする。
+
+```
+[
+  {"role": "system", "content": "システムプロンプト"},
+  {"role": "user", "content": "ユーザーメッセージ"},
+  {"role": "assistant", "content": "アシスタント応答"}
+]
+```
+
+各クライアントは内部でAPIの仕様に応じて変換を行う。
+- **OpenAI**: そのまま使用
+- **Anthropic**: `system` を別パラメータに分離
+- **Bedrock**: `system` を別フィールドに分離、`content` をリスト形式に変換
+
+#### 3.7.4 共通プロンプト定義
+
+プロバイダー間で一貫した動作を保証するため、以下のプロンプトは `BaseLLMClient` で定義し、全クライアントで共有する。
+
+**質問生成時の指示文:**
+```
+次の質問を1つだけ生成してください。質問のみを出力し、説明や前置きは不要です。
+```
+
+**構造化データ抽出用システムプロンプト:**
+```
+あなたは会話から構造化データを抽出する専門家です。
+与えられた会話から、指定されたスキーマに従ってデータを抽出し、JSON形式で返してください。
+
+重要な指示:
+1. 会話に明示的に含まれていない情報は推測しないでください
+2. リストや配列が適切な場合は配列として返してください
+3. 情報が欠けている場合は null を使用してください
+4. JSON形式で返してください（マークダウンのコードブロックは不要）
+```
+
+**構造化データ抽出用ユーザープロンプトテンプレート:**
+```
+以下の会話から、次のスキーマに従ってデータを抽出してください:
+
+{schema_description}
+
+会話:
+{conversation}
+
+JSON形式で抽出したデータを返してください:
+```
+
+#### 3.7.5 コンテキスト構築
+
+`generate_question()` で使用するコンテキストは `_build_context_prompt()` メソッドで構築する。
+
+**入力 context の構造:**
+```
+{
+  "conversation_history": "質問1: ...\n回答1: ...",
+  "missing_fields": ["field1", "field2"],
+  "previous_phases": { ... }
+}
+```
+
+**構築されるプロンプト:**
+```
+{system_prompt}
+
+## 会話履歴:
+{conversation_history}
+
+## まだ収集が必要な情報:
+- field1
+- field2
+
+## 前フェーズの情報:
+{previous_phases}
+```
+
 ---
 
 ## 4. 画面仕様
@@ -708,3 +807,4 @@ sdd-generator/
 | 日付 | バージョン | 変更内容 |
 |------|-----------|----------|
 | 2025-01-02 | 1.0.0 | 初版作成 |
+| 2025-01-02 | 1.1.0 | 3.7 LLMクライアント インターフェース仕様を追加 |
