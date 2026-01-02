@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     aws_access_key_id: str = Field(default="", description="AWS access key ID")
     aws_secret_access_key: str = Field(default="", description="AWS secret access key")
     aws_region: str = Field(default="us-west-2", description="AWS region")
+    bedrock_model_id: str = Field(
+        default="anthropic.claude-3-sonnet-20240229-v1:0",
+        description="Bedrock model ID (e.g., anthropic.claude-3-sonnet-20240229-v1:0)"
+    )
 
     # SDD Generator Settings
     default_llm_provider: str = Field(

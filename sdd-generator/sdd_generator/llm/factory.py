@@ -107,6 +107,7 @@ class LLMFactory:
             )
 
         return BedrockClient(
+            model=settings.bedrock_model_id,
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
             region=settings.aws_region,
