@@ -17,10 +17,10 @@ class Settings(BaseSettings):
     # AWS Credentials (for Bedrock)
     aws_access_key_id: str = Field(default="", description="AWS access key ID")
     aws_secret_access_key: str = Field(default="", description="AWS secret access key")
-    aws_region: str = Field(default="us-west-2", description="AWS region")
+    aws_region: str = Field(default="ap-northeast-1", description="AWS region")
     bedrock_model_id: str = Field(
-        default="anthropic.claude-3-sonnet-20240229-v1:0",
-        description="Bedrock model ID (e.g., anthropic.claude-3-sonnet-20240229-v1:0)"
+        default="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+        description="Bedrock model ID (e.g., global.anthropic.claude-haiku-4-5-20251001-v1:0)"
     )
 
     # SDD Generator Settings
