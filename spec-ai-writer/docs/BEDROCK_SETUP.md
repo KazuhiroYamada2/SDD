@@ -130,7 +130,7 @@ DEFAULT_LLM_PROVIDER=bedrock
 
 ```bash
 # プロジェクト開始
-specstart my-bedrock-project
+spec start my-bedrock-project
 
 # Bedrockが正しく設定されているか確認
 # 最初の質問が表示されればOK

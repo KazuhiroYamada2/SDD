@@ -135,7 +135,7 @@ Spec AIライター は、LLM（大規模言語モデル）を活用した対話
 #### 中断・再開機能
 - Ctrl+C または "exit" 入力で中断
 - 進捗は自動的にJSONファイルに保存
-- `specresume <project>` で再開可能
+- `spec resume <project>` で再開可能
 
 ### 3.4 仕様書生成機能
 
@@ -701,12 +701,12 @@ JSON形式で抽出したデータを返してください:
 
 | コマンド | 説明 |
 |---------|------|
-| `specstart <project>` | 新規プロジェクト開始 |
-| `specresume <project>` | 中断したインタビュー再開 |
-| `speclist` | プロジェクト一覧表示 |
-| `specstatus <project>` | プロジェクト進捗表示 |
-| `spec--help` | ヘルプ表示 |
-| `spec--version` | バージョン表示 |
+| `spec start <project>` | 新規プロジェクト開始 |
+| `spec resume <project>` | 中断したインタビュー再開 |
+| `spec list` | プロジェクト一覧表示 |
+| `spec status <project>` | プロジェクト進捗表示 |
+| `spec --help` | ヘルプ表示 |
+| `spec --version` | バージョン表示 |
 
 ### 8.2 オプション
 
@@ -717,7 +717,7 @@ JSON形式で抽出したデータを返してください:
 ### 8.3 実行例
 
 ```
-$ specstart customer-mgmt
+$ spec start customer-mgmt
 
 ============================================================
 仕様駆動開発（SDD）インタビューを開始します

@@ -56,7 +56,7 @@ python -m spec_ai_writer.main start my-project
 または、モジュールとしてインストール済みの場合:
 
 ```bash
-specstart my-project
+spec start my-project
 ```
 
 ### インタビューの流れ
@@ -183,7 +183,7 @@ Excelで顧客管理をしていますが、営業担当者が増えて
 ❌ プロジェクト 'my-project' が見つかりません。
 ```
 
-**解決方法**: `specstart my-project`で新規作成するか、`speclist`で既存プロジェクトを確認してください。
+**解決方法**: `spec start my-project`で新規作成するか、`spec list`で既存プロジェクトを確認してください。
 
 ### インタビューが長すぎる
 

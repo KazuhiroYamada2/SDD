@@ -65,7 +65,7 @@ def start(project_name: str, provider: str):
 
     except KeyboardInterrupt:
         click.echo("\n\nインタビューを中断しました。")
-        click.echo(f"'specresume {project_name}' で再開できます。")
+        click.echo(f"'spec resume {project_name}' で再開できます。")
     except Exception as e:
         click.echo(f"\n❌ エラーが発生しました: {e}", err=True)
         import traceback
@@ -98,7 +98,7 @@ def resume(project_name: str):
         # Check if context exists
         if not context_mgr.context.get("phases"):
             click.echo(f"❌ プロジェクト '{project_name}' が見つかりません。")
-            click.echo(f"'specstart {project_name}' で新規開始してください。")
+            click.echo(f"'spec start {project_name}' で新規開始してください。")
             sys.exit(1)
 
         # Create interview engine

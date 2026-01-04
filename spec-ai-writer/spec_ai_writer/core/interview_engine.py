@@ -44,7 +44,7 @@ class InterviewEngine:
             if not self._conduct_phase_interview(phase_num):
                 # User requested to stop
                 print("\nインタビューを中断しました。")
-                print(f"次回は 'specresume {self.context_mgr.project_name}' で再開できます。")
+                print(f"次回は 'spec resume {self.context_mgr.project_name}' で再開できます。")
                 return
 
         print("\n" + "="*60)
