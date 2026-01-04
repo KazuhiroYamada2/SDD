@@ -142,7 +142,7 @@ Spec AIライター は、LLM（大規模言語モデル）を活用した対話
 - Jinja2テンプレートによるMarkdown生成
 - プロジェクト名、生成日時を自動挿入
 - 変更履歴テーブルを自動追加
-- 出力先: `./spec_output/` ディレクトリ
+- 出力先: `./spec_output/{project_name}/` ディレクトリ（プロジェクトごとに分離）
 
 ### 3.5 Git連携機能
 
@@ -764,10 +764,11 @@ spec-ai-writer/
 ├── .env                    # 環境変数設定
 ├── .interview_state/       # インタビュー状態保存
 │   └── {project}.json
-├── spec_output/             # 生成仕様書
-│   ├── 01-principle-definition.md
-│   ├── 02-planning-requirement.md
-│   └── ...
+├── spec_output/             # 生成仕様書（プロジェクトごとにディレクトリ分離）
+│   └── {project}/
+│       ├── 01-principle-definition.md
+│       ├── 02-planning-requirement.md
+│       └── ...
 └── templates/              # 仕様書テンプレート
     ├── 01-principle-definition.md.jinja2
     └── ...
