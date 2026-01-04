@@ -24,7 +24,7 @@ class TestPhaseManager:
         for phase_num in range(1, 8):
             info = manager.get_phase_info(phase_num)
             assert info is not None
-            assert info.phase_num == phase_num
+            assert info.number == phase_num  # Changed from phase_num to number
             assert info.name
             assert info.description
             assert info.filename
@@ -49,7 +49,9 @@ class TestPhaseManager:
         assert info.filename == "01-principle-definition.md"
         assert "background" in info.required_fields
         assert "principles" in info.required_fields
-        assert "scope" in info.required_fields
+        # "scope" was split into "in_scope" and "out_scope"
+        assert "in_scope" in info.required_fields
+        assert "out_scope" in info.required_fields
 
     def test_phase_dependencies(self):
         """Test phase dependencies."""
@@ -63,46 +65,51 @@ class TestPhaseManager:
         deps_2 = manager.get_dependencies(2)
         assert 1 in deps_2
 
-        # Phase 7 depends on all previous phases
+        # Phase 7 depends only on phase 6 (not all previous phases)
         deps_7 = manager.get_dependencies(7)
-        assert len(deps_7) == 6
-        assert all(i in deps_7 for i in range(1, 7))
+        assert len(deps_7) == 1
+        assert 6 in deps_7
 
     def test_validate_phase_completion_empty(self):
         """Test validation with empty context."""
         manager = PhaseManager()
         phase_context = {}
 
-        is_valid = manager.validate_phase_completion(1, phase_context)
+        # validate_phase_completion now returns (is_valid, missing_fields) tuple
+        is_valid, missing_fields = manager.validate_phase_completion(1, phase_context)
         assert is_valid is False
+        assert len(missing_fields) > 0
 
-    def test_validate_phase_completion_insufficient_qa(self):
-        """Test validation with insufficient Q&A pairs."""
+    def test_validate_phase_completion_insufficient_data(self):
+        """Test validation with insufficient data."""
         manager = PhaseManager()
+        # This context is missing required fields
         phase_context = {
-            "qa_pairs": [
-                {"question": "Q1", "answer": "A1"},
-                {"question": "Q2", "answer": "A2"}
-            ]
+            "background": "Test background"
         }
 
-        # Need at least 5 Q&A pairs
-        is_valid = manager.validate_phase_completion(1, phase_context)
+        is_valid, missing_fields = manager.validate_phase_completion(1, phase_context)
         assert is_valid is False
+        assert len(missing_fields) > 0
 
-    def test_validate_phase_completion_sufficient_qa(self):
-        """Test validation with sufficient Q&A pairs."""
+    def test_validate_phase_completion_complete_data(self):
+        """Test validation with all required fields."""
         manager = PhaseManager()
+        # Provide all required fields for phase 1
         phase_context = {
-            "qa_pairs": [
-                {"question": f"Q{i}", "answer": f"A{i}"}
-                for i in range(1, 6)
-            ]
+            "background": "Test background",
+            "purposes": ["Purpose 1"],
+            "principles": ["Principle 1"],
+            "in_scope": ["In scope item"],
+            "out_scope": ["Out scope item"],
+            "constraints": {"time": "2 weeks"},
+            "stakeholders": ["User"],
+            "success_criteria": "All tests pass"
         }
 
-        # 5 Q&A pairs should be valid
-        is_valid = manager.validate_phase_completion(1, phase_context)
+        is_valid, missing_fields = manager.validate_phase_completion(1, phase_context)
         assert is_valid is True
+        assert missing_fields == []
 
     def test_get_schema_for_phase(self):
         """Test getting schema for each phase."""
@@ -113,11 +120,12 @@ class TestPhaseManager:
             assert isinstance(schema, dict)
             assert len(schema) > 0
 
-            # Verify schema has descriptions
-            for field, description in schema.items():
-                assert isinstance(field, str)
-                assert isinstance(description, str)
-                assert len(description) > 0
+            # Schema now returns JSON schema format with type, properties, required
+            assert "type" in schema
+            assert schema["type"] == "object"
+            assert "properties" in schema
+            assert "required" in schema
+            assert len(schema["properties"]) > 0
 
     def test_all_phases_have_unique_filenames(self):
         """Test that all phases have unique filenames."""

@@ -37,6 +37,66 @@ def _get_spec_file(project_name: str, filename: str) -> Path:
     return _get_output_dir(project_name) / filename
 
 
+@router.get("/{project_name}/download-all")
+async def download_all_specifications(project_name: str):
+    """
+    Download all specifications as a ZIP file.
+
+    Returns a ZIP archive containing all generated specification files.
+    """
+    import io
+    import zipfile
+    from fastapi.responses import StreamingResponse
+
+    try:
+        output_dir = _get_output_dir(project_name)
+
+        if not output_dir.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No specifications found for project '{project_name}'"
+            )
+
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            spec_count = 0
+
+            for i in range(1, 8):
+                phase_info = phase_manager.get_phase_info(i)
+                spec_file = output_dir / phase_info.filename
+
+                if spec_file.exists():
+                    zip_file.write(spec_file, arcname=phase_info.filename)
+                    spec_count += 1
+
+            if spec_count == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"No specifications found for project '{project_name}'"
+                )
+
+        zip_buffer.seek(0)
+
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={project_name}_specifications.zip"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download all specifications: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download all specifications: {str(e)}"
+        )
+
+
 @router.get("/{project_name}", response_model=SpecificationListResponse)
 async def list_specifications(project_name: str):
     """
@@ -170,64 +230,4 @@ async def download_specification(project_name: str, phase_num: int):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to download specification: {str(e)}"
-        )
-
-
-@router.get("/{project_name}/download-all")
-async def download_all_specifications(project_name: str):
-    """
-    Download all specifications as a ZIP file.
-
-    Returns a ZIP archive containing all generated specification files.
-    """
-    import io
-    import zipfile
-    from fastapi.responses import StreamingResponse
-
-    try:
-        output_dir = _get_output_dir(project_name)
-
-        if not output_dir.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No specifications found for project '{project_name}'"
-            )
-
-        # Create ZIP file in memory
-        zip_buffer = io.BytesIO()
-
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            spec_count = 0
-
-            for i in range(1, 8):
-                phase_info = phase_manager.get_phase_info(i)
-                spec_file = output_dir / phase_info.filename
-
-                if spec_file.exists():
-                    zip_file.write(spec_file, arcname=phase_info.filename)
-                    spec_count += 1
-
-            if spec_count == 0:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"No specifications found for project '{project_name}'"
-                )
-
-        zip_buffer.seek(0)
-
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={
-                "Content-Disposition": f"attachment; filename={project_name}_specifications.zip"
-            }
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to download all specifications: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download all specifications: {str(e)}"
         )
