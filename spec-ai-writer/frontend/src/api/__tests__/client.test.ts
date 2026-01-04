@@ -1,9 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import axios from 'axios'
-import { apiClient } from '../client'
 
-vi.mock('axios')
-const mockedAxios = vi.mocked(axios, true)
+// Create mock axios instance with interceptors
+const mockAxiosInstance = {
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+  interceptors: {
+    request: { use: vi.fn() },
+    response: { use: vi.fn() },
+  },
+}
+
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => mockAxiosInstance),
+  },
+}))
+
+// Import after mock setup
+const { apiClient } = await import('../client')
 
 describe('API Client', () => {
   beforeEach(() => {
@@ -20,8 +36,7 @@ describe('API Client', () => {
         total: 2,
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockResolvedValue({ data: mockData })
+      mockAxiosInstance.get.mockResolvedValue({ data: mockData })
 
       const result = await apiClient.listProjects()
       expect(result).toEqual(mockData)
@@ -39,8 +54,7 @@ describe('API Client', () => {
         created_at: '2024-01-01T00:00:00Z',
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.post.mockResolvedValue({ data: mockResponse })
+      mockAxiosInstance.post.mockResolvedValue({ data: mockResponse })
 
       const result = await apiClient.createProject(projectData)
       expect(result.name).toBe(projectData.name)
@@ -55,8 +69,7 @@ describe('API Client', () => {
         overall_progress: 0,
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockResolvedValue({ data: mockStatus })
+      mockAxiosInstance.get.mockResolvedValue({ data: mockStatus })
 
       const result = await apiClient.getProjectStatus(projectName)
       expect(result.project_name).toBe(projectName)
@@ -76,8 +89,7 @@ describe('API Client', () => {
         initial_message: 'Welcome!',
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.post.mockResolvedValue({ data: mockResponse })
+      mockAxiosInstance.post.mockResolvedValue({ data: mockResponse })
 
       const result = await apiClient.startInterview(request)
       expect(result.phase_num).toBe(1)
@@ -95,8 +107,7 @@ describe('API Client', () => {
         ],
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockResolvedValue({ data: mockData })
+      mockAxiosInstance.get.mockResolvedValue({ data: mockData })
 
       const result = await apiClient.listSpecifications(projectName)
       expect(result.specifications).toHaveLength(2)
@@ -115,8 +126,7 @@ describe('API Client', () => {
         generated_at: '2024-01-01T00:00:00Z',
       }
 
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockResolvedValue({ data: mockSpec })
+      mockAxiosInstance.get.mockResolvedValue({ data: mockSpec })
 
       const result = await apiClient.getSpecification(projectName, phaseNum)
       expect(result.phase_num).toBe(phaseNum)
@@ -126,15 +136,13 @@ describe('API Client', () => {
 
   describe('Error Handling', () => {
     it('should handle network errors', async () => {
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockRejectedValue(new Error('Network error'))
+      mockAxiosInstance.get.mockRejectedValue(new Error('Network error'))
 
       await expect(apiClient.listProjects()).rejects.toThrow('Network error')
     })
 
     it('should handle HTTP errors', async () => {
-      mockedAxios.create.mockReturnThis()
-      mockedAxios.get.mockRejectedValue({
+      mockAxiosInstance.get.mockRejectedValue({
         response: {
           status: 404,
           data: { error: 'Not found' },
