@@ -312,6 +312,20 @@ Phase Complete → Markdown Generator → Generate Spec File
             Git Manager → Auto Commit
 ```
 
+## ドキュメント
+
+詳細な内部仕様については、[docs/SPEC.md](./docs/SPEC.md) を参照してください。
+
+SPEC.mdには以下の内容が記載されています：
+- システム構成とアーキテクチャ
+- 機能要件の詳細
+- 画面仕様とUI設計
+- API仕様とWebSocketメッセージ形式
+- データモデルとスキーマ定義
+- 処理フローの詳細
+- CLI仕様
+- 設定仕様と環境変数
+
 ## ライセンス
 
 MIT License
