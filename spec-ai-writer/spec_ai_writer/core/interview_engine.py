@@ -1,7 +1,8 @@
 """Interview engine for conducting SDD interviews."""
 
 import sys
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.phase_manager import PhaseManager
@@ -172,10 +173,14 @@ class InterviewEngine:
         structured_data = phase_data.get("structured_data", {}) or {}
         missing_fields = [f for f in required_fields if f not in structured_data or not structured_data[f]]
 
+        # Load previous phase specifications
+        previous_phases = self._load_previous_phase_specs(phase_num)
+
         return {
             "conversation_history": conversation_history,
             "missing_fields": missing_fields,
-            "qa_count": len(phase_data.get("qa_pairs", []))
+            "qa_count": len(phase_data.get("qa_pairs", [])),
+            "previous_phases": previous_phases
         }
 
     def _check_phase_completion(self, phase_num: int) -> bool:
@@ -406,3 +411,69 @@ class InterviewEngine:
                 project_name
             )
             print(f"仕様書 {phase_info.filename} を生成しました。")
+
+    def _get_phase_dependencies(self, phase_num: int) -> List[int]:
+        """
+        Get the list of phases that the current phase depends on.
+
+        Based on SPEC.md section 3.2:
+        - Phase 2: depends on Phase 1
+        - Phase 3: depends on Phases 1, 2
+        - Phase 4: depends on Phases 2, 3
+        - Phase 5: depends on Phases 2, 3, 4
+        - Phase 6: depends on Phases 2, 5
+        - Phase 7: depends on Phase 6
+
+        Args:
+            phase_num: Current phase number
+
+        Returns:
+            List of phase numbers this phase depends on
+        """
+        dependencies = {
+            1: [],
+            2: [1],
+            3: [1, 2],
+            4: [2, 3],
+            5: [2, 3, 4],
+            6: [2, 5],
+            7: [6],
+        }
+        return dependencies.get(phase_num, [])
+
+    def _load_previous_phase_specs(self, phase_num: int) -> str:
+        """
+        Load specification documents from previous phases that this phase depends on.
+
+        Args:
+            phase_num: Current phase number
+
+        Returns:
+            Combined content of previous phase specifications
+        """
+        from config.settings import get_settings
+
+        dependencies = self._get_phase_dependencies(phase_num)
+        if not dependencies:
+            return ""
+
+        settings = get_settings()
+        output_dir = Path(settings.output_dir)
+        project_name = self.context_mgr.project_name
+        project_dir = output_dir / project_name
+
+        specs_content = []
+        for dep_phase in dependencies:
+            phase_info = self.phase_mgr.get_phase_info(dep_phase)
+            spec_path = project_dir / phase_info.filename
+
+            if spec_path.exists():
+                try:
+                    content = spec_path.read_text(encoding="utf-8")
+                    specs_content.append(
+                        f"### フェーズ{dep_phase}: {phase_info.name}\n\n{content}"
+                    )
+                except Exception:
+                    pass  # Skip if file cannot be read
+
+        return "\n\n---\n\n".join(specs_content)
