@@ -49,11 +49,10 @@ async def start_interview(request: InterviewStartRequest):
         if request.phase_num:
             phase_num = request.phase_num
         else:
-            # Find next incomplete phase
+            # Find next incomplete phase using context's completed flag
             phase_num = 1
             for i in range(1, 8):
-                phase_context = context.get_phase_context(i)
-                if not phase_manager.validate_phase_completion(i, phase_context):
+                if not context.is_phase_complete(i):
                     phase_num = i
                     break
 
@@ -97,11 +96,10 @@ async def submit_answer(request: UserAnswerRequest):
         # Load context
         context = ContextManager(request.project_name)
 
-        # Determine current phase
+        # Determine current phase using context's completed flag
         current_phase = 1
         for i in range(1, 8):
-            phase_context = context.get_phase_context(i)
-            if not phase_manager.validate_phase_completion(i, phase_context):
+            if not context.is_phase_complete(i):
                 current_phase = i
                 break
 
@@ -179,11 +177,10 @@ async def websocket_interview(websocket: WebSocket, project_name: str):
         # Create or load context
         context = ContextManager(project_name)
 
-        # Determine current phase
+        # Determine current phase using context's completed flag
         current_phase = 1
         for i in range(1, 8):
-            phase_context = context.get_phase_context(i)
-            if not phase_manager.validate_phase_completion(i, phase_context):
+            if not context.is_phase_complete(i):
                 current_phase = i
                 break
 
