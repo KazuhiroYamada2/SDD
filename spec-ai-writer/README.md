@@ -224,7 +224,7 @@ DEFAULT_LLM_PROVIDER=bedrock
 
 **詳細な設定手順:**
 
-Bedrock固有の設定、IAMポリシー、VPC Endpoint、コスト最適化などの詳細は、[BEDROCK_SETUP.md](./BEDROCK_SETUP.md)を参照してください。
+Bedrock固有の設定、IAMポリシー、VPC Endpoint、コスト最適化などの詳細は、[BEDROCK_SETUP.md](./docs/BEDROCK_SETUP.md)を参照してください。
 
 ### コマンド一覧
 
