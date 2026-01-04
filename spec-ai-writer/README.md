@@ -75,7 +75,7 @@ AWS_REGION=us-west-2
 
 # 設定
 DEFAULT_LLM_PROVIDER=claude  # claude, openai, bedrockから選択
-OUTPUT_DIR=./sdd_output
+OUTPUT_DIR=./spec_output
 AUTO_GIT_COMMIT=true
 TEMPERATURE=0.7
 ```

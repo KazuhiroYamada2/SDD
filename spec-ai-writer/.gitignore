@@ -39,7 +39,7 @@ ENV/
 
 # spec-ai-writer specific
 .interview_state/
-sdd_output/
+spec_output/
 
 # Testing
 .pytest_cache/

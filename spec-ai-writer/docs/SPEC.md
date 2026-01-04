@@ -142,7 +142,7 @@ Spec AIライター は、LLM（大規模言語モデル）を活用した対話
 - Jinja2テンプレートによるMarkdown生成
 - プロジェクト名、生成日時を自動挿入
 - 変更履歴テーブルを自動追加
-- 出力先: `./sdd_output/` ディレクトリ
+- 出力先: `./spec_output/` ディレクトリ
 
 ### 3.5 Git連携機能
 
@@ -686,7 +686,7 @@ JSON形式で抽出したデータを返してください:
                ▼
 ┌─────────────────────────────┐
 │ ファイル書き込み             │
-│ (sdd_output/XX-*.md)        │
+│ (spec_output/XX-*.md)        │
 └──────────────┬──────────────┘
                │
                ▼
@@ -751,7 +751,7 @@ $ specstart customer-mgmt
 | AWS_REGION | △ | AWS リージョン | ap-northeast-1 |
 | BEDROCK_MODEL_ID | - | Bedrock モデルID | (自動選択) |
 | DEFAULT_LLM_PROVIDER | ○ | 使用プロバイダー | claude |
-| OUTPUT_DIR | - | 出力ディレクトリ | ./sdd_output |
+| OUTPUT_DIR | - | 出力ディレクトリ | ./spec_output |
 | AUTO_GIT_COMMIT | - | 自動コミット有効化 | false |
 | TEMPERATURE | - | LLM Temperature | 0.7 |
 
@@ -764,7 +764,7 @@ spec-ai-writer/
 ├── .env                    # 環境変数設定
 ├── .interview_state/       # インタビュー状態保存
 │   └── {project}.json
-├── sdd_output/             # 生成仕様書
+├── spec_output/             # 生成仕様書
 │   ├── 01-principle-definition.md
 │   ├── 02-planning-requirement.md
 │   └── ...

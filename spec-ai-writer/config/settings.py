@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         description="Default LLM provider (claude, openai, bedrock)"
     )
     output_dir: str = Field(
-        default="./sdd_output",
+        default="./spec_output",
         description="Output directory for generated specs"
     )
     auto_git_commit: bool = Field(
