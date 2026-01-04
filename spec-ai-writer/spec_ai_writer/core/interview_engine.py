@@ -316,7 +316,8 @@ class InterviewEngine:
         context = {
             "conversation_history": "",
             "missing_fields": self.phase_mgr.get_required_fields(phase_num),
-            "qa_count": 0
+            "qa_count": 0,
+            "previous_phases": self._load_previous_phase_specs(phase_num)
         }
 
         try:
