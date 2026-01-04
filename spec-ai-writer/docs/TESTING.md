@@ -1,6 +1,6 @@
 # テストガイド
 
-SDD Generatorのテストスイート実行方法
+Spec AIライターのテストスイート実行方法
 
 ## バックエンドテスト (Python/pytest)
 

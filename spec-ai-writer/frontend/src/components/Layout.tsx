@@ -18,7 +18,7 @@ export default function Layout() {
                 <FileText className="h-8 w-8 text-primary-600" />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                    SDD Generator
+                    Spec AIライター
                   </h1>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     仕様駆動開発
@@ -60,7 +60,7 @@ export default function Layout() {
       <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            © 2024 SDD Generator - Specification Driven Development
+            © 2026 Spec AIライター
           </p>
         </div>
       </footer>

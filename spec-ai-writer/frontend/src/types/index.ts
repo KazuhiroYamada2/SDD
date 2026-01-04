@@ -1,5 +1,5 @@
 /**
- * TypeScript types for SDD Generator Frontend
+ * TypeScript types for spec-ai-writer Frontend
  *
  * Matches FastAPI backend models
  */

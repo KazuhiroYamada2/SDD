@@ -1,10 +1,10 @@
-# SDD Generator 仕様書
+# Spec AIライター 仕様書
 
 ## 1. 概要
 
 ### 1.1 システム概要
 
-SDD Generator は、LLM（大規模言語モデル）を活用した対話形式のインタビューシステムである。ユーザーとの対話を通じて情報を収集し、仕様駆動開発（Specification Driven Development）で定義された7つの仕様書を自動生成する。
+Spec AIライター は、LLM（大規模言語モデル）を活用した対話形式のインタビューシステムである。ユーザーとの対話を通じて情報を収集し、仕様駆動開発（Specification Driven Development）で定義された7つの仕様書を自動生成する。
 
 ### 1.2 目的
 
@@ -135,14 +135,14 @@ SDD Generator は、LLM（大規模言語モデル）を活用した対話形式
 #### 中断・再開機能
 - Ctrl+C または "exit" 入力で中断
 - 進捗は自動的にJSONファイルに保存
-- `sdd resume <project>` で再開可能
+- `spec resume <project>` で再開可能
 
 ### 3.4 仕様書生成機能
 
 - Jinja2テンプレートによるMarkdown生成
 - プロジェクト名、生成日時を自動挿入
 - 変更履歴テーブルを自動追加
-- 出力先: `./sdd_output/` ディレクトリ
+- 出力先: `./spec_output/` ディレクトリ
 
 ### 3.5 Git連携機能
 
@@ -304,7 +304,7 @@ JSON形式で抽出したデータを返してください:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  SDD Generator                                    [Dark/Light]│
+│  Spec AIライター                                    [Dark/Light]│
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  プロジェクト一覧                        [+ 新規プロジェクト] │
@@ -336,7 +336,7 @@ JSON形式で抽出したデータを返してください:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  SDD Generator  >  customer-mgmt  >  インタビュー           │
+│  Spec AIライター  >  customer-mgmt  >  インタビュー           │
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  フェーズ 1: 原則定義                          [1] ● ○ ○ ○ ○ ○ ○ │
@@ -383,7 +383,7 @@ JSON形式で抽出したデータを返してください:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  SDD Generator  >  customer-mgmt                           │
+│  Spec AIライター  >  customer-mgmt                           │
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  customer-mgmt                                             │
@@ -414,7 +414,7 @@ JSON形式で抽出したデータを返してください:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  SDD Generator  >  customer-mgmt  >  仕様書                │
+│  Spec AIライター  >  customer-mgmt  >  仕様書                │
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  生成済み仕様書                              [全てDL (ZIP)] │
@@ -686,7 +686,7 @@ JSON形式で抽出したデータを返してください:
                ▼
 ┌─────────────────────────────┐
 │ ファイル書き込み             │
-│ (sdd_output/XX-*.md)        │
+│ (spec_output/XX-*.md)        │
 └──────────────┬──────────────┘
                │
                ▼
@@ -701,12 +701,12 @@ JSON形式で抽出したデータを返してください:
 
 | コマンド | 説明 |
 |---------|------|
-| `sdd start <project>` | 新規プロジェクト開始 |
-| `sdd resume <project>` | 中断したインタビュー再開 |
-| `sdd list` | プロジェクト一覧表示 |
-| `sdd status <project>` | プロジェクト進捗表示 |
-| `sdd --help` | ヘルプ表示 |
-| `sdd --version` | バージョン表示 |
+| `spec start <project>` | 新規プロジェクト開始 |
+| `spec resume <project>` | 中断したインタビュー再開 |
+| `spec list` | プロジェクト一覧表示 |
+| `spec status <project>` | プロジェクト進捗表示 |
+| `spec --help` | ヘルプ表示 |
+| `spec --version` | バージョン表示 |
 
 ### 8.2 オプション
 
@@ -717,7 +717,7 @@ JSON形式で抽出したデータを返してください:
 ### 8.3 実行例
 
 ```
-$ sdd start customer-mgmt
+$ spec start customer-mgmt
 
 ============================================================
 仕様駆動開発（SDD）インタビューを開始します
@@ -751,7 +751,7 @@ $ sdd start customer-mgmt
 | AWS_REGION | △ | AWS リージョン | ap-northeast-1 |
 | BEDROCK_MODEL_ID | - | Bedrock モデルID | (自動選択) |
 | DEFAULT_LLM_PROVIDER | ○ | 使用プロバイダー | claude |
-| OUTPUT_DIR | - | 出力ディレクトリ | ./sdd_output |
+| OUTPUT_DIR | - | 出力ディレクトリ | ./spec_output |
 | AUTO_GIT_COMMIT | - | 自動コミット有効化 | false |
 | TEMPERATURE | - | LLM Temperature | 0.7 |
 
@@ -764,7 +764,7 @@ spec-ai-writer/
 ├── .env                    # 環境変数設定
 ├── .interview_state/       # インタビュー状態保存
 │   └── {project}.json
-├── sdd_output/             # 生成仕様書
+├── spec_output/             # 生成仕様書
 │   ├── 01-principle-definition.md
 │   ├── 02-planning-requirement.md
 │   └── ...

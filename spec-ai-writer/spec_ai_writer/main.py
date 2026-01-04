@@ -1,4 +1,4 @@
-"""Main entry point for SDD Generator."""
+"""Main entry point for spec-ai-writer."""
 
 from spec_ai_writer.cli import main
 

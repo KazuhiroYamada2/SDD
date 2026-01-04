@@ -1,4 +1,4 @@
-"""Configuration management for SDD Generator."""
+"""Configuration management for spec-ai-writer."""
 
 from pathlib import Path
 from typing import Optional
@@ -23,13 +23,13 @@ class Settings(BaseSettings):
         description="Bedrock model ID (e.g., global.anthropic.claude-haiku-4-5-20251001-v1:0)"
     )
 
-    # SDD Generator Settings
+    # spec-ai-writer Settings
     default_llm_provider: str = Field(
         default="claude",
         description="Default LLM provider (claude, openai, bedrock)"
     )
     output_dir: str = Field(
-        default="./sdd_output",
+        default="./spec_output",
         description="Output directory for generated specs"
     )
     auto_git_commit: bool = Field(

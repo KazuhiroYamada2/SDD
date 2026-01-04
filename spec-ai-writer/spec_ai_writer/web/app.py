@@ -1,5 +1,5 @@
 """
-FastAPI Web Application for SDD Generator
+FastAPI Web Application for spec-ai-writer
 
 Provides a modern web UI with real-time chat interface for conducting
 specification interviews and managing multiple projects.
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="SDD Generator Web UI",
+    title="spec-ai-writer Web UI",
     description="LLM-powered interview system for generating SDD specifications",
     version="1.0.0",
     docs_url="/api/docs",
@@ -47,7 +47,7 @@ app.add_middleware(
 async def root():
     """Root endpoint - serves React app in production, API info in dev."""
     return {
-        "app": "SDD Generator Web UI",
+        "app": "spec-ai-writer Web UI",
         "version": "1.0.0",
         "docs": "/api/docs",
         "status": "running"

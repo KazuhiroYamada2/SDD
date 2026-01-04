@@ -75,7 +75,7 @@ AWS_REGION=us-west-2
 
 # 設定
 DEFAULT_LLM_PROVIDER=claude  # claude, openai, bedrockから選択
-OUTPUT_DIR=./sdd_output
+OUTPUT_DIR=./spec_output
 AUTO_GIT_COMMIT=true
 TEMPERATURE=0.7
 ```
@@ -140,21 +140,21 @@ npm run dev
 
 1. **初期設定** (初回のみ):
 ```bash
-sdd init
+spec init
 ```
 
 対話形式で設定を行います。
 
 2. **インタビュー開始**:
 ```bash
-sdd start my-project
+spec start my-project
 ```
 
 `my-project`はプロジェクト名です。LLMが7つのフェーズについて順番に質問を行います。
 
 3. **インタビュー再開**:
 ```bash
-sdd resume my-project
+spec resume my-project
 ```
 
 中断したインタビューを再開できます。
@@ -224,15 +224,15 @@ DEFAULT_LLM_PROVIDER=bedrock
 
 **詳細な設定手順:**
 
-Bedrock固有の設定、IAMポリシー、VPC Endpoint、コスト最適化などの詳細は、[BEDROCK_SETUP.md](./BEDROCK_SETUP.md)を参照してください。
+Bedrock固有の設定、IAMポリシー、VPC Endpoint、コスト最適化などの詳細は、[BEDROCK_SETUP.md](./docs/BEDROCK_SETUP.md)を参照してください。
 
 ### コマンド一覧
 
-- `sdd init` - 初期設定ウィザード
-- `sdd start <project-name>` - 新規インタビュー開始
-- `sdd resume <project-name>` - インタビュー再開
-- `sdd list` - 保存されているプロジェクト一覧
-- `sdd status <project-name>` - プロジェクトの進捗状況表示
+- `spec init` - 初期設定ウィザード
+- `spec start <project-name>` - 新規インタビュー開始
+- `spec resume <project-name>` - インタビュー再開
+- `spec list` - 保存されているプロジェクト一覧
+- `spec status <project-name>` - プロジェクトの進捗状況表示
 
 ## プロジェクト構造
 

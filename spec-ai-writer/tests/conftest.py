@@ -1,5 +1,5 @@
 """
-Pytest configuration and fixtures for SDD Generator tests
+Pytest configuration and fixtures for spec-ai-writer tests
 """
 
 import pytest
@@ -15,6 +15,24 @@ from spec_ai_writer.web.app import app
 from spec_ai_writer.llm.base import BaseLLMClient
 from spec_ai_writer.core.context_manager import ContextManager
 from config.settings import Settings
+
+
+@pytest.fixture(autouse=True)
+def clean_interview_state():
+    """Clean up interview state before each test."""
+    state_dir = Path.cwd() / ".interview_state"
+    # Clean up before test
+    if state_dir.exists():
+        for f in state_dir.glob("*.json"):
+            # Only remove test-related files to avoid breaking other things
+            if f.stem in ["test-project", "project-1", "project-2", "workflow-test"]:
+                f.unlink()
+    yield
+    # Clean up after test
+    if state_dir.exists():
+        for f in state_dir.glob("*.json"):
+            if f.stem in ["test-project", "project-1", "project-2", "workflow-test"]:
+                f.unlink()
 
 
 @pytest.fixture
@@ -79,9 +97,9 @@ def sample_project_name() -> str:
 @pytest.fixture
 def context_manager(sample_project_name: str, temp_dir: Path) -> ContextManager:
     """Context manager with temporary storage."""
-    manager = ContextManager(sample_project_name)
-    # Override state file path to use temp directory
-    manager.state_file = temp_dir / f"{sample_project_name}.json"
+    # Use a unique subdirectory for each test to avoid shared state
+    storage_path = temp_dir / "context_storage"
+    manager = ContextManager(sample_project_name, storage_path=str(storage_path))
     return manager
 
 

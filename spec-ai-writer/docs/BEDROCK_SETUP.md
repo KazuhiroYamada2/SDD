@@ -1,6 +1,6 @@
 # AWS Bedrock セットアップガイド
 
-このガイドでは、SDD GeneratorをAWS Bedrockで使用するための詳細な手順を説明します。
+このガイドでは、Spec AIライターをAWS Bedrockで使用するための詳細な手順を説明します。
 
 ## なぜAWS Bedrockを使うのか？
 
@@ -130,7 +130,7 @@ DEFAULT_LLM_PROVIDER=bedrock
 
 ```bash
 # プロジェクト開始
-sdd start my-bedrock-project
+spec start my-bedrock-project
 
 # Bedrockが正しく設定されているか確認
 # 最初の質問が表示されればOK
@@ -290,7 +290,7 @@ Claude 3.5 Sonnet:
 
 ## まとめ
 
-AWS Bedrockを使用することで、エンタープライズグレードのセキュリティとコンプライアンスを維持しながら、SDD Generatorを利用できます。
+AWS Bedrockを使用することで、エンタープライズグレードのセキュリティとコンプライアンスを維持しながら、Spec AIライターを利用できます。
 
 セットアップでお困りの場合は、GitHubのIssuesでお気軽にご質問ください。
 

@@ -1,5 +1,5 @@
 /**
- * API Client for SDD Generator Backend
+ * API Client for spec-ai-writer Backend
  *
  * Provides typed methods for interacting with FastAPI backend
  * Supports mock mode when VITE_USE_MOCK_API=true
