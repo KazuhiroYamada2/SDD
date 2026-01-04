@@ -1,0 +1,175 @@
+# 移行・運用工程
+
+このファイルは、仕様駆動開発の**移行・運用工程**で作成される運用記録です。
+
+参照: [検証記録](./06-verification-acceptance.md)
+
+## 移行計画
+
+{% if migration_plan is string %}
+{{ migration_plan }}
+{% elif migration_plan is mapping %}
+### デプロイ予定
+
+- **予定日**: {{ migration_plan.scheduled_date if migration_plan.scheduled_date is defined else "（未定）" }}
+- **実施日**: {{ migration_plan.actual_date if migration_plan.actual_date is defined else "（未実施）" }}
+- **方式**: {{ migration_plan.method if migration_plan.method is defined else "（未定）" }}
+
+### デプロイ手順
+
+{% if migration_plan.steps is defined %}
+{% for step in migration_plan.steps %}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+{% else %}
+（未定義）
+{% endif %}
+
+### データ移行
+
+{{ migration_plan.data_migration if migration_plan.data_migration is defined else "データ移行は不要" }}
+
+### ロールバック手順
+
+{{ migration_plan.rollback if migration_plan.rollback is defined else "（未定義）" }}
+
+### リスクと対策
+
+{% if migration_plan.risks is defined %}
+{% for risk in migration_plan.risks %}
+- **リスク**: {{ risk.description if risk is mapping and risk.description is defined else risk }}
+{% if risk is mapping and risk.mitigation is defined %}
+  - **対策**: {{ risk.mitigation }}
+{% endif %}
+{% endfor %}
+{% else %}
+（未定義）
+{% endif %}
+{% else %}
+移行計画は本番デプロイ前に作成されます。
+{% endif %}
+
+## 運用体制
+
+{% if operation_structure is string %}
+{{ operation_structure }}
+{% elif operation_structure is mapping %}
+### サポート体制
+
+- **担当チーム**: {{ operation_structure.team if operation_structure.team is defined else "（未定）" }}
+- **対応時間**: {{ operation_structure.hours if operation_structure.hours is defined else "（未定）" }}
+- **連絡先**: {{ operation_structure.contact if operation_structure.contact is defined else "（未定）" }}
+
+### 監視体制
+
+{{ operation_structure.monitoring if operation_structure.monitoring is defined else "（未定義）" }}
+
+### エスカレーションフロー
+
+{% if operation_structure.escalation is defined %}
+{{ operation_structure.escalation }}
+{% else %}
+1. 一次対応: サポートチーム
+2. 二次対応: 開発チーム
+3. 三次対応: 技術リーダー
+{% endif %}
+
+### 定期メンテナンス
+
+{{ operation_structure.maintenance if operation_structure.maintenance is defined else "（未定義）" }}
+{% else %}
+運用体制は運用開始前に確立されます。
+{% endif %}
+
+## フィードバックループ
+
+{% if feedback_loop is string %}
+{{ feedback_loop }}
+{% elif feedback_loop is mapping %}
+### フィードバック収集方法
+
+{{ feedback_loop.collection if feedback_loop.collection is defined else "（未定義）" }}
+
+### 対応プロセス
+
+{% if feedback_loop.process is defined %}
+{{ feedback_loop.process }}
+{% else %}
+1. フィードバック収集
+2. 優先順位付け
+3. 対応計画作成
+4. 実装・テスト
+5. リリース
+{% endif %}
+
+### 改善サイクル
+
+{{ feedback_loop.cycle if feedback_loop.cycle is defined else "月次レビュー" }}
+{% else %}
+フィードバックループは運用開始後に確立されます。
+{% endif %}
+
+## 運用メトリクス
+
+{% if metrics is string %}
+{{ metrics }}
+{% elif metrics is mapping %}
+### KPI
+
+{% if metrics.kpi is defined %}
+{% for kpi in metrics.kpi %}
+- {{ kpi }}
+{% endfor %}
+{% else %}
+- システム稼働率: 99.9%以上
+- 平均応答時間: 2秒以下
+- ユーザー満足度: 4.0/5.0以上
+- インシデント解決時間: 4時間以内
+{% endif %}
+
+### 監視項目
+
+{% if metrics.monitoring_items is defined %}
+{% for item in metrics.monitoring_items %}
+- {{ item }}
+{% endfor %}
+{% else %}
+- サーバーリソース使用率
+- エラー発生率
+- レスポンスタイム
+- ユーザーアクセス数
+{% endif %}
+
+### レビュー頻度
+
+{{ metrics.review_frequency if metrics.review_frequency is defined else "週次" }}
+{% else %}
+運用メトリクスは運用開始後に収集されます。
+{% endif %}
+
+## 運用実績
+
+### {{ generation_date }} 時点
+
+運用実績は運用開始後に随時更新されます。
+
+## 継続的改善
+
+このフェーズで得られたフィードバックと運用実績は、
+次のプロジェクトサイクルの**フェーズ1（原則定義）**に戻り、
+継続的な改善につなげます。
+
+---
+
+**変更履歴**
+
+| 日付 | 変更内容 | 変更者 |
+|------|----------|--------|
+| {{ generation_date }} | 初版作成 | SDD Generator |
+
+---
+
+*このドキュメントは SDD Generator によって自動生成されました*
+*プロジェクト名: {{ project_name }}*
+
+**🎉 おめでとうございます！仕様駆動開発の7つのフェーズがすべて完了しました！**

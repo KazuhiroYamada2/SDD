@@ -127,7 +127,7 @@ SDD/
 │   ├── 06-verification-acceptance.md    # 検証・受入工程
 │   ├── 07-migration-operation.md        # 移行・運用工程
 │   └── README.md                        # サンプルファイルの説明
-└── sdd-generator/              # 仕様駆動開発支援ツール（オプション）
+└── spec-ai-writer/              # 仕様駆動開発支援AIツール（オプション）
     ├── README.md               # ツールの説明
     ├── QUICKSTART.md           # クイックスタートガイド
     └── ...                     # ツールの実装ファイル

@@ -1,0 +1,93 @@
+# 企画・要件定義工程
+
+このファイルは、仕様駆動開発の**企画・要件定義工程**で作成される仕様書です。
+
+参照: [原則定義](./01-principle-definition.md)
+
+## プロジェクト概要
+
+{{ project_overview }}
+
+## 対象ユーザー
+
+{% if target_users is string %}
+{{ target_users }}
+{% else %}
+{% for user in target_users %}
+### {{ user.role if user is mapping and user.role is defined else user }}
+
+{% if user is mapping %}
+- **特徴**: {{ user.description if user.description is defined else "（記載なし）" }}
+- **ITリテラシー**: {{ user.literacy if user.literacy is defined else "（記載なし）" }}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+## 機能要件（Functional Requirements）
+
+{% if functional_requirements is string %}
+{{ functional_requirements }}
+{% else %}
+{% for req in functional_requirements %}
+### {{ loop.index }}. {{ req.name if req is mapping and req.name is defined else req }}
+
+{% if req is mapping and req.description is defined %}
+{{ req.description }}
+
+{% if req.details is defined %}
+**詳細:**
+{% for detail in req.details %}
+- {{ detail }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+## 非機能要件（Non-functional Requirements）
+
+{% if non_functional_requirements is string %}
+{{ non_functional_requirements }}
+{% elif non_functional_requirements is mapping %}
+{% for category, requirements in non_functional_requirements.items() %}
+### {{ category }}
+
+{% if requirements is string %}
+{{ requirements }}
+{% else %}
+{% for req in requirements %}
+- {{ req }}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+{% else %}
+{% for req in non_functional_requirements %}
+- {{ req }}
+{% endfor %}
+{% endif %}
+
+## 未決定事項
+
+{% if undecided_items is defined %}
+{% for item in undecided_items %}
+- {{ item }}
+{% endfor %}
+{% else %}
+現時点で未決定の項目はありません。
+{% endif %}
+
+---
+
+**変更履歴**
+
+| 日付 | 変更内容 | 変更者 |
+|------|----------|--------|
+| {{ generation_date }} | 初版作成 | SDD Generator |
+
+---
+
+*このドキュメントは SDD Generator によって自動生成されました*
+*プロジェクト名: {{ project_name }}*
