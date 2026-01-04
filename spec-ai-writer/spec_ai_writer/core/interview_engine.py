@@ -121,7 +121,7 @@ class InterviewEngine:
             qa_count += 1
 
             # Check if we have enough information
-            if qa_count >= 5:  # After at least 5 Q&A pairs
+            if qa_count >= 3:  # After at least 3 Q&A pairs (per SPEC.md 3.3)
                 if self._check_phase_completion(phase_num):
                     break
 
