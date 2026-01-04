@@ -79,8 +79,10 @@ class MarkdownGenerator:
             # Render template
             content = template.render(context)
 
-        # Save to file
-        file_path = self.output_dir / filename
+        # Save to file (project-specific directory)
+        project_dir = self.output_dir / project_name
+        project_dir.mkdir(parents=True, exist_ok=True)
+        file_path = project_dir / filename
         file_path.write_text(content, encoding="utf-8")
 
         return file_path

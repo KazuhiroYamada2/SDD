@@ -124,12 +124,9 @@ class InterviewEngine:
                 if self._check_phase_completion(phase_num):
                     break
 
-        # Extract structured data
+        # Extract structured data and generate spec
         print("\n情報を整理しています...")
-        self._extract_and_save_structured_data(phase_num)
-
-        # Mark phase as complete
-        self.context_mgr.mark_phase_complete(phase_num)
+        self._generate_and_save_spec(phase_num, self.context_mgr.project_name)
 
         print(f"\nフェーズ {phase_num} が完了しました！")
 
@@ -391,6 +388,21 @@ class InterviewEngine:
         # Mark phase as complete
         self.context_mgr.mark_phase_complete(phase_num)
 
-        # TODO: Generate Markdown spec file using templates
-        # This would use the MarkdownGenerator class
-        pass
+        # Generate Markdown spec file using templates
+        from config.settings import get_settings
+        from spec_ai_writer.generators.markdown_generator import MarkdownGenerator
+
+        settings = get_settings()
+        generator = MarkdownGenerator(settings.output_dir)
+        phase_info = self.phase_mgr.get_phase_info(phase_num)
+        structured_data = self.context_mgr.get_structured_data(phase_num)
+
+        if structured_data:
+            file_path = generator.generate_spec(
+                phase_num,
+                phase_info.name,
+                phase_info.filename,
+                structured_data,
+                project_name
+            )
+            print(f"仕様書 {phase_info.filename} を生成しました。")
