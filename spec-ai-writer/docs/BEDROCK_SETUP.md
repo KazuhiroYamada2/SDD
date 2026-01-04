@@ -1,6 +1,6 @@
 # AWS Bedrock セットアップガイド
 
-このガイドでは、SDD GeneratorをAWS Bedrockで使用するための詳細な手順を説明します。
+このガイドでは、Spec AIライターをAWS Bedrockで使用するための詳細な手順を説明します。
 
 ## なぜAWS Bedrockを使うのか？
 

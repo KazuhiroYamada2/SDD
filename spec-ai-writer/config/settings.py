@@ -1,4 +1,4 @@
-"""Configuration management for SDD Generator."""
+"""Configuration management for spec-ai-writer."""
 
 from pathlib import Path
 from typing import Optional

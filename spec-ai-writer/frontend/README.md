@@ -1,4 +1,4 @@
-# SDD Generator - Frontend
+# Spec AIライター - Frontend
 
 React + TypeScript フロントエンドアプリケーション
 
