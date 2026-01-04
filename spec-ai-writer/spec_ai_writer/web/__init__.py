@@ -1,1 +1,1 @@
-"""Web UI package for SDD Generator."""
+"""Web UI package for spec-ai-writer."""

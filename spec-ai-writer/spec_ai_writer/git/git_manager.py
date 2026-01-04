@@ -45,7 +45,7 @@ class GitManager:
         # Create .gitignore if it doesn't exist
         gitignore_path = self.repo_path / ".gitignore"
         if not gitignore_path.exists():
-            gitignore_content = """# SDD Generator
+            gitignore_content = """# Spec AIライター
 .interview_state/
 *.pyc
 __pycache__/
@@ -110,7 +110,7 @@ __pycache__/
 
 仕様駆動開発 フェーズ{phase_num} の仕様書を生成しました。
 
-🤖 Generated with SDD Generator
+🤖 Generated with Spec AIライター
 """
 
     def get_status(self) -> str:

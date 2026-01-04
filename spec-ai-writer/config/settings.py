@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         description="Bedrock model ID (e.g., global.anthropic.claude-haiku-4-5-20251001-v1:0)"
     )
 
-    # SDD Generator Settings
+    # spec-ai-writer Settings
     default_llm_provider: str = Field(
         default="claude",
         description="Default LLM provider (claude, openai, bedrock)"

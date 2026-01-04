@@ -180,7 +180,7 @@ Do NOT modify this file unless you are explicitly instructed.
         content += """
 ---
 
-*このドキュメントは SDD Generator によって生成されました*
+*このドキュメントは Spec AIライター によって生成されました*
 """
 
         return content
@@ -211,7 +211,7 @@ Do NOT modify this file unless you are explicitly instructed.
         content += """
 ---
 
-*このドキュメントは SDD Generator によって生成されました*
+*このドキュメントは Spec AIライター によって生成されました*
 """
 
         return content

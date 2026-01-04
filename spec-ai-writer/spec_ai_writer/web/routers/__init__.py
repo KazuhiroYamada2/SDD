@@ -1,1 +1,1 @@
-"""API routers for SDD Generator Web UI."""
+"""API routers for spec-ai-writer Web UI."""

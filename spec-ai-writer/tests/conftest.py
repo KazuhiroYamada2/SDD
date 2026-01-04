@@ -1,5 +1,5 @@
 """
-Pytest configuration and fixtures for SDD Generator tests
+Pytest configuration and fixtures for spec-ai-writer tests
 """
 
 import pytest

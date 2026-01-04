@@ -37,7 +37,7 @@ ENV/
 .env
 .env.local
 
-# SDD Generator specific
+# spec-ai-writer specific
 .interview_state/
 sdd_output/
 
