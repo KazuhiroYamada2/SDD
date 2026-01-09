@@ -30,7 +30,7 @@
 - [セキュリティとプライバシーガイド](guides/security-privacy-guide.md) - 規制産業・公的機関向けのセキュリティ対応
 - [トラブルシューティング](guides/troubleshooting.md) - よくある問題と対処法
 - [Markdownにしやすい文書の作り方](guides/markdown-friendly-document-creation.md) - 将来の移行を見据えた文書作成
-- [書籍の誤植修正一覧](guides/errata.md) - 書籍発売後に判明した誤植や修正事項
+- [書籍の正誤表](guides/errata.md) - 書籍発売後に判明した誤植や修正事項
 
 ## 書籍との対応
 
@@ -45,7 +45,7 @@
 | スクリプト集 | 第12章 |
 | Word/Excel変換 | 第10章 |
 | OASYS/一太郎変換 | 第10章 |
-| 書籍の誤植修正一覧 | 全章（補足情報） |
+| 書籍の正誤表 | 全章（補足情報） |
 
 ## 推奨する読み方
 

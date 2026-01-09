@@ -117,7 +117,7 @@ SDD/
 │       ├── security-privacy-guide.md      # セキュリティとプライバシーガイド（規制産業・公的機関向け）
 │       ├── troubleshooting.md  # トラブルシューティング
 │       ├── markdown-friendly-document-creation.md # Markdownにしやすい文書の作り方
-│       └── errata.md           # 書籍の誤植修正一覧
+│       └── errata.md           # 書籍の正誤表
 ├── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
 │   ├── 01-principle-definition.md      # 原則決定工程
 │   ├── 02-planning-requirement.md      # 企画・要件定義工程
