@@ -24,10 +24,10 @@ class PhaseManager:
         self.phases = {
             1: PhaseInfo(
                 number=1,
-                name="原則定義",
+                name="原則決定工程",
                 name_en="Principle Definition",
                 filename="01-principle-definition.md",
-                description="プロジェクトの存在意義・原則・制約条件を明文化",
+                description="プロジェクトの存在意義・原則・制約条件を明文化し、合意形成する",
                 required_fields=[
                     "background",
                     "purposes",
@@ -42,10 +42,10 @@ class PhaseManager:
             ),
             2: PhaseInfo(
                 number=2,
-                name="企画・要件定義",
+                name="企画・要件定義工程",
                 name_en="Planning & Requirements",
                 filename="02-planning-requirement.md",
-                description="「何を」「なぜ」作るのかを定義",
+                description="顧客やステークホルダーと共に「何を」「なぜ」作るのかを定義する",
                 required_fields=[
                     "project_overview",
                     "target_users",
@@ -56,10 +56,10 @@ class PhaseManager:
             ),
             3: PhaseInfo(
                 number=3,
-                name="設計計画",
+                name="設計計画工程",
                 name_en="Design Planning",
                 filename="03-design-planning.md",
-                description="技術スタック、アーキテクチャ、制約条件を整理",
+                description="技術スタック、アーキテクチャ、制約条件を整理し、AIを活用して設計プランを策定する",
                 required_fields=[
                     "technology_options",
                     "architecture",
@@ -69,10 +69,10 @@ class PhaseManager:
             ),
             4: PhaseInfo(
                 number=4,
-                name="タスク分割",
+                name="タスク分割工程",
                 name_en="Task Breakdown",
                 filename="04-task-breakdown.md",
-                description="レビュー・テスト可能な粒度でタスクを分割",
+                description="仕様と設計をもとに、レビューやテスト可能な粒度でタスクを分割する",
                 required_fields=[
                     "milestones",
                     "tasks",
@@ -83,10 +83,10 @@ class PhaseManager:
             ),
             5: PhaseInfo(
                 number=5,
-                name="実装",
+                name="実装工程",
                 name_en="Implementation",
                 filename="05-implementation.md",
-                description="AIにコードを書かせ、人間がレビュー・検証",
+                description="タスクごとにCursorなどのAIエディタにコードを書かせ、人間がレビュー・検証する",
                 required_fields=[
                     "implementation_records",
                     "review_results",
@@ -96,10 +96,10 @@ class PhaseManager:
             ),
             6: PhaseInfo(
                 number=6,
-                name="検証・受入",
+                name="検証・受入工程",
                 name_en="Verification & Acceptance",
                 filename="06-verification-acceptance.md",
-                description="仕様が満たされているかを顧客と共に確認",
+                description="全体の仕様が満たされているかを顧客と共に確認する",
                 required_fields=[
                     "test_items",
                     "test_results",
@@ -110,10 +110,10 @@ class PhaseManager:
             ),
             7: PhaseInfo(
                 number=7,
-                name="移行・運用",
+                name="移行・運用工程",
                 name_en="Migration & Operation",
                 filename="07-migration-operation.md",
-                description="本番へ移行し、運用フェーズで継続的に改善",
+                description="システムを本番へ移行し、運用フェーズで仕様変更や改善を継続的に反映する",
                 required_fields=[
                     "migration_plan",
                     "operation_structure",

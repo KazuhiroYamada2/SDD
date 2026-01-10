@@ -139,7 +139,7 @@ async def submit_answer(request: UserAnswerRequest):
                 )
             else:
                 return AssistantQuestionResponse(
-                    question="おめでとうございます！全7フェーズのインタビューが完了しました。",
+                    question="おめでとうございます！全7つの工程のインタビューが完了しました。",
                     phase_complete=True,
                     phase_num=7,
                     qa_count=len(qa_pairs)
@@ -285,7 +285,7 @@ async def websocket_interview(websocket: WebSocket, project_name: str):
                         # All phases complete
                         await websocket.send_json({
                             "type": "complete",
-                            "content": "おめでとうございます！全7フェーズのインタビューが完了しました。",
+                            "content": "おめでとうございます！全7つの工程のインタビューが完了しました。",
                             "metadata": {
                                 "project_name": project_name
                             }

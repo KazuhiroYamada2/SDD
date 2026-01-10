@@ -32,10 +32,10 @@ export class WebSocketManager {
           // Send initial question
           const initialMessage: WebSocketMessage = {
             type: 'question',
-            content: `こんにちは！フェーズ1「原則定義」のインタビューを開始します。\n\nまず、プロジェクトの概要について教えてください。`,
+            content: `こんにちは！フェーズ1「原則決定工程」のインタビューを開始します。\n\nまず、プロジェクトの概要について教えてください。`,
             metadata: {
               phase_num: 1,
-              phase_name: '原則定義',
+              phase_name: '原則決定工程',
               qa_count: 0,
             },
           };
@@ -116,11 +116,11 @@ export class WebSocketManager {
         const question: WebSocketMessage = {
           type: isPhaseComplete ? 'phase_complete' : 'question',
           content: isPhaseComplete 
-            ? 'フェーズ1「原則定義」が完了しました！'
+            ? 'フェーズ1「原則決定工程」が完了しました！'
             : mockQuestions[Math.min(this.mockAnswerCount - 1, mockQuestions.length - 1)],
           metadata: {
             phase_num: 1,
-            phase_name: '原則定義',
+            phase_name: '原則決定工程',
             qa_count: this.mockAnswerCount,
           },
         };
@@ -133,7 +133,7 @@ export class WebSocketManager {
               content: '仕様書「01-principle-definition.md」を生成しました。',
               metadata: {
                 phase_num: 1,
-                phase_name: '原則定義',
+                phase_name: '原則決定工程',
                 filename: '01-principle-definition.md',
               },
             };

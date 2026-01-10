@@ -85,7 +85,7 @@ describe('API Client', () => {
       const mockResponse = {
         project_name: 'test-project',
         phase_num: 1,
-        phase_name: '原則定義',
+        phase_name: '原則決定工程',
         initial_message: 'Welcome!',
       }
 
@@ -120,7 +120,7 @@ describe('API Client', () => {
       const mockSpec = {
         project_name: projectName,
         phase_num: phaseNum,
-        phase_name: '原則定義',
+        phase_name: '原則決定工程',
         content: '# Test Content',
         filename: '01-principle-definition.md',
         generated_at: '2024-01-01T00:00:00Z',

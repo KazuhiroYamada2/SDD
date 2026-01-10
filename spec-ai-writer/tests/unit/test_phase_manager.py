@@ -45,7 +45,7 @@ class TestPhaseManager:
         manager = PhaseManager()
         info = manager.get_phase_info(1)
 
-        assert info.name == "原則定義"
+        assert info.name == "原則決定工程"
         assert info.filename == "01-principle-definition.md"
         assert "background" in info.required_fields
         assert "principles" in info.required_fields

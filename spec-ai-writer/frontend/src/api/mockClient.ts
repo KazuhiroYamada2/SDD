@@ -92,7 +92,7 @@ class MockAPIClient {
     }
 
     const phases = [
-      { phase_num: 1, phase_name: '原則定義', description: 'プロジェクトの基本原則を定義', status: project.phase_status[1] as any, qa_count: 3, required_fields: [], filename: '01-principle-definition.md' },
+      { phase_num: 1, phase_name: '原則決定工程', description: 'プロジェクトの基本原則を定義', status: project.phase_status[1] as any, qa_count: 3, required_fields: [], filename: '01-principle-definition.md' },
       { phase_num: 2, phase_name: '企画・要件定義', description: '要件を明確化', status: project.phase_status[2] as any, qa_count: 5, required_fields: [], filename: '02-planning-requirement.md' },
       { phase_num: 3, phase_name: '設計計画', description: '設計方針を決定', status: project.phase_status[3] as any, qa_count: 4, required_fields: [], filename: '03-design-planning.md' },
       { phase_num: 4, phase_name: 'タスク分割', description: '作業を細分化', status: project.phase_status[4] as any, qa_count: 0, required_fields: [], filename: '04-task-breakdown.md' },
@@ -142,7 +142,7 @@ class MockAPIClient {
     await delay(800);
     const phaseNum = data.phase_num || 1;
     const phaseNames = [
-      '原則定義',
+      '原則決定工程',
       '企画・要件定義',
       '設計計画',
       'タスク分割',
@@ -184,7 +184,7 @@ class MockAPIClient {
     }
 
     const phaseNames = [
-      '原則定義',
+      '原則決定工程',
       '企画・要件定義',
       '設計計画',
       'タスク分割',
@@ -223,7 +223,7 @@ class MockAPIClient {
   async getSpecification(projectName: string, phaseNum: number): Promise<SpecificationResponse> {
     await delay(400);
     const phaseNames = [
-      '原則定義',
+      '原則決定工程',
       '企画・要件定義',
       '設計計画',
       'タスク分割',

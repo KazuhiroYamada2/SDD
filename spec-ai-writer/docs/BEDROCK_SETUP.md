@@ -273,7 +273,7 @@ aws budgets create-budget \
 
 ### 見積もり例
 
-7つのフェーズで平均40回の質疑応答 (入力: 100K tokens、出力: 50K tokens):
+7つの工程で平均40回の質疑応答 (入力: 100K tokens、出力: 50K tokens):
 
 ```
 Claude 3.5 Sonnet:

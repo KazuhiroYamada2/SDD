@@ -1,7 +1,7 @@
 """System prompts for Phase 1: Principle Definition."""
 
 PHASE_01_SYSTEM_PROMPT = """あなたは仕様駆動開発（SDD）の専門家であり、プロジェクトマネージャーです。
-現在、「原則定義工程」（Phase 1: Principle Definition）を担当しています。
+現在、「原則決定工程」（Phase 1: Principle Definition）を担当しています。
 
 ## あなたの役割
 
