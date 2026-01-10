@@ -112,6 +112,36 @@ git pull
 
 ## リポジトリの操作
 
+### リモートリポジトリを作成する
+
+リモートリポジトリの作成は、以下の2つの方法があります。
+
+#### 方法1: GitHubのWeb画面から作成（推奨）
+
+1. GitHubにログインし、右上の「+」アイコンから「New repository」を選択
+2. リポジトリ名、公開設定（Public/Private）を入力して「Create repository」をクリック
+3. 作成後、表示される指示に従ってローカルリポジトリと接続
+
+**詳しい手順**: [GitHub公式ドキュメント](https://docs.github.com/ja/repositories/creating-and-managing-repositories/creating-a-new-repository)を参照してください。
+
+#### 方法2: GitHub CLI（gh）を使って作成
+
+GitHub CLIをインストール済みであれば、以下のコマンドで作成できます：
+
+```bash
+gh repo create リポジトリ名 --public --source=. --remote=origin --push
+```
+
+**コマンドの説明**:
+- `--public`: 公開リポジトリとして作成（`--private`で非公開リポジトリ）
+- `--source=.`: 現在のディレクトリをソースとして使用
+- `--remote=origin`: リモート名を`origin`として設定
+- `--push`: 作成後に自動的にプッシュ
+
+**チャットパネルでの指示**: 「リモートリポジトリを作成して」または「gh repo createコマンドでGitHubにリポジトリを作成して」
+
+**注意**: GitHub CLIのインストール方法については、第4章4.3節「GitHub CLI（gh）をインストール・設定する」を参照してください。
+
 ### リモートリポジトリをクローンする
 
 ```bash
