@@ -11,16 +11,16 @@ from jinja2 import Environment, FileSystemLoader, Template
 class MarkdownGenerator:
     """Generates Markdown specification files from interview data."""
 
-    def __init__(self, output_dir: str, templates_dir: Optional[str] = None):
+    def __init__(self, specs_dir: Path, templates_dir: Optional[str] = None):
         """
         Initialize the Markdown generator.
 
         Args:
-            output_dir: Directory to save generated files
+            specs_dir: Directory to save generated spec files (Path object)
             templates_dir: Directory containing Jinja2 templates
         """
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.specs_dir = Path(specs_dir)
+        self.specs_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup Jinja2 environment
         if templates_dir is None:
@@ -41,7 +41,7 @@ class MarkdownGenerator:
         phase_name: str,
         filename: str,
         data: Dict[str, Any],
-        project_name: str
+        display_name: str = ""
     ) -> Path:
         """
         Generate a Markdown specification file using Jinja2 templates.
@@ -51,7 +51,7 @@ class MarkdownGenerator:
             phase_name: Phase name
             filename: Output filename
             data: Structured data from interview
-            project_name: Project name
+            display_name: Human-readable project name (for template rendering)
 
         Returns:
             Path to the generated file
@@ -65,13 +65,13 @@ class MarkdownGenerator:
             print(f"Warning: Could not load template {template_filename}: {e}")
             # Fallback to old method
             if phase_num == 1:
-                content = self._generate_phase_01(data, project_name)
+                content = self._generate_phase_01(data, display_name)
             else:
-                content = self._generate_generic_phase(phase_num, phase_name, data, project_name)
+                content = self._generate_generic_phase(phase_num, phase_name, data, display_name)
         else:
             # Prepare template context
             context = {
-                'project_name': project_name,
+                'project_name': display_name,
                 'generation_date': datetime.now().strftime('%Y-%m-%d'),
                 **data  # Unpack all data fields
             }
@@ -79,17 +79,16 @@ class MarkdownGenerator:
             # Render template
             content = template.render(context)
 
-        # Save to file (project-specific directory)
-        project_dir = self.output_dir / project_name
-        project_dir.mkdir(parents=True, exist_ok=True)
-        file_path = project_dir / filename
+        # Save to file directly in specs_dir
+        self.specs_dir.mkdir(parents=True, exist_ok=True)
+        file_path = self.specs_dir / filename
         file_path.write_text(content, encoding="utf-8")
 
         return file_path
 
-    def _generate_phase_01(self, data: Dict[str, Any], project_name: str) -> str:
+    def _generate_phase_01(self, data: Dict[str, Any], display_name: str) -> str:
         """Generate Phase 1: Principle Definition markdown."""
-        content = f"""# {project_name} - プロジェクト憲章
+        content = f"""# {display_name} - プロジェクト憲章
 
 <!--
 IMPORTANT:
@@ -192,10 +191,10 @@ Do NOT modify this file unless you are explicitly instructed.
         phase_num: int,
         phase_name: str,
         data: Dict[str, Any],
-        project_name: str
+        display_name: str
     ) -> str:
         """Generate a generic phase markdown file."""
-        content = f"""# {project_name} - フェーズ{phase_num}: {phase_name}
+        content = f"""# {display_name} - フェーズ{phase_num}: {phase_name}
 
 ## 収集された情報
 

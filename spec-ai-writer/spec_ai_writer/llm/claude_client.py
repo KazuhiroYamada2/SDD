@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Optional
 
+import httpx
 from anthropic import Anthropic
 
 from .base import BaseLLMClient
@@ -14,7 +15,9 @@ class ClaudeClient(BaseLLMClient):
         self,
         api_key: str,
         model: str = "claude-3-5-sonnet-20241022",
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        timeout: float = 30.0
     ):
         """
         Initialize Claude client.
@@ -23,9 +26,12 @@ class ClaudeClient(BaseLLMClient):
             api_key: Anthropic API key
             model: Claude model name
             temperature: Generation temperature
+            max_tokens: Maximum tokens to generate
+            timeout: Timeout in seconds for API calls
         """
-        super().__init__(api_key, model, temperature)
-        self.client = Anthropic(api_key=api_key)
+        super().__init__(api_key, model, temperature, timeout=timeout)
+        self.max_tokens = max_tokens
+        self.client = Anthropic(api_key=api_key, timeout=httpx.Timeout(self.timeout))
 
     def chat(
         self,
@@ -51,7 +57,7 @@ class ClaudeClient(BaseLLMClient):
             Exception: If API call fails
         """
         temp = temperature if temperature is not None else self.temperature
-        tokens = max_tokens if max_tokens is not None else 4096
+        tokens = max_tokens if max_tokens is not None else self.max_tokens
 
         # Separate system message from conversation messages
         system_message = None

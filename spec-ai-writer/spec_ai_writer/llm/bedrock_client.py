@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional
 
 try:
     import boto3
+    from botocore.config import Config as BotoConfig
     from botocore.exceptions import BotoCoreError, ClientError
     BOTO3_AVAILABLE = True
 except ImportError:
@@ -31,23 +32,25 @@ class BedrockClient(BaseLLMClient):
 
     def __init__(
         self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0",
         region: str = "us-west-2",
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        timeout: float = 30.0
     ):
         """
         Initialize Bedrock client.
 
         Args:
-            model: Bedrock model ID (e.g., "anthropic.claude-3-5-sonnet-20241022-v2:0")
+            model: Bedrock model ID (e.g., "global.anthropic.claude-haiku-4-5-20251001-v1:0")
             region: AWS region (e.g., "us-west-2", "us-east-1")
             aws_access_key_id: AWS access key (optional, can use IAM role)
             aws_secret_access_key: AWS secret key (optional, can use IAM role)
             temperature: Sampling temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
+            timeout: Timeout in seconds for API calls
 
         Raises:
             ImportError: If boto3 is not installed
@@ -60,10 +63,10 @@ class BedrockClient(BaseLLMClient):
             )
 
         # Note: Bedrock doesn't use api_key, so we pass empty string
-        super().__init__("", model, temperature)
+        super().__init__("", model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
 
-        # Create Bedrock Runtime client
+        # Create Bedrock Runtime client with timeout configuration
         session_kwargs = {"region_name": region}
         if aws_access_key_id and aws_secret_access_key:
             session_kwargs["aws_access_key_id"] = aws_access_key_id
@@ -71,7 +74,8 @@ class BedrockClient(BaseLLMClient):
 
         try:
             session = boto3.Session(**session_kwargs)
-            self.client = session.client("bedrock-runtime")
+            boto_config = BotoConfig(read_timeout=int(self.timeout), connect_timeout=int(self.timeout))
+            self.client = session.client("bedrock-runtime", config=boto_config)
             logger.info(f"Bedrock client initialized with model: {model}, region: {region}")
         except Exception as e:
             logger.error(f"Failed to initialize Bedrock client: {e}")

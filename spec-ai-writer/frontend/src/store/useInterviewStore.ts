@@ -7,7 +7,7 @@ import type { ChatMessage } from '@/types';
 
 interface InterviewStore {
   // State
-  projectName: string | null;
+  projectId: string | null;
   currentPhase: number;
   phaseName: string;
   messages: ChatMessage[];
@@ -15,7 +15,7 @@ interface InterviewStore {
   isWaitingForResponse: boolean;
 
   // Actions
-  setProjectName: (name: string) => void;
+  setProjectId: (id: string) => void;
   setCurrentPhase: (phase: number, name: string) => void;
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
@@ -26,7 +26,7 @@ interface InterviewStore {
 
 export const useInterviewStore = create<InterviewStore>((set) => ({
   // Initial state
-  projectName: null,
+  projectId: null,
   currentPhase: 1,
   phaseName: '',
   messages: [],
@@ -34,7 +34,7 @@ export const useInterviewStore = create<InterviewStore>((set) => ({
   isWaitingForResponse: false,
 
   // Actions
-  setProjectName: (name) => set({ projectName: name }),
+  setProjectId: (id) => set({ projectId: id }),
   setCurrentPhase: (phase, name) => set({ currentPhase: phase, phaseName: name }),
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
@@ -43,7 +43,7 @@ export const useInterviewStore = create<InterviewStore>((set) => ({
   setWaitingForResponse: (isWaiting) => set({ isWaitingForResponse: isWaiting }),
   reset: () =>
     set({
-      projectName: null,
+      projectId: null,
       currentPhase: 1,
       phaseName: '',
       messages: [],

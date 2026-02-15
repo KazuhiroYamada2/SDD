@@ -36,7 +36,7 @@ class InterviewEngine:
 
         print(f"\n{'='*60}")
         print(f"仕様駆動開発（SDD）インタビューを開始します")
-        print(f"プロジェクト: {self.context_mgr.project_name}")
+        print(f"プロジェクト: {self.context_mgr.project_id}")
         print(f"現在のフェーズ: {current_phase}")
         print(f"{'='*60}\n")
 
@@ -45,7 +45,7 @@ class InterviewEngine:
             if not self._conduct_phase_interview(phase_num):
                 # User requested to stop
                 print("\nインタビューを中断しました。")
-                print(f"次回は 'spec resume {self.context_mgr.project_name}' で再開できます。")
+                print(f"次回は 'spec resume {self.context_mgr.project_id}' で再開できます。")
                 return
 
         print("\n" + "="*60)
@@ -127,7 +127,7 @@ class InterviewEngine:
 
         # Extract structured data and generate spec
         print("\n情報を整理しています...")
-        self._generate_and_save_spec(phase_num, self.context_mgr.project_name)
+        self._generate_and_save_spec(phase_num)
 
         print(f"\nフェーズ {phase_num} が完了しました！")
 
@@ -226,9 +226,9 @@ class InterviewEngine:
                 self.llm,
                 schema
             )
-            print(f"✓ データを抽出しました（{len(structured_data)}項目）")
+            print(f"データを抽出しました（{len(structured_data)}項目）")
         except Exception as e:
-            print(f"⚠ データ抽出中にエラーが発生しました: {e}")
+            print(f"データ抽出中にエラーが発生しました: {e}")
 
     def _get_system_prompt_for_phase(self, phase_num: int) -> str:
         """
@@ -279,7 +279,7 @@ class InterviewEngine:
 
         print(f"\n{'='*60}")
         print(f"インタビューを再開します")
-        print(f"プロジェクト: {self.context_mgr.project_name}")
+        print(f"プロジェクト: {self.context_mgr.project_id}")
         print(f"現在のフェーズ: {current_phase}")
         print(f"{'='*60}\n")
 
@@ -378,15 +378,13 @@ class InterviewEngine:
 
     def _generate_and_save_spec(
         self,
-        phase_num: int,
-        project_name: str
+        phase_num: int
     ) -> None:
         """
         Generate and save the specification document for a phase.
 
         Args:
             phase_num: Phase number
-            project_name: Project name for the spec file
         """
         # Extract structured data first
         self._extract_and_save_structured_data(phase_num)
@@ -395,11 +393,11 @@ class InterviewEngine:
         self.context_mgr.mark_phase_complete(phase_num)
 
         # Generate Markdown spec file using templates
-        from config.settings import get_settings
         from spec_ai_writer.generators.markdown_generator import MarkdownGenerator
+        from spec_ai_writer.git.git_manager import GitManager
 
-        settings = get_settings()
-        generator = MarkdownGenerator(settings.output_dir)
+        specs_dir = self.context_mgr.get_specs_dir()
+        generator = MarkdownGenerator(specs_dir)
         phase_info = self.phase_mgr.get_phase_info(phase_num)
         structured_data = self.context_mgr.get_structured_data(phase_num)
 
@@ -409,9 +407,20 @@ class InterviewEngine:
                 phase_info.name,
                 phase_info.filename,
                 structured_data,
-                project_name
+                self.context_mgr.display_name
             )
             print(f"仕様書 {phase_info.filename} を生成しました。")
+
+            # Handle git init on first spec generation and auto-commit
+            from config.settings import get_settings
+            settings = get_settings()
+            if settings.auto_git_commit:
+                git_mgr = GitManager(str(specs_dir))
+                git_mgr.commit_spec(
+                    phase_info.filename,
+                    phase_num,
+                    phase_info.name
+                )
 
     def _get_phase_dependencies(self, phase_num: int) -> List[int]:
         """
@@ -452,21 +461,16 @@ class InterviewEngine:
         Returns:
             Combined content of previous phase specifications
         """
-        from config.settings import get_settings
-
         dependencies = self._get_phase_dependencies(phase_num)
         if not dependencies:
             return ""
 
-        settings = get_settings()
-        output_dir = Path(settings.output_dir)
-        project_name = self.context_mgr.project_name
-        project_dir = output_dir / project_name
+        specs_dir = self.context_mgr.get_specs_dir()
 
         specs_content = []
         for dep_phase in dependencies:
             phase_info = self.phase_mgr.get_phase_info(dep_phase)
-            spec_path = project_dir / phase_info.filename
+            spec_path = specs_dir / phase_info.filename
 
             if spec_path.exists():
                 try:

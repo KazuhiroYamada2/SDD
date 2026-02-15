@@ -1,29 +1,42 @@
 """Context manager for storing and retrieving interview data."""
 
 import json
+import shutil
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+def generate_project_id() -> str:
+    """Generate a unique alphanumeric project ID.
+
+    Returns:
+        An 8-character hex string (e.g., 'a1b2c3d4')
+    """
+    return uuid.uuid4().hex[:8]
+
+
 class ContextManager:
     """Manages interview context and conversation history across phases."""
 
-    def __init__(self, project_name: str, storage_path: Optional[str] = None):
+    def __init__(self, project_id: str, display_name: str = "", data_dir: str = "./data"):
         """
         Initialize the context manager.
 
         Args:
-            project_name: Name of the project being interviewed
-            storage_path: Directory to store context files (default: .interview_state/)
+            project_id: Unique project identifier
+            display_name: Human-readable project name
+            data_dir: Root data directory for all projects
         """
-        self.project_name = project_name
-        self.storage_path = Path(storage_path or ".interview_state")
-        self.storage_path.mkdir(parents=True, exist_ok=True)
+        self._project_id = project_id
+        self._display_name = display_name
+        self._data_dir = data_dir
 
         # Context structure:
         # {
-        #     "project_name": str,
+        #     "project_id": str,
+        #     "display_name": str,
         #     "created_at": str,
         #     "updated_at": str,
         #     "current_phase": int,
@@ -37,15 +50,157 @@ class ContextManager:
         #     }
         # }
         self.context: Dict[str, Any] = {
-            "project_name": project_name,
+            "project_id": project_id,
+            "display_name": display_name,
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "current_phase": 1,
             "phases": {}
         }
 
-        # Try to load existing context
-        self.load_from_disk()
+    @property
+    def project_id(self) -> str:
+        """Get the project ID."""
+        return self._project_id
+
+    @property
+    def display_name(self) -> str:
+        """Get the display name."""
+        return self._display_name
+
+    def get_project_dir(self) -> Path:
+        """Get the project directory path."""
+        return Path(self._data_dir) / self._project_id
+
+    def get_specs_dir(self) -> Path:
+        """Get the specs subdirectory path."""
+        return self.get_project_dir() / "specs"
+
+    @classmethod
+    def create_project(cls, display_name: str, data_dir: str = "./data") -> "ContextManager":
+        """
+        Create a new project with auto-generated ID.
+
+        Creates the directory structure and project.json metadata file.
+
+        Args:
+            display_name: Human-readable project name
+            data_dir: Root data directory
+
+        Returns:
+            A new ContextManager instance
+        """
+        project_id = generate_project_id()
+        instance = cls(project_id=project_id, display_name=display_name, data_dir=data_dir)
+
+        # Create directory structure
+        project_dir = instance.get_project_dir()
+        project_dir.mkdir(parents=True, exist_ok=True)
+        instance.get_specs_dir().mkdir(parents=True, exist_ok=True)
+
+        # Save project.json metadata
+        now = datetime.now().isoformat()
+        project_metadata = {
+            "project_id": project_id,
+            "display_name": display_name,
+            "created_at": now,
+            "updated_at": now
+        }
+        project_json_path = project_dir / "project.json"
+        with open(project_json_path, "w", encoding="utf-8") as f:
+            json.dump(project_metadata, f, ensure_ascii=False, indent=2)
+
+        # Save initial interview state
+        instance.save_to_disk()
+
+        return instance
+
+    @classmethod
+    def load_project(cls, project_id: str, data_dir: str = "./data") -> "ContextManager":
+        """
+        Load an existing project from disk.
+
+        Args:
+            project_id: Project identifier
+            data_dir: Root data directory
+
+        Returns:
+            A ContextManager instance with loaded state
+
+        Raises:
+            FileNotFoundError: If the project directory doesn't exist
+        """
+        project_dir = Path(data_dir) / project_id
+        project_json_path = project_dir / "project.json"
+
+        if not project_dir.exists():
+            raise FileNotFoundError(f"Project directory not found: {project_dir}")
+
+        # Load project metadata
+        display_name = ""
+        if project_json_path.exists():
+            with open(project_json_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+                display_name = metadata.get("display_name", "")
+
+        instance = cls(project_id=project_id, display_name=display_name, data_dir=data_dir)
+        instance.load_from_disk()
+
+        return instance
+
+    @classmethod
+    def list_projects(cls, data_dir: str = "./data") -> List[Dict[str, Any]]:
+        """
+        List all projects in the data directory.
+
+        Args:
+            data_dir: Root data directory
+
+        Returns:
+            List of project metadata dictionaries
+        """
+        data_path = Path(data_dir)
+        if not data_path.exists():
+            return []
+
+        projects = []
+        for item in sorted(data_path.iterdir()):
+            if not item.is_dir():
+                continue
+
+            project_json = item / "project.json"
+            if not project_json.exists():
+                continue
+
+            try:
+                with open(project_json, "r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+
+                # Also load interview state to get current phase
+                interview_json = item / "interview.json"
+                current_phase = 1
+                if interview_json.exists():
+                    with open(interview_json, "r", encoding="utf-8") as f:
+                        interview_data = json.load(f)
+                        current_phase = interview_data.get("current_phase", 1)
+
+                projects.append({
+                    "project_id": metadata.get("project_id", item.name),
+                    "display_name": metadata.get("display_name", ""),
+                    "created_at": metadata.get("created_at", ""),
+                    "updated_at": metadata.get("updated_at", ""),
+                    "current_phase": current_phase
+                })
+            except Exception:
+                continue
+
+        return projects
+
+    def delete_project(self) -> None:
+        """Delete the project directory and all its contents."""
+        project_dir = self.get_project_dir()
+        if project_dir.exists():
+            shutil.rmtree(project_dir)
 
     def add_qa_pair(self, phase: int, question: str, answer: str) -> None:
         """
@@ -228,20 +383,37 @@ class ContextManager:
         return self.context.get("current_phase", 1)
 
     def save_to_disk(self) -> None:
-        """Save context to disk."""
-        file_path = self.storage_path / f"{self.project_name}.json"
+        """Save context to disk as interview.json in the project directory."""
+        project_dir = self.get_project_dir()
+        project_dir.mkdir(parents=True, exist_ok=True)
+        file_path = project_dir / "interview.json"
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(self.context, f, ensure_ascii=False, indent=2)
 
+        # Also update project.json updated_at
+        project_json_path = project_dir / "project.json"
+        if project_json_path.exists():
+            try:
+                with open(project_json_path, "r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+                metadata["updated_at"] = datetime.now().isoformat()
+                with open(project_json_path, "w", encoding="utf-8") as f:
+                    json.dump(metadata, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
     def load_from_disk(self) -> None:
         """Load context from disk if it exists."""
-        file_path = self.storage_path / f"{self.project_name}.json"
+        file_path = self.get_project_dir() / "interview.json"
 
         if file_path.exists():
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     loaded_context = json.load(f)
                     self.context.update(loaded_context)
+                    # Update display_name from loaded data if available
+                    if loaded_context.get("display_name"):
+                        self._display_name = loaded_context["display_name"]
             except Exception as e:
                 # If loading fails, keep the default context
                 print(f"Warning: Could not load context from {file_path}: {e}")

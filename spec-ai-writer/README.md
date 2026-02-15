@@ -37,23 +37,17 @@ git clone <repository-url>
 cd spec-ai-writer
 ```
 
-2. 仮想環境を作成・有効化:
+2. 依存パッケージをインストール:
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windowsの場合: venv\Scripts\activate
+uv sync
 ```
 
-3. 依存パッケージをインストール:
+開発用依存関係も含める場合:
 ```bash
-pip install -r requirements.txt
+uv sync --extra dev
 ```
 
-または開発版として:
-```bash
-pip install -e ".[dev]"
-```
-
-4. 環境変数を設定:
+3. 環境変数を設定:
 ```bash
 cp .env.example .env
 # .envファイルを編集してAPIキーを設定
@@ -185,7 +179,7 @@ DEFAULT_LLM_PROVIDER=openai
 
 3. openaiパッケージをインストール:
 ```bash
-pip install openai
+uv add openai
 ```
 
 **利用可能なモデル:**
@@ -208,7 +202,7 @@ AWS Bedrockを使用すると、既存のAWSインフラ内でClaudeモデルを
 
 1. boto3をインストール:
 ```bash
-pip install boto3
+uv add boto3
 ```
 
 2. `.env`ファイルを設定:
@@ -267,7 +261,7 @@ spec-ai-writer/
 ### 開発環境のセットアップ
 
 ```bash
-pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 ### テストの実行

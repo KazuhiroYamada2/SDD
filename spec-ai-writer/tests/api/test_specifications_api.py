@@ -16,56 +16,57 @@ class TestSpecificationsAPI:
         assert response.status_code == 200
 
         data = response.json()
-        assert data["project_name"] == "nonexistent-project"
+        assert data["project_id"] == "nonexistent-project"
         assert "specifications" in data
-        # When output directory doesn't exist, returns empty list
+        # When specs directory doesn't exist, returns empty list
         assert len(data["specifications"]) == 0
 
     def test_list_specifications_structure(self, test_client: TestClient, sample_project_data: dict):
         """Test specification list structure."""
         # Create project
-        test_client.post("/api/projects/", json=sample_project_data)
+        create_response = test_client.post("/api/projects/", json=sample_project_data)
+        project_id = create_response.json()["project_id"]
 
-        response = test_client.get(f"/api/specs/{sample_project_data['name']}")
+        response = test_client.get(f"/api/specs/{project_id}")
         assert response.status_code == 200
 
         data = response.json()
         assert "specifications" in data
-        # When output directory doesn't exist, returns empty list (no specs generated yet)
         assert isinstance(data["specifications"], list)
 
     def test_get_specification_not_found(self, test_client: TestClient, sample_project_data: dict):
         """Test getting non-existent specification."""
         # Create project
-        test_client.post("/api/projects/", json=sample_project_data)
+        create_response = test_client.post("/api/projects/", json=sample_project_data)
+        project_id = create_response.json()["project_id"]
 
         # Try to get spec for phase 1 (not generated yet)
-        response = test_client.get(f"/api/specs/{sample_project_data['name']}/1")
+        response = test_client.get(f"/api/specs/{project_id}/1")
         assert response.status_code == 404
 
     def test_get_specification_invalid_phase(self, test_client: TestClient, sample_project_data: dict):
         """Test getting spec with invalid phase number."""
         # Create project
-        test_client.post("/api/projects/", json=sample_project_data)
+        create_response = test_client.post("/api/projects/", json=sample_project_data)
+        project_id = create_response.json()["project_id"]
 
         # Invalid phase numbers
-        response = test_client.get(f"/api/specs/{sample_project_data['name']}/0")
+        response = test_client.get(f"/api/specs/{project_id}/0")
         assert response.status_code == 400
 
-        response = test_client.get(f"/api/specs/{sample_project_data['name']}/8")
+        response = test_client.get(f"/api/specs/{project_id}/8")
         assert response.status_code == 400
 
     def test_download_specification_not_found(self, test_client: TestClient, sample_project_data: dict):
         """Test downloading non-existent specification."""
-        test_client.post("/api/projects/", json=sample_project_data)
+        create_response = test_client.post("/api/projects/", json=sample_project_data)
+        project_id = create_response.json()["project_id"]
 
-        response = test_client.get(f"/api/specs/{sample_project_data['name']}/1/download")
+        response = test_client.get(f"/api/specs/{project_id}/1/download")
         assert response.status_code == 404
 
     def test_download_all_specifications_not_found(self, test_client: TestClient):
         """Test downloading all specs for non-existent project."""
-        # Note: The endpoint path pattern /{project_name}/download-all may conflict with
-        # /{project_name}/{phase_num}. The router handles this correctly.
         response = test_client.get("/api/specs/nonexistent-project/download-all")
-        # Should return 404 when no output directory exists
+        # Should return 404 when no specs directory exists
         assert response.status_code == 404

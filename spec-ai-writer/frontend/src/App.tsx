@@ -25,9 +25,9 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="project/:projectName" element={<ProjectDetail />} />
-            <Route path="interview/:projectName" element={<Interview />} />
-            <Route path="specs/:projectName" element={<Specifications />} />
+            <Route path="project/:projectId" element={<ProjectDetail />} />
+            <Route path="interview/:projectId" element={<Interview />} />
+            <Route path="specs/:projectId" element={<Specifications />} />
           </Route>
         </Routes>
       </BrowserRouter>

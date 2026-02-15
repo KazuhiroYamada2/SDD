@@ -7,6 +7,8 @@ Provides integration with OpenAI API (GPT-4, GPT-3.5-turbo).
 import logging
 from typing import List, Dict, Optional
 
+import httpx
+
 try:
     from openai import OpenAI
     OPENAI_AVAILABLE = True
@@ -30,7 +32,8 @@ class OpenAIClient(BaseLLMClient):
         api_key: str,
         model: str = "gpt-4-turbo-preview",
         temperature: float = 0.7,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        timeout: float = 30.0
     ):
         """
         Initialize OpenAI client.
@@ -40,6 +43,7 @@ class OpenAIClient(BaseLLMClient):
             model: Model name (gpt-4, gpt-4-turbo-preview, gpt-3.5-turbo, etc.)
             temperature: Sampling temperature (0.0-2.0)
             max_tokens: Maximum tokens to generate
+            timeout: Timeout in seconds for API calls
 
         Raises:
             ImportError: If openai package is not installed
@@ -54,11 +58,11 @@ class OpenAIClient(BaseLLMClient):
         if not api_key:
             raise ValueError("OpenAI API key is required")
 
-        super().__init__(api_key, model, temperature)
+        super().__init__(api_key, model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
 
         try:
-            self.client = OpenAI(api_key=api_key)
+            self.client = OpenAI(api_key=api_key, timeout=httpx.Timeout(self.timeout))
             logger.info(f"OpenAI client initialized with model: {model}")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")

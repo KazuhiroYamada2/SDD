@@ -17,24 +17,6 @@ from spec_ai_writer.core.context_manager import ContextManager
 from config.settings import Settings
 
 
-@pytest.fixture(autouse=True)
-def clean_interview_state():
-    """Clean up interview state before each test."""
-    state_dir = Path.cwd() / ".interview_state"
-    # Clean up before test
-    if state_dir.exists():
-        for f in state_dir.glob("*.json"):
-            # Only remove test-related files to avoid breaking other things
-            if f.stem in ["test-project", "project-1", "project-2", "workflow-test"]:
-                f.unlink()
-    yield
-    # Clean up after test
-    if state_dir.exists():
-        for f in state_dir.glob("*.json"):
-            if f.stem in ["test-project", "project-1", "project-2", "workflow-test"]:
-                f.unlink()
-
-
 @pytest.fixture
 def test_settings() -> Settings:
     """Test settings with mock values."""
@@ -45,7 +27,7 @@ def test_settings() -> Settings:
         aws_secret_access_key="test-key",
         aws_region="us-west-2",
         default_llm_provider="claude",
-        output_dir="./test_output",
+        data_dir="./test_data",
         auto_git_commit=False,
         temperature=0.7
     )
@@ -83,23 +65,31 @@ def mock_llm_client() -> Mock:
 
 
 @pytest.fixture
-def test_client() -> TestClient:
-    """FastAPI test client."""
-    return TestClient(app)
+def test_client(tmp_path, monkeypatch) -> TestClient:
+    """FastAPI test client with isolated data directory."""
+    from config.settings import get_settings, reload_settings
+    # Use a temp directory for data_dir during API tests
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    reload_settings()
+    client = TestClient(app)
+    yield client
+    reload_settings()
 
 
 @pytest.fixture
-def sample_project_name() -> str:
-    """Sample project name for testing."""
-    return "test-project"
+def sample_project_id() -> str:
+    """Sample project ID for testing."""
+    return "testproj"
 
 
 @pytest.fixture
-def context_manager(sample_project_name: str, temp_dir: Path) -> ContextManager:
+def context_manager(sample_project_id: str, temp_dir: Path) -> ContextManager:
     """Context manager with temporary storage."""
-    # Use a unique subdirectory for each test to avoid shared state
-    storage_path = temp_dir / "context_storage"
-    manager = ContextManager(sample_project_name, storage_path=str(storage_path))
+    data_dir = str(temp_dir / "data")
+    manager = ContextManager(sample_project_id, display_name="test-project", data_dir=data_dir)
+    # Create project directory structure
+    manager.get_project_dir().mkdir(parents=True, exist_ok=True)
+    manager.get_specs_dir().mkdir(parents=True, exist_ok=True)
     return manager
 
 
@@ -126,6 +116,6 @@ def sample_qa_pairs() -> list:
 def sample_project_data() -> dict:
     """Sample project data for API testing."""
     return {
-        "name": "test-project",
+        "display_name": "test-project",
         "description": "テストプロジェクトの説明"
     }

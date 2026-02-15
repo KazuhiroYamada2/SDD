@@ -28,9 +28,9 @@ class Settings(BaseSettings):
         default="claude",
         description="Default LLM provider (claude, openai, bedrock)"
     )
-    output_dir: str = Field(
-        default="./spec_output",
-        description="Output directory for generated specs"
+    data_dir: str = Field(
+        default="./data",
+        description="Data directory for project files"
     )
     auto_git_commit: bool = Field(
         default=True,
@@ -43,12 +43,6 @@ class Settings(BaseSettings):
         description="LLM temperature for generation"
     )
 
-    # Optional settings
-    project_name_prefix: Optional[str] = Field(
-        default=None,
-        description="Prefix for project names"
-    )
-
     # Model configuration
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -57,9 +51,9 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    def get_output_path(self) -> Path:
-        """Get the output directory as a Path object."""
-        return Path(self.output_dir).expanduser().resolve()
+    def get_data_path(self) -> Path:
+        """Get the data directory as a Path object."""
+        return Path(self.data_dir).expanduser().resolve()
 
     def validate_llm_config(self) -> tuple[bool, list[str]]:
         """

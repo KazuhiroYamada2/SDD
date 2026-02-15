@@ -26,9 +26,8 @@ def cli():
 
 
 @cli.command()
-@click.argument("project_name")
 @click.option("--provider", type=click.Choice(["claude", "openai", "bedrock"]), help="LLM provider")
-def start(project_name: str, provider: str):
+def start(provider: str):
     """新しいプロジェクトのインタビューを開始"""
     try:
         settings = get_settings()
@@ -40,18 +39,28 @@ def start(project_name: str, provider: str):
         # Validate LLM configuration
         is_valid, errors = settings.validate_llm_config()
         if not is_valid:
-            click.echo("❌ LLM設定エラー:")
+            click.echo("LLM設定エラー:")
             for error in errors:
                 click.echo(f"  - {error}")
             click.echo("\n.envファイルを確認してAPIキーを設定してください。")
             sys.exit(1)
 
+        # Prompt for display name interactively
+        display_name = click.prompt("プロジェクト名を入力してください")
+
+        # Create project with auto-generated ID
+        context_mgr = ContextManager.create_project(
+            display_name=display_name,
+            data_dir=settings.data_dir
+        )
+
+        click.echo(f"プロジェクトID: {context_mgr.project_id}")
+
         # Create LLM client
-        click.echo(f"🤖 {settings.default_llm_provider.upper()} を使用します...")
+        click.echo(f"{settings.default_llm_provider.upper()} を使用します...")
         llm_client = create_default_client()
 
         # Create managers
-        context_mgr = ContextManager(project_name)
         phase_mgr = PhaseManager()
 
         # Create interview engine
@@ -65,17 +74,17 @@ def start(project_name: str, provider: str):
 
     except KeyboardInterrupt:
         click.echo("\n\nインタビューを中断しました。")
-        click.echo(f"'spec resume {project_name}' で再開できます。")
+        click.echo(f"'spec resume {context_mgr.project_id}' で再開できます。")
     except Exception as e:
-        click.echo(f"\n❌ エラーが発生しました: {e}", err=True)
+        click.echo(f"\nエラーが発生しました: {e}", err=True)
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
 
 @cli.command()
-@click.argument("project_name")
-def resume(project_name: str):
+@click.argument("project_id")
+def resume(project_id: str):
     """中断したインタビューを再開"""
     try:
         settings = get_settings()
@@ -83,7 +92,7 @@ def resume(project_name: str):
         # Validate LLM configuration
         is_valid, errors = settings.validate_llm_config()
         if not is_valid:
-            click.echo("❌ LLM設定エラー:")
+            click.echo("LLM設定エラー:")
             for error in errors:
                 click.echo(f"  - {error}")
             sys.exit(1)
@@ -92,13 +101,18 @@ def resume(project_name: str):
         llm_client = create_default_client()
 
         # Load existing context
-        context_mgr = ContextManager(project_name)
+        try:
+            context_mgr = ContextManager.load_project(project_id, data_dir=settings.data_dir)
+        except FileNotFoundError:
+            click.echo(f"プロジェクト '{project_id}' が見つかりません。")
+            click.echo("'spec list' でプロジェクト一覧を確認してください。")
+            sys.exit(1)
+
         phase_mgr = PhaseManager()
 
         # Check if context exists
         if not context_mgr.context.get("phases"):
-            click.echo(f"❌ プロジェクト '{project_name}' が見つかりません。")
-            click.echo(f"'spec start {project_name}' で新規開始してください。")
+            click.echo(f"プロジェクト '{project_id}' にはインタビューデータがありません。")
             sys.exit(1)
 
         # Create interview engine
@@ -113,45 +127,45 @@ def resume(project_name: str):
     except KeyboardInterrupt:
         click.echo("\n\nインタビューを中断しました。")
     except Exception as e:
-        click.echo(f"\n❌ エラーが発生しました: {e}", err=True)
+        click.echo(f"\nエラーが発生しました: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command(name="list")
 def list_projects():
     """保存されているプロジェクト一覧を表示"""
-    state_dir = Path(".interview_state")
+    settings = get_settings()
+    project_list = ContextManager.list_projects(data_dir=settings.data_dir)
 
-    if not state_dir.exists():
-        click.echo("保存されているプロジェクトはありません。")
-        return
-
-    projects = list(state_dir.glob("*.json"))
-
-    if not projects:
+    if not project_list:
         click.echo("保存されているプロジェクトはありません。")
         return
 
     click.echo("保存されているプロジェクト:\n")
-    for project_file in projects:
-        project_name = project_file.stem
-        context_mgr = ContextManager(project_name)
-        current_phase = context_mgr.get_current_phase()
-        click.echo(f"  - {project_name} (現在: フェーズ{current_phase})")
+    for proj in project_list:
+        project_id = proj["project_id"]
+        display_name = proj.get("display_name", "")
+        current_phase = proj.get("current_phase", 1)
+        name_part = f" ({display_name})" if display_name else ""
+        click.echo(f"  - {project_id}{name_part} (現在: フェーズ{current_phase})")
 
 
 @cli.command()
-@click.argument("project_name")
-def status(project_name: str):
+@click.argument("project_id")
+def status(project_id: str):
     """プロジェクトの進捗状況を表示"""
     try:
-        context_mgr = ContextManager(project_name)
+        settings = get_settings()
 
-        if not context_mgr.context.get("phases"):
-            click.echo(f"❌ プロジェクト '{project_name}' が見つかりません。")
+        try:
+            context_mgr = ContextManager.load_project(project_id, data_dir=settings.data_dir)
+        except FileNotFoundError:
+            click.echo(f"プロジェクト '{project_id}' が見つかりません。")
             sys.exit(1)
 
-        click.echo(f"\nプロジェクト: {project_name}")
+        display_name = context_mgr.display_name
+        name_part = f" ({display_name})" if display_name else ""
+        click.echo(f"\nプロジェクト: {project_id}{name_part}")
         click.echo(f"現在のフェーズ: {context_mgr.get_current_phase()}")
         click.echo("\n進捗状況:")
 
@@ -160,18 +174,19 @@ def status(project_name: str):
         for phase_num in range(1, 8):
             phase_info = phase_mgr.get_phase_info(phase_num)
             is_complete = context_mgr.is_phase_complete(phase_num)
-            status_icon = "✓" if is_complete else "○"
+            status_icon = "+" if is_complete else "o"
             click.echo(f"  {status_icon} フェーズ{phase_num}: {phase_info.name}")
 
     except Exception as e:
-        click.echo(f"\n❌ エラーが発生しました: {e}", err=True)
+        click.echo(f"\nエラーが発生しました: {e}", err=True)
         sys.exit(1)
 
 
 def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settings):
     """Generate Markdown specs for all completed phases."""
-    generator = MarkdownGenerator(settings.output_dir)
-    git_mgr = GitManager(settings.output_dir) if settings.auto_git_commit else None
+    specs_dir = context_mgr.get_specs_dir()
+    generator = MarkdownGenerator(specs_dir)
+    git_mgr = GitManager(str(specs_dir)) if settings.auto_git_commit else None
 
     click.echo("\n" + "="*60)
     click.echo("仕様書を生成しています...")
@@ -185,7 +200,7 @@ def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settin
         structured_data = context_mgr.get_structured_data(phase_num)
 
         if not structured_data:
-            click.echo(f"⚠ フェーズ{phase_num}のデータがありません。スキップします。")
+            click.echo(f"フェーズ{phase_num}のデータがありません。スキップします。")
             continue
 
         try:
@@ -194,9 +209,9 @@ def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settin
                 phase_info.name,
                 phase_info.filename,
                 structured_data,
-                context_mgr.project_name
+                context_mgr.display_name
             )
-            click.echo(f"✓ 生成完了: {file_path}")
+            click.echo(f"+ 生成完了: {file_path}")
 
             # Auto-commit if enabled
             if git_mgr:
@@ -207,9 +222,9 @@ def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settin
                 )
 
         except Exception as e:
-            click.echo(f"⚠ フェーズ{phase_num}の生成中にエラー: {e}")
+            click.echo(f"フェーズ{phase_num}の生成中にエラー: {e}")
 
-    click.echo(f"\n出力ディレクトリ: {settings.output_dir}")
+    click.echo(f"\n出力ディレクトリ: {specs_dir}")
 
 
 def main():
