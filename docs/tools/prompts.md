@@ -199,7 +199,7 @@ README.mdに記載された仕様を読んで、[機能名]のコードを生成
 
 ### 3.5 Cursorの設定ファイル（.cursorrules）用プロンプト
 
-**本文での説明**: [第3章 3.8.5節「Cursorの設定をカスタマイズする（.cursorrules）」](../../../chapters/3章：Cursorで仕様を記述・活用する.md#385-cursorの設定をカスタマイズするcursorrules)で、基本的な`.cursorrules`の使い方を説明しています。このセクションでは、より詳細な設定例を提供します。
+**本文での説明**: [第3章 3.9節「Cursorの設定をカスタマイズする（.cursorrules）」](../../../chapters/3章：Cursorで仕様を記述・活用する.md#39-cursorの設定をカスタマイズするcursorrules)で、基本的な`.cursorrules`の使い方を説明しています。このセクションでは、より詳細な設定例を提供します。
 
 #### .cursorrulesファイルの作成プロンプト
 
