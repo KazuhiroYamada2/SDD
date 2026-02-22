@@ -7,26 +7,33 @@ import remarkGfm from 'remark-gfm';
 import apiClient from '@/api/client';
 
 export default function Specifications() {
-  const { projectName } = useParams<{ projectName: string }>();
+  const { projectId } = useParams<{ projectId: string }>();
   const [selectedPhase, setSelectedPhase] = useState<number | null>(null);
+
+  // Fetch project info for display name
+  const { data: projectData } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => apiClient.getProject(projectId!),
+    enabled: !!projectId,
+  });
 
   // Fetch specifications list
   const { data: specsData, isLoading } = useQuery({
-    queryKey: ['specifications', projectName],
-    queryFn: () => apiClient.listSpecifications(projectName!),
-    enabled: !!projectName,
+    queryKey: ['specifications', projectId],
+    queryFn: () => apiClient.listSpecifications(projectId!),
+    enabled: !!projectId,
   });
 
   // Fetch selected specification content
   const { data: specContent } = useQuery({
-    queryKey: ['specification', projectName, selectedPhase],
-    queryFn: () => apiClient.getSpecification(projectName!, selectedPhase!),
-    enabled: !!projectName && selectedPhase !== null,
+    queryKey: ['specification', projectId, selectedPhase],
+    queryFn: () => apiClient.getSpecification(projectId!, selectedPhase!),
+    enabled: !!projectId && selectedPhase !== null,
   });
 
   const handleDownload = async (phaseNum: number, filename: string) => {
     try {
-      const blob = await apiClient.downloadSpecification(projectName!, phaseNum);
+      const blob = await apiClient.downloadSpecification(projectId!, phaseNum);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -43,11 +50,11 @@ export default function Specifications() {
 
   const handleDownloadAll = async () => {
     try {
-      const blob = await apiClient.downloadAllSpecifications(projectName!);
+      const blob = await apiClient.downloadAllSpecifications(projectId!);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${projectName}_specifications.zip`;
+      a.download = `${projectId}_specifications.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -58,10 +65,10 @@ export default function Specifications() {
     }
   };
 
-  if (!projectName) {
+  if (!projectId) {
     return (
       <div className="card">
-        <p className="text-red-600">プロジェクト名が指定されていません</p>
+        <p className="text-red-600">プロジェクトIDが指定されていません</p>
       </div>
     );
   }
@@ -76,7 +83,7 @@ export default function Specifications() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              仕様書: {projectName}
+              仕様書: {projectData?.display_name || projectId}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               生成された仕様書を確認・ダウンロードできます
@@ -84,7 +91,7 @@ export default function Specifications() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link to={`/interview/${projectName}`} className="btn btn-secondary">
+          <Link to={`/interview/${projectId}`} className="btn btn-secondary">
             インタビューへ
           </Link>
           <button onClick={handleDownloadAll} className="btn btn-primary flex items-center gap-2">

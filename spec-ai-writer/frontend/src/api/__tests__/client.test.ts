@@ -30,8 +30,8 @@ describe('API Client', () => {
     it('should list projects', async () => {
       const mockData = {
         projects: [
-          { name: 'project-1', current_phase: 1 },
-          { name: 'project-2', current_phase: 2 },
+          { project_id: 'proj_001', display_name: 'project-1', current_phase: 1 },
+          { project_id: 'proj_002', display_name: 'project-2', current_phase: 2 },
         ],
         total: 2,
       }
@@ -44,12 +44,14 @@ describe('API Client', () => {
 
     it('should create project', async () => {
       const projectData = {
-        name: 'new-project',
+        display_name: 'new-project',
         description: 'Test project',
       }
 
       const mockResponse = {
-        ...projectData,
+        project_id: 'proj_003',
+        display_name: projectData.display_name,
+        description: projectData.description,
         current_phase: 1,
         created_at: '2024-01-01T00:00:00Z',
       }
@@ -57,13 +59,14 @@ describe('API Client', () => {
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse })
 
       const result = await apiClient.createProject(projectData)
-      expect(result.name).toBe(projectData.name)
+      expect(result.display_name).toBe(projectData.display_name)
+      expect(result.project_id).toBe('proj_003')
     })
 
     it('should get project status', async () => {
-      const projectName = 'test-project'
+      const projectId = 'test_project_001'
       const mockStatus = {
-        project_name: projectName,
+        project_id: projectId,
         current_phase: 1,
         phases: [],
         overall_progress: 0,
@@ -71,19 +74,19 @@ describe('API Client', () => {
 
       mockAxiosInstance.get.mockResolvedValue({ data: mockStatus })
 
-      const result = await apiClient.getProjectStatus(projectName)
-      expect(result.project_name).toBe(projectName)
+      const result = await apiClient.getProjectStatus(projectId)
+      expect(result.project_id).toBe(projectId)
     })
   })
 
   describe('Interview API', () => {
     it('should start interview', async () => {
       const request = {
-        project_name: 'test-project',
+        project_id: 'test_project_001',
       }
 
       const mockResponse = {
-        project_name: 'test-project',
+        project_id: 'test_project_001',
         phase_num: 1,
         phase_name: '原則決定工程',
         initial_message: 'Welcome!',
@@ -98,9 +101,9 @@ describe('API Client', () => {
 
   describe('Specifications API', () => {
     it('should list specifications', async () => {
-      const projectName = 'test-project'
+      const projectId = 'test_project_001'
       const mockData = {
-        project_name: projectName,
+        project_id: projectId,
         specifications: [
           { phase_num: 1, exists: true },
           { phase_num: 2, exists: false },
@@ -109,16 +112,16 @@ describe('API Client', () => {
 
       mockAxiosInstance.get.mockResolvedValue({ data: mockData })
 
-      const result = await apiClient.listSpecifications(projectName)
+      const result = await apiClient.listSpecifications(projectId)
       expect(result.specifications).toHaveLength(2)
     })
 
     it('should get specification', async () => {
-      const projectName = 'test-project'
+      const projectId = 'test_project_001'
       const phaseNum = 1
 
       const mockSpec = {
-        project_name: projectName,
+        project_id: projectId,
         phase_num: phaseNum,
         phase_name: '原則決定工程',
         content: '# Test Content',
@@ -128,7 +131,7 @@ describe('API Client', () => {
 
       mockAxiosInstance.get.mockResolvedValue({ data: mockSpec })
 
-      const result = await apiClient.getSpecification(projectName, phaseNum)
+      const result = await apiClient.getSpecification(projectId, phaseNum)
       expect(result.phase_num).toBe(phaseNum)
       expect(result.content).toBe('# Test Content')
     })

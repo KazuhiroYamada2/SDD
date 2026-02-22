@@ -34,14 +34,15 @@ class ChatMessage(BaseModel):
 
 class ProjectCreate(BaseModel):
     """Request model for creating a new project."""
-    name: str = Field(..., min_length=1, max_length=100, description="Project name")
+    display_name: str = Field(..., min_length=1, max_length=100, description="Project display name")
     description: Optional[str] = Field(None, max_length=500, description="Project description")
     llm_provider: Optional[str] = Field(None, description="LLM provider (claude, openai, bedrock)")
 
 
 class ProjectResponse(BaseModel):
     """Response model for project information."""
-    name: str
+    project_id: str
+    display_name: str
     description: Optional[str]
     current_phase: int
     phase_status: Dict[int, PhaseStatus]
@@ -69,13 +70,14 @@ class PhaseInfo(BaseModel):
 
 class InterviewStartRequest(BaseModel):
     """Request model for starting an interview."""
-    project_name: str
+    project_id: str
     phase_num: Optional[int] = Field(None, description="Specific phase to start (default: next incomplete phase)")
 
 
 class InterviewStartResponse(BaseModel):
     """Response model for interview start."""
-    project_name: str
+    project_id: str
+    display_name: str
     phase_num: int
     phase_name: str
     initial_message: str
@@ -83,7 +85,8 @@ class InterviewStartResponse(BaseModel):
 
 class UserAnswerRequest(BaseModel):
     """Request model for user answer."""
-    project_name: str
+    project_id: str
+    question: str
     answer: str
 
 
@@ -97,13 +100,13 @@ class AssistantQuestionResponse(BaseModel):
 
 class SpecificationGenerateRequest(BaseModel):
     """Request model for generating specification."""
-    project_name: str
+    project_id: str
     phase_num: int
 
 
 class SpecificationResponse(BaseModel):
     """Response model for specification content."""
-    project_name: str
+    project_id: str
     phase_num: int
     phase_name: str
     filename: str
@@ -113,23 +116,16 @@ class SpecificationResponse(BaseModel):
 
 class SpecificationListResponse(BaseModel):
     """Response model for specification list."""
-    project_name: str
+    project_id: str
     specifications: List[Dict[str, Any]]
 
 
 class ProjectStatusResponse(BaseModel):
     """Response model for project status."""
-    project_name: str
+    project_id: str
     current_phase: int
     phases: List[PhaseInfo]
     overall_progress: float  # 0.0 to 1.0
-
-
-class WebSocketMessage(BaseModel):
-    """WebSocket message model."""
-    type: str  # "question", "answer", "phase_complete", "error"
-    content: str
-    metadata: Optional[Dict[str, Any]] = None
 
 
 class ErrorResponse(BaseModel):

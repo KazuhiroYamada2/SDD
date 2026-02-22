@@ -27,18 +27,18 @@ settings = get_settings()
 phase_manager = PhaseManager()
 
 
-def _get_output_dir(project_name: str) -> Path:
-    """Get output directory for project."""
-    return Path(settings.output_dir) / project_name
+def _get_specs_dir(project_id: str) -> Path:
+    """Get specs directory for project."""
+    return Path(settings.data_dir) / project_id / "specs"
 
 
-def _get_spec_file(project_name: str, filename: str) -> Path:
+def _get_spec_file(project_id: str, filename: str) -> Path:
     """Get specification file path."""
-    return _get_output_dir(project_name) / filename
+    return _get_specs_dir(project_id) / filename
 
 
-@router.get("/{project_name}/download-all")
-async def download_all_specifications(project_name: str):
+@router.get("/{project_id}/download-all")
+async def download_all_specifications(project_id: str):
     """
     Download all specifications as a ZIP file.
 
@@ -49,12 +49,12 @@ async def download_all_specifications(project_name: str):
     from fastapi.responses import StreamingResponse
 
     try:
-        output_dir = _get_output_dir(project_name)
+        specs_dir = _get_specs_dir(project_id)
 
-        if not output_dir.exists():
+        if not specs_dir.exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No specifications found for project '{project_name}'"
+                detail=f"No specifications found for project '{project_id}'"
             )
 
         # Create ZIP file in memory
@@ -65,7 +65,7 @@ async def download_all_specifications(project_name: str):
 
             for i in range(1, 8):
                 phase_info = phase_manager.get_phase_info(i)
-                spec_file = output_dir / phase_info.filename
+                spec_file = specs_dir / phase_info.filename
 
                 if spec_file.exists():
                     zip_file.write(spec_file, arcname=phase_info.filename)
@@ -74,7 +74,7 @@ async def download_all_specifications(project_name: str):
             if spec_count == 0:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"No specifications found for project '{project_name}'"
+                    detail=f"No specifications found for project '{project_id}'"
                 )
 
         zip_buffer.seek(0)
@@ -83,7 +83,7 @@ async def download_all_specifications(project_name: str):
             zip_buffer,
             media_type="application/zip",
             headers={
-                "Content-Disposition": f"attachment; filename={project_name}_specifications.zip"
+                "Content-Disposition": f"attachment; filename={project_id}_specifications.zip"
             }
         )
 
@@ -97,19 +97,19 @@ async def download_all_specifications(project_name: str):
         )
 
 
-@router.get("/{project_name}", response_model=SpecificationListResponse)
-async def list_specifications(project_name: str):
+@router.get("/{project_id}", response_model=SpecificationListResponse)
+async def list_specifications(project_id: str):
     """
     List all generated specifications for a project.
 
     Returns a list of all specification files with their metadata.
     """
     try:
-        output_dir = _get_output_dir(project_name)
+        specs_dir = _get_specs_dir(project_id)
 
-        if not output_dir.exists():
+        if not specs_dir.exists():
             return SpecificationListResponse(
-                project_name=project_name,
+                project_id=project_id,
                 specifications=[]
             )
 
@@ -117,7 +117,7 @@ async def list_specifications(project_name: str):
 
         for i in range(1, 8):
             phase_info = phase_manager.get_phase_info(i)
-            spec_file = output_dir / phase_info.filename
+            spec_file = specs_dir / phase_info.filename
 
             if spec_file.exists():
                 specifications.append({
@@ -137,7 +137,7 @@ async def list_specifications(project_name: str):
                 })
 
         return SpecificationListResponse(
-            project_name=project_name,
+            project_id=project_id,
             specifications=specifications
         )
 
@@ -149,8 +149,8 @@ async def list_specifications(project_name: str):
         )
 
 
-@router.get("/{project_name}/{phase_num}", response_model=SpecificationResponse)
-async def get_specification(project_name: str, phase_num: int):
+@router.get("/{project_id}/{phase_num}", response_model=SpecificationResponse)
+async def get_specification(project_id: str, phase_num: int):
     """
     Get a specific specification by phase number.
 
@@ -164,7 +164,7 @@ async def get_specification(project_name: str, phase_num: int):
             )
 
         phase_info = phase_manager.get_phase_info(phase_num)
-        spec_file = _get_spec_file(project_name, phase_info.filename)
+        spec_file = _get_spec_file(project_id, phase_info.filename)
 
         if not spec_file.exists():
             raise HTTPException(
@@ -176,7 +176,7 @@ async def get_specification(project_name: str, phase_num: int):
         content = spec_file.read_text(encoding="utf-8")
 
         return SpecificationResponse(
-            project_name=project_name,
+            project_id=project_id,
             phase_num=phase_num,
             phase_name=phase_info.name,
             filename=phase_info.filename,
@@ -194,8 +194,8 @@ async def get_specification(project_name: str, phase_num: int):
         )
 
 
-@router.get("/{project_name}/{phase_num}/download")
-async def download_specification(project_name: str, phase_num: int):
+@router.get("/{project_id}/{phase_num}/download")
+async def download_specification(project_id: str, phase_num: int):
     """
     Download a specification file.
 
@@ -209,7 +209,7 @@ async def download_specification(project_name: str, phase_num: int):
             )
 
         phase_info = phase_manager.get_phase_info(phase_num)
-        spec_file = _get_spec_file(project_name, phase_info.filename)
+        spec_file = _get_spec_file(project_id, phase_info.filename)
 
         if not spec_file.exists():
             raise HTTPException(

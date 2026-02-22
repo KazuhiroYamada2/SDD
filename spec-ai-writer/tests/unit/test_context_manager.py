@@ -13,17 +13,21 @@ from spec_ai_writer.core.context_manager import ContextManager
 class TestContextManager:
     """Test ContextManager functionality."""
 
-    def test_initialization(self, sample_project_name, temp_dir):
+    def test_initialization(self, temp_dir):
         """Test context manager initialization."""
-        manager = ContextManager(sample_project_name, storage_path=str(temp_dir))
-        assert manager.project_name == sample_project_name
+        data_dir = str(temp_dir / "data")
+        manager = ContextManager("proj001", display_name="test-project", data_dir=data_dir)
+        assert manager.project_id == "proj001"
+        assert manager.display_name == "test-project"
         # Context now includes metadata fields
-        assert "project_name" in manager.context
+        assert "project_id" in manager.context
+        assert "display_name" in manager.context
         assert "created_at" in manager.context
         assert "updated_at" in manager.context
         assert "current_phase" in manager.context
         assert "phases" in manager.context
-        assert manager.context["project_name"] == sample_project_name
+        assert manager.context["project_id"] == "proj001"
+        assert manager.context["display_name"] == "test-project"
         assert manager.context["current_phase"] == 1
         assert manager.context["phases"] == {}
 
@@ -51,10 +55,10 @@ class TestContextManager:
         phase_context = context_manager.get_phase_context(phase_num)
         assert len(phase_context["qa_pairs"]) == len(sample_qa_pairs)
 
-    def test_get_phase_context_empty(self, sample_project_name, temp_dir):
+    def test_get_phase_context_empty(self, temp_dir):
         """Test getting context for phase with no data."""
-        # Create a fresh manager without any prior data
-        manager = ContextManager(sample_project_name, storage_path=str(temp_dir / "empty"))
+        data_dir = str(temp_dir / "data" / "empty")
+        manager = ContextManager("emptyproj", display_name="empty", data_dir=data_dir)
         phase_context = manager.get_phase_context(1)
         # get_phase_context now returns default structure if phase doesn't exist
         assert "qa_pairs" in phase_context
@@ -72,10 +76,11 @@ class TestContextManager:
         assert "qa_pairs" in phase_context
         assert len(phase_context["qa_pairs"]) == 2
 
-    def test_get_context_for_phase(self, sample_project_name, temp_dir):
+    def test_get_context_for_phase(self, temp_dir):
         """Test getting context including previous phases."""
-        # Create a fresh manager for this test
-        manager = ContextManager(sample_project_name, storage_path=str(temp_dir / "context_for_phase"))
+        data_dir = str(temp_dir / "data" / "context_for_phase")
+        manager = ContextManager("ctxproj", display_name="context-test", data_dir=data_dir)
+        manager.get_project_dir().mkdir(parents=True, exist_ok=True)
 
         # Add data to phase 1
         manager.add_qa_pair(1, "Phase 1 Q", "Phase 1 A")
@@ -94,8 +99,9 @@ class TestContextManager:
 
     def test_save_and_load(self, sample_qa_pairs, temp_dir):
         """Test saving and loading context."""
-        # Create a manager with temp storage
-        manager = ContextManager("test-project", storage_path=str(temp_dir))
+        data_dir = str(temp_dir / "data")
+        manager = ContextManager.create_project(display_name="save-test", data_dir=data_dir)
+        project_id = manager.project_id
 
         # Add data
         for qa in sample_qa_pairs:
@@ -103,20 +109,21 @@ class TestContextManager:
 
         # save_to_disk is called automatically in add_qa_pair
         # Verify file exists
-        state_file = temp_dir / "test-project.json"
-        assert state_file.exists()
+        interview_file = manager.get_project_dir() / "interview.json"
+        assert interview_file.exists()
 
-        # Load into new manager (uses same project name and storage path)
-        new_manager = ContextManager("test-project", storage_path=str(temp_dir))
+        # Load into new manager
+        new_manager = ContextManager.load_project(project_id, data_dir=data_dir)
 
         # Verify data
         phase_context = new_manager.get_phase_context(1)
         assert len(phase_context["qa_pairs"]) == len(sample_qa_pairs)
 
-    def test_extract_structured_data(self, sample_project_name, temp_dir, mock_llm_client):
+    def test_extract_structured_data(self, temp_dir, mock_llm_client):
         """Test extracting structured data from conversation."""
-        # Create a fresh manager for this test
-        manager = ContextManager(sample_project_name, storage_path=str(temp_dir / "extract"))
+        data_dir = str(temp_dir / "data" / "extract")
+        manager = ContextManager("extractproj", display_name="extract-test", data_dir=data_dir)
+        manager.get_project_dir().mkdir(parents=True, exist_ok=True)
 
         # Add sample Q&A pairs
         manager.add_qa_pair(1, "目的は？", "Webアプリ開発")
@@ -136,10 +143,11 @@ class TestContextManager:
         assert "project_name" in data
         assert "background" in data
 
-    def test_json_serialization(self, sample_project_name, temp_dir):
+    def test_json_serialization(self, temp_dir):
         """Test JSON serialization/deserialization."""
-        # Create a fresh manager for this test
-        manager = ContextManager(sample_project_name, storage_path=str(temp_dir / "serial"))
+        data_dir = str(temp_dir / "data" / "serial")
+        manager = ContextManager("serialproj", display_name="serial-test", data_dir=data_dir)
+        manager.get_project_dir().mkdir(parents=True, exist_ok=True)
 
         # Add complex data
         manager.add_qa_pair(1, "Question", "Answer")
@@ -151,10 +159,48 @@ class TestContextManager:
         manager.save_to_disk()
 
         # Verify JSON is valid
-        state_file = temp_dir / "serial" / f"{sample_project_name}.json"
-        with open(state_file, 'r', encoding='utf-8') as f:
+        interview_file = manager.get_project_dir() / "interview.json"
+        with open(interview_file, 'r', encoding='utf-8') as f:
             loaded_data = json.load(f)
 
         assert "phases" in loaded_data
         assert "1" in loaded_data["phases"]
         assert loaded_data["phases"]["1"]["metadata"]["nested"]["key"] == "value"
+
+    def test_create_project(self, temp_dir):
+        """Test creating a project with auto-generated ID."""
+        data_dir = str(temp_dir / "data")
+        manager = ContextManager.create_project(display_name="new-project", data_dir=data_dir)
+
+        assert manager.project_id  # Should be non-empty
+        assert len(manager.project_id) == 8  # 8-char hex string
+        assert manager.display_name == "new-project"
+        assert manager.get_project_dir().exists()
+        assert manager.get_specs_dir().exists()
+        assert (manager.get_project_dir() / "project.json").exists()
+        assert (manager.get_project_dir() / "interview.json").exists()
+
+    def test_list_projects(self, temp_dir):
+        """Test listing projects."""
+        data_dir = str(temp_dir / "data")
+
+        # Create multiple projects
+        m1 = ContextManager.create_project(display_name="project-1", data_dir=data_dir)
+        m2 = ContextManager.create_project(display_name="project-2", data_dir=data_dir)
+
+        projects = ContextManager.list_projects(data_dir=data_dir)
+        assert len(projects) == 2
+
+        display_names = {p["display_name"] for p in projects}
+        assert "project-1" in display_names
+        assert "project-2" in display_names
+
+    def test_delete_project(self, temp_dir):
+        """Test deleting a project."""
+        data_dir = str(temp_dir / "data")
+        manager = ContextManager.create_project(display_name="to-delete", data_dir=data_dir)
+        project_dir = manager.get_project_dir()
+
+        assert project_dir.exists()
+        manager.delete_project()
+        assert not project_dir.exists()

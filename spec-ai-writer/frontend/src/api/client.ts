@@ -62,14 +62,14 @@ class APIClient {
     return response.data;
   }
 
-  async getProject(projectName: string): Promise<Project> {
-    const response = await this.client.get<Project>(`/api/projects/${projectName}`);
+  async getProject(projectId: string): Promise<Project> {
+    const response = await this.client.get<Project>(`/api/projects/${projectId}`);
     return response.data;
   }
 
-  async getProjectStatus(projectName: string): Promise<ProjectStatusResponse> {
+  async getProjectStatus(projectId: string): Promise<ProjectStatusResponse> {
     const response = await this.client.get<ProjectStatusResponse>(
-      `/api/projects/${projectName}/status`
+      `/api/projects/${projectId}/status`
     );
     return response.data;
   }
@@ -81,8 +81,8 @@ class APIClient {
     return response.data;
   }
 
-  async deleteProject(projectName: string): Promise<void> {
-    await this.client.delete(`/api/projects/${projectName}`);
+  async deleteProject(projectId: string): Promise<void> {
+    await this.client.delete(`/api/projects/${projectId}`);
   }
 
   // Interview API
@@ -103,26 +103,26 @@ class APIClient {
   }
 
   // Specifications API
-  async listSpecifications(projectName: string): Promise<SpecificationListResponse> {
+  async listSpecifications(projectId: string): Promise<SpecificationListResponse> {
     const response = await this.client.get<SpecificationListResponse>(
-      `/api/specs/${projectName}`
+      `/api/specs/${projectId}`
     );
     return response.data;
   }
 
   async getSpecification(
-    projectName: string,
+    projectId: string,
     phaseNum: number
   ): Promise<SpecificationResponse> {
     const response = await this.client.get<SpecificationResponse>(
-      `/api/specs/${projectName}/${phaseNum}`
+      `/api/specs/${projectId}/${phaseNum}`
     );
     return response.data;
   }
 
-  async downloadSpecification(projectName: string, phaseNum: number): Promise<Blob> {
+  async downloadSpecification(projectId: string, phaseNum: number): Promise<Blob> {
     const response = await this.client.get(
-      `/api/specs/${projectName}/${phaseNum}/download`,
+      `/api/specs/${projectId}/${phaseNum}/download`,
       {
         responseType: 'blob',
       }
@@ -130,8 +130,8 @@ class APIClient {
     return response.data;
   }
 
-  async downloadAllSpecifications(projectName: string): Promise<Blob> {
-    const response = await this.client.get(`/api/specs/${projectName}/download-all`, {
+  async downloadAllSpecifications(projectId: string): Promise<Blob> {
+    const response = await this.client.get(`/api/specs/${projectId}/download-all`, {
       responseType: 'blob',
     });
     return response.data;

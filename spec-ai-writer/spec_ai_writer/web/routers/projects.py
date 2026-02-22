@@ -5,9 +5,8 @@ Endpoints for project management (CRUD operations).
 """
 
 import logging
-from pathlib import Path
-from typing import List
 from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -32,58 +31,26 @@ settings = get_settings()
 phase_manager = PhaseManager()
 
 
-def _get_interview_state_dir() -> Path:
-    """Get interview state directory."""
-    return Path.cwd() / ".interview_state"
-
-
-def _get_project_state_file(project_name: str) -> Path:
-    """Get project state file path."""
-    return _get_interview_state_dir() / f"{project_name}.json"
-
-
-def _project_exists(project_name: str) -> bool:
-    """Check if project exists."""
-    return _get_project_state_file(project_name).exists()
-
-
-def _load_project_context(project_name: str) -> ContextManager:
-    """Load project context."""
-    context = ContextManager(project_name)
-    state_file = _get_project_state_file(project_name)
-    if state_file.exists():
-        # ContextManager manages its own storage path; no explicit file path needed.
-        context.load_from_disk()
-    return context
-
-
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(project: ProjectCreate):
     """
     Create a new project.
 
-    Initializes a new SDD project with the given name.
+    Initializes a new SDD project with the given display name.
+    A unique project_id is auto-generated.
     """
     try:
-        if _project_exists(project.name):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Project '{project.name}' already exists"
-            )
+        # Create project with auto-generated ID
+        context = ContextManager.create_project(
+            display_name=project.display_name,
+            data_dir=settings.data_dir
+        )
 
-        # Create context manager
-        context = ContextManager(project.name)
-
-        # Save initial state
-        state_dir = _get_interview_state_dir()
-        state_dir.mkdir(exist_ok=True)
-        # ContextManager manages its own storage path; no explicit file path needed.
-        context.save_to_disk()
-
-        logger.info(f"Created new project: {project.name}")
+        logger.info(f"Created new project: {context.project_id} ({project.display_name})")
 
         return ProjectResponse(
-            name=project.name,
+            project_id=context.project_id,
+            display_name=project.display_name,
             description=project.description,
             current_phase=1,
             phase_status={i: PhaseStatus.NOT_STARTED for i in range(1, 8)},
@@ -110,16 +77,16 @@ async def list_projects():
     Returns a list of all SDD projects with their current status.
     """
     try:
-        state_dir = _get_interview_state_dir()
+        project_list = ContextManager.list_projects(data_dir=settings.data_dir)
 
-        if not state_dir.exists():
+        if not project_list:
             return ProjectListResponse(projects=[], total=0)
 
         projects = []
-        for state_file in state_dir.glob("*.json"):
+        for proj_meta in project_list:
             try:
-                project_name = state_file.stem
-                context = _load_project_context(project_name)
+                project_id = proj_meta["project_id"]
+                context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
 
                 # Determine phase status
                 phase_status = {}
@@ -147,18 +114,23 @@ async def list_projects():
                     for i in range(1, 8)
                 )
 
+                # Parse dates from metadata
+                created_at = datetime.fromisoformat(proj_meta.get("created_at", datetime.now().isoformat()))
+                updated_at = datetime.fromisoformat(proj_meta.get("updated_at", datetime.now().isoformat()))
+
                 projects.append(ProjectResponse(
-                    name=project_name,
+                    project_id=project_id,
+                    display_name=proj_meta.get("display_name", ""),
                     description=None,
                     current_phase=current_phase,
                     phase_status=phase_status,
-                    created_at=datetime.fromtimestamp(state_file.stat().st_ctime),
-                    updated_at=datetime.fromtimestamp(state_file.stat().st_mtime),
+                    created_at=created_at,
+                    updated_at=updated_at,
                     total_qa_pairs=total_qa
                 ))
 
             except Exception as e:
-                logger.warning(f"Failed to load project {state_file.name}: {e}")
+                logger.warning(f"Failed to load project {proj_meta.get('project_id', 'unknown')}: {e}")
                 continue
 
         return ProjectListResponse(
@@ -174,21 +146,15 @@ async def list_projects():
         )
 
 
-@router.get("/{project_name}", response_model=ProjectResponse)
-async def get_project(project_name: str):
+@router.get("/{project_id}", response_model=ProjectResponse)
+async def get_project(project_id: str):
     """
     Get project details.
 
     Returns detailed information about a specific project.
     """
     try:
-        if not _project_exists(project_name):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project '{project_name}' not found"
-            )
-
-        context = _load_project_context(project_name)
+        context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
 
         # Determine phase status
         phase_status = {}
@@ -216,18 +182,22 @@ async def get_project(project_name: str):
             for i in range(1, 8)
         )
 
-        state_file = _get_project_state_file(project_name)
-
         return ProjectResponse(
-            name=project_name,
+            project_id=project_id,
+            display_name=context.display_name,
             description=None,
             current_phase=current_phase,
             phase_status=phase_status,
-            created_at=datetime.fromtimestamp(state_file.stat().st_ctime),
-            updated_at=datetime.fromtimestamp(state_file.stat().st_mtime),
+            created_at=datetime.fromisoformat(context.context.get("created_at", datetime.now().isoformat())),
+            updated_at=datetime.fromisoformat(context.context.get("updated_at", datetime.now().isoformat())),
             total_qa_pairs=total_qa
         )
 
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_id}' not found"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -238,21 +208,15 @@ async def get_project(project_name: str):
         )
 
 
-@router.get("/{project_name}/status", response_model=ProjectStatusResponse)
-async def get_project_status(project_name: str):
+@router.get("/{project_id}/status", response_model=ProjectStatusResponse)
+async def get_project_status(project_id: str):
     """
     Get detailed project status including all phases.
 
     Returns comprehensive status information for all 7 phases.
     """
     try:
-        if not _project_exists(project_name):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project '{project_name}' not found"
-            )
-
-        context = _load_project_context(project_name)
+        context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
 
         phases = []
         completed_phases = 0
@@ -291,12 +255,17 @@ async def get_project_status(project_name: str):
             current_phase = 7
 
         return ProjectStatusResponse(
-            project_name=project_name,
+            project_id=project_id,
             current_phase=current_phase,
             phases=phases,
             overall_progress=completed_phases / 7.0
         )
 
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_id}' not found"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -307,28 +276,26 @@ async def get_project_status(project_name: str):
         )
 
 
-@router.delete("/{project_name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_name: str):
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_project(project_id: str):
     """
     Delete a project.
 
     Removes the project and all its associated data.
     """
     try:
-        if not _project_exists(project_name):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Project '{project_name}' not found"
-            )
+        context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
+        context.delete_project()
 
-        # Delete state file
-        state_file = _get_project_state_file(project_name)
-        state_file.unlink()
-
-        logger.info(f"Deleted project: {project_name}")
+        logger.info(f"Deleted project: {project_id}")
 
         return None
 
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_id}' not found"
+        )
     except HTTPException:
         raise
     except Exception as e:

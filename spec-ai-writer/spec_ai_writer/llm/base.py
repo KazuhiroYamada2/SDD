@@ -30,7 +30,7 @@ JSON形式で抽出したデータを返してください:"""
 class BaseLLMClient(ABC):
     """Abstract base class for LLM API clients."""
 
-    def __init__(self, api_key: str = "", model: Optional[str] = None, temperature: float = 0.7):
+    def __init__(self, api_key: str = "", model: Optional[str] = None, temperature: float = 0.7, timeout: float = 30.0):
         """
         Initialize the LLM client.
 
@@ -38,10 +38,12 @@ class BaseLLMClient(ABC):
             api_key: API key for the LLM provider
             model: Model name to use (provider-specific)
             temperature: Temperature for generation (0.0-2.0)
+            timeout: Timeout in seconds for API calls
         """
         self.api_key = api_key
         self.model = model
         self.temperature = temperature
+        self.timeout = timeout
 
     @abstractmethod
     def chat(

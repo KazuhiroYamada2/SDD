@@ -1,6 +1,6 @@
 /**
  * Mock API Client for Development/Demo
- * 
+ *
  * Provides mock data when API keys are not configured
  */
 
@@ -20,10 +20,18 @@ import type {
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Simple ID generator for mock
+let nextIdCounter = 100;
+function generateMockId(): string {
+  nextIdCounter++;
+  return `mock_${nextIdCounter}`;
+}
+
 class MockAPIClient {
   private mockProjects: Project[] = [
     {
-      name: 'demo-project',
+      project_id: 'demo_001',
+      display_name: 'demo-project',
       description: 'デモプロジェクト',
       current_phase: 3,
       phase_status: {
@@ -40,7 +48,8 @@ class MockAPIClient {
       total_qa_pairs: 15,
     },
     {
-      name: 'sample-webapp',
+      project_id: 'sample_002',
+      display_name: 'sample-webapp',
       description: 'サンプルWebアプリケーション',
       current_phase: 7,
       phase_status: {
@@ -57,6 +66,8 @@ class MockAPIClient {
       total_qa_pairs: 42,
     },
   ];
+
+  private mockAnswerCounts: Record<string, number> = {};
 
   async healthCheck() {
     await delay(300);
@@ -75,20 +86,20 @@ class MockAPIClient {
     };
   }
 
-  async getProject(projectName: string): Promise<Project> {
+  async getProject(projectId: string): Promise<Project> {
     await delay(300);
-    const project = this.mockProjects.find(p => p.name === projectName);
+    const project = this.mockProjects.find(p => p.project_id === projectId);
     if (!project) {
-      throw new Error(`Project not found: ${projectName}`);
+      throw new Error(`Project not found: ${projectId}`);
     }
     return { ...project };
   }
 
-  async getProjectStatus(projectName: string): Promise<ProjectStatusResponse> {
+  async getProjectStatus(projectId: string): Promise<ProjectStatusResponse> {
     await delay(300);
-    const project = this.mockProjects.find(p => p.name === projectName);
+    const project = this.mockProjects.find(p => p.project_id === projectId);
     if (!project) {
-      throw new Error(`Project not found: ${projectName}`);
+      throw new Error(`Project not found: ${projectId}`);
     }
 
     const phases = [
@@ -103,7 +114,7 @@ class MockAPIClient {
 
     const completedCount = phases.filter(p => p.status === 'completed').length;
     return {
-      project_name: projectName,
+      project_id: projectId,
       current_phase: project.current_phase,
       phases,
       overall_progress: Math.round((completedCount / 7) * 100),
@@ -113,7 +124,8 @@ class MockAPIClient {
   async createProject(data: ProjectCreate): Promise<Project> {
     await delay(500);
     const newProject: Project = {
-      name: data.name,
+      project_id: generateMockId(),
+      display_name: data.display_name,
       description: data.description,
       current_phase: 1,
       phase_status: {
@@ -133,9 +145,9 @@ class MockAPIClient {
     return { ...newProject };
   }
 
-  async deleteProject(projectName: string): Promise<void> {
+  async deleteProject(projectId: string): Promise<void> {
     await delay(300);
-    this.mockProjects = this.mockProjects.filter(p => p.name !== projectName);
+    this.mockProjects = this.mockProjects.filter(p => p.project_id !== projectId);
   }
 
   async startInterview(data: InterviewStartRequest): Promise<InterviewStartResponse> {
@@ -150,8 +162,10 @@ class MockAPIClient {
       '検証・受入',
       '移行・運用',
     ];
+    // Reset answer count for this project
+    this.mockAnswerCounts[data.project_id] = 0;
     return {
-      project_name: data.project_name,
+      project_id: data.project_id,
       phase_num: phaseNum,
       phase_name: phaseNames[phaseNum - 1],
       initial_message: `こんにちは！フェーズ${phaseNum}「${phaseNames[phaseNum - 1]}」のインタビューを開始します。\n\nまず、プロジェクトの概要について教えてください。`,
@@ -160,27 +174,36 @@ class MockAPIClient {
 
   async submitAnswer(data: UserAnswerRequest): Promise<AssistantQuestionResponse> {
     await delay(1000);
-    // Simulate interview progression
+    // Track answer count per project for mock progression
+    if (!this.mockAnswerCounts[data.project_id]) {
+      this.mockAnswerCounts[data.project_id] = 0;
+    }
+    this.mockAnswerCounts[data.project_id]++;
+    const count = this.mockAnswerCounts[data.project_id];
+
     const mockQuestions = [
       'ありがとうございます。次に、プロジェクトの主要な目的について詳しく教えてください。',
       '理解しました。では、このプロジェクトで最も重要な成功基準は何でしょうか？',
       '素晴らしいですね。最後に、プロジェクトの制約事項があれば教えてください。',
     ];
-    const randomQuestion = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
-    
+
+    const isPhaseComplete = count >= 3;
+
     return {
-      question: randomQuestion,
-      phase_complete: Math.random() > 0.7, // 30% chance of phase completion
+      question: isPhaseComplete
+        ? 'フェーズが完了しました。次のフェーズに進みます。'
+        : mockQuestions[Math.min(count - 1, mockQuestions.length - 1)],
+      phase_complete: isPhaseComplete,
       phase_num: 1,
-      qa_count: Math.floor(Math.random() * 10) + 1,
+      qa_count: count,
     };
   }
 
-  async listSpecifications(projectName: string): Promise<SpecificationListResponse> {
+  async listSpecifications(projectId: string): Promise<SpecificationListResponse> {
     await delay(400);
-    const project = this.mockProjects.find(p => p.name === projectName);
+    const project = this.mockProjects.find(p => p.project_id === projectId);
     if (!project) {
-      throw new Error(`Project not found: ${projectName}`);
+      throw new Error(`Project not found: ${projectId}`);
     }
 
     const phaseNames = [
@@ -208,19 +231,19 @@ class MockAPIClient {
       phase_name: phaseNames[index],
       filename,
       file_size: project.phase_status[index + 1] === 'completed' ? 15000 + Math.random() * 10000 : undefined,
-      generated_at: project.phase_status[index + 1] === 'completed' 
+      generated_at: project.phase_status[index + 1] === 'completed'
         ? new Date(Date.now() - (7 - index) * 24 * 60 * 60 * 1000).toISOString()
         : undefined,
       exists: project.phase_status[index + 1] === 'completed',
     }));
 
     return {
-      project_name: projectName,
+      project_id: projectId,
       specifications,
     };
   }
 
-  async getSpecification(projectName: string, phaseNum: number): Promise<SpecificationResponse> {
+  async getSpecification(projectId: string, phaseNum: number): Promise<SpecificationResponse> {
     await delay(400);
     const phaseNames = [
       '原則決定工程',
@@ -242,24 +265,24 @@ class MockAPIClient {
     ];
 
     return {
-      project_name: projectName,
+      project_id: projectId,
       phase_num: phaseNum,
       phase_name: phaseNames[phaseNum - 1],
       filename: filenames[phaseNum - 1],
-      content: `# ${phaseNames[phaseNum - 1]}\n\n## 概要\n\nこれはモックモードで表示されているサンプル仕様書です。\n\n実際の仕様書を生成するには、LLM APIキーを設定してバックエンドサーバーを起動してください。\n\n## プロジェクト情報\n\n- プロジェクト名: ${projectName}\n- フェーズ: ${phaseNum}\n\n## 内容\n\nこの仕様書は、実際のインタビューを通じて生成されます。\n\nモックモードでは、実際のLLM APIを呼び出さないため、このサンプルコンテンツが表示されています。`,
+      content: `# ${phaseNames[phaseNum - 1]}\n\n## 概要\n\nこれはモックモードで表示されているサンプル仕様書です。\n\n実際の仕様書を生成するには、LLM APIキーを設定してバックエンドサーバーを起動してください。\n\n## プロジェクト情報\n\n- プロジェクトID: ${projectId}\n- フェーズ: ${phaseNum}\n\n## 内容\n\nこの仕様書は、実際のインタビューを通じて生成されます。\n\nモックモードでは、実際のLLM APIを呼び出さないため、このサンプルコンテンツが表示されています。`,
       generated_at: new Date().toISOString(),
     };
   }
 
-  async downloadSpecification(projectName: string, phaseNum: number): Promise<Blob> {
+  async downloadSpecification(projectId: string, phaseNum: number): Promise<Blob> {
     await delay(500);
-    const spec = await this.getSpecification(projectName, phaseNum);
+    const spec = await this.getSpecification(projectId, phaseNum);
     return new Blob([spec.content], { type: 'text/markdown' });
   }
 
-  async downloadAllSpecifications(projectName: string): Promise<Blob> {
+  async downloadAllSpecifications(projectId: string): Promise<Blob> {
     await delay(800);
-    const list = await this.listSpecifications(projectName);
+    const list = await this.listSpecifications(projectId);
     const completedSpecs = list.specifications.filter(s => s.exists);
     const content = completedSpecs.map(s => `# ${s.phase_name}\n\n[仕様書内容]\n\n`).join('\n\n---\n\n');
     return new Blob([content], { type: 'text/markdown' });

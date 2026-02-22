@@ -37,7 +37,8 @@ ENV/
 .env
 .env.local
 
-# spec-ai-writer specific
+# spec-ai-writer data directory
+data/
 .interview_state/
 spec_output/
 

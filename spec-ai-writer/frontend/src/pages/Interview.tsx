@@ -1,153 +1,164 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Send, ArrowLeft, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useInterviewStore } from '@/store/useInterviewStore';
-import { WebSocketManager } from '@/api/websocket';
-import type { ChatMessage, WebSocketMessage } from '@/types';
+import apiClient from '@/api/client';
+import type { ChatMessage } from '@/types';
 
 export default function Interview() {
-  const { projectName } = useParams<{ projectName: string }>();
+  const { projectId } = useParams<{ projectId: string }>();
   const [input, setInput] = useState('');
-  const [ws, setWs] = useState<WebSocketManager | null>(null);
-  const [isConnecting, setIsConnecting] = useState(true);
+  const [isStarting, setIsStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
     messages,
+    displayName,
     currentPhase,
     phaseName,
     isWaitingForResponse,
+    isInterviewActive,
     addMessage,
     setCurrentPhase,
-    setProjectName,
+    setProjectId,
+    setDisplayName,
     setInterviewActive,
     setWaitingForResponse,
   } = useInterviewStore();
 
-  useEffect(() => {
-    if (!projectName) return;
+  // Start interview via REST API
+  const startInterview = useCallback(async () => {
+    if (!projectId) return;
 
-    setProjectName(projectName);
+    setIsStarting(true);
+    setError(null);
+    setProjectId(projectId);
 
-    // Initialize WebSocket
-    const websocket = new WebSocketManager(projectName);
-    setWs(websocket);
-
-    websocket
-      .connect()
-      .then(() => {
-        setIsConnecting(false);
-        setInterviewActive(true);
-      })
-      .catch((err) => {
-        console.error('Failed to connect:', err);
-        setError('WebSocket接続に失敗しました');
-        setIsConnecting(false);
+    try {
+      const response = await apiClient.startInterview({
+        project_id: projectId,
       });
 
-    // Handle incoming messages
-    const unsubscribe = websocket.onMessage((message: WebSocketMessage) => {
-      handleWebSocketMessage(message);
-    });
+      // Set phase info and display name
+      setDisplayName(response.display_name);
+      setCurrentPhase(response.phase_num, response.phase_name);
+      setInterviewActive(true);
+
+      // Add initial question as assistant message
+      addMessage({
+        role: 'assistant',
+        content: response.initial_message,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to start interview:', err);
+      setError('インタビューの開始に失敗しました。バックエンドサーバーの接続を確認してください。');
+    } finally {
+      setIsStarting(false);
+    }
+  }, [projectId, setProjectId, setCurrentPhase, setInterviewActive, addMessage]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    startInterview();
 
     // Cleanup
     return () => {
-      unsubscribe();
-      websocket.disconnect();
       setInterviewActive(false);
     };
-  }, [projectName]);
+  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Auto-scroll to bottom
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleWebSocketMessage = (message: WebSocketMessage) => {
-    console.log('Received message:', message);
-
-    switch (message.type) {
-      case 'question':
-        // Assistant question
-        addMessage({
-          role: 'assistant',
-          content: message.content,
-          timestamp: new Date().toISOString(),
-        });
-
-        if (message.metadata?.phase_num && message.metadata?.phase_name) {
-          setCurrentPhase(message.metadata.phase_num, message.metadata.phase_name);
-        }
-
-        setWaitingForResponse(false);
-        break;
-
-      case 'phase_complete':
-        // Phase completed
-        addMessage({
-          role: 'system',
-          content: `✅ ${message.content}`,
-          timestamp: new Date().toISOString(),
-        });
-        break;
-
-      case 'spec_generated':
-        // Spec generated
-        addMessage({
-          role: 'system',
-          content: `📄 ${message.content}`,
-          timestamp: new Date().toISOString(),
-        });
-        break;
-
-      case 'complete':
-        // Interview complete
-        addMessage({
-          role: 'system',
-          content: `🎉 ${message.content}`,
-          timestamp: new Date().toISOString(),
-        });
-        setInterviewActive(false);
-        break;
-
-      case 'error':
-        // Error occurred
-        addMessage({
-          role: 'system',
-          content: `❌ ${message.content}`,
-          timestamp: new Date().toISOString(),
-        });
-        setWaitingForResponse(false);
-        break;
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!input.trim() || !ws || isWaitingForResponse) return;
+    if (!input.trim() || !projectId || isWaitingForResponse) return;
+
+    const userAnswer = input.trim();
 
     // Add user message to UI
     const userMessage: ChatMessage = {
       role: 'user',
-      content: input.trim(),
+      content: userAnswer,
       timestamp: new Date().toISOString(),
     };
 
     addMessage(userMessage);
-
-    // Send to WebSocket
-    ws.sendAnswer(input.trim());
-
     setInput('');
     setWaitingForResponse(true);
+    setError(null);
+
+    try {
+      // Find the last assistant message to use as the question being answered
+      const lastAssistantMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === 'assistant');
+      const currentQuestion = lastAssistantMessage?.content ?? '';
+
+      const response = await apiClient.submitAnswer({
+        project_id: projectId,
+        question: currentQuestion,
+        answer: userAnswer,
+      });
+
+      // Check if phase is complete
+      if (response.phase_complete) {
+        // Add phase completion message
+        addMessage({
+          role: 'system',
+          content: `フェーズ ${response.phase_num} が完了しました。`,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Check if all phases (1-7) are done
+        if (response.phase_num >= 7) {
+          addMessage({
+            role: 'system',
+            content: '全てのフェーズが完了しました。仕様書が生成されました。',
+            timestamp: new Date().toISOString(),
+          });
+          setInterviewActive(false);
+        } else {
+          // Add the next question (response from next phase start)
+          addMessage({
+            role: 'assistant',
+            content: response.question,
+            timestamp: new Date().toISOString(),
+          });
+          setCurrentPhase(response.phase_num + 1, '');
+        }
+      } else {
+        // Add the next question
+        addMessage({
+          role: 'assistant',
+          content: response.question,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to submit answer:', err);
+      addMessage({
+        role: 'system',
+        content: '回答の送信中にエラーが発生しました。再度お試しください。',
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      setWaitingForResponse(false);
+    }
   };
 
-  if (!projectName) {
+  if (!projectId) {
     return (
       <div className="card">
-        <p className="text-red-600">プロジェクト名が指定されていません</p>
+        <p className="text-red-600">プロジェクトIDが指定されていません</p>
       </div>
     );
   }
@@ -162,7 +173,7 @@ export default function Interview() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              インタビュー: {projectName}
+              インタビュー: {displayName || projectId}
             </h2>
             {phaseName && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -171,7 +182,7 @@ export default function Interview() {
             )}
           </div>
         </div>
-        <Link to={`/specs/${projectName}`} className="btn btn-secondary text-sm">
+        <Link to={`/specs/${projectId}`} className="btn btn-secondary text-sm">
           仕様書を見る
         </Link>
       </div>
@@ -183,16 +194,16 @@ export default function Interview() {
         </div>
       )}
 
-      {/* Connecting */}
-      {isConnecting && (
+      {/* Starting */}
+      {isStarting && (
         <div className="card text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-600" />
-          <p className="mt-4 text-gray-500">接続中...</p>
+          <p className="mt-4 text-gray-500">インタビューを開始しています...</p>
         </div>
       )}
 
       {/* Chat Interface */}
-      {!isConnecting && !error && (
+      {!isStarting && !error && (
         <div className="card p-0 flex flex-col h-[calc(100vh-16rem)]">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -216,7 +227,15 @@ export default function Interview() {
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <p
                     className={`text-xs mt-1 ${
                       message.role === 'user'
@@ -254,12 +273,12 @@ export default function Interview() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="回答を入力してください..."
                 className="input flex-1"
-                disabled={isWaitingForResponse}
+                disabled={isWaitingForResponse || !isInterviewActive}
               />
               <button
                 type="submit"
                 className="btn btn-primary px-6 flex items-center gap-2"
-                disabled={!input.trim() || isWaitingForResponse}
+                disabled={!input.trim() || isWaitingForResponse || !isInterviewActive}
               >
                 {isWaitingForResponse ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

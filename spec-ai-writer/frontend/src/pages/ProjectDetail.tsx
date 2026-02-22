@@ -5,12 +5,12 @@ import apiClient from '@/api/client';
 import type { PhaseStatus } from '@/types';
 
 export default function ProjectDetail() {
-  const { projectName } = useParams<{ projectName: string }>();
+  const { projectId } = useParams<{ projectId: string }>();
 
   const { data: status, isLoading } = useQuery({
-    queryKey: ['project-status', projectName],
-    queryFn: () => apiClient.getProjectStatus(projectName!),
-    enabled: !!projectName,
+    queryKey: ['project-status', projectId],
+    queryFn: () => apiClient.getProjectStatus(projectId!),
+    enabled: !!projectId,
   });
 
   const getStatusIcon = (status: PhaseStatus) => {
@@ -24,10 +24,10 @@ export default function ProjectDetail() {
     }
   };
 
-  if (!projectName) {
+  if (!projectId) {
     return (
       <div className="card">
-        <p className="text-red-600">プロジェクト名が指定されていません</p>
+        <p className="text-red-600">プロジェクトIDが指定されていません</p>
       </div>
     );
   }
@@ -39,7 +39,7 @@ export default function ProjectDetail() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {projectName}
+          {projectId}
         </h2>
       </div>
 

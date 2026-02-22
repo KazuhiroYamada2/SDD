@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   // Delete project mutation
   const deleteMutation = useMutation({
-    mutationFn: (projectName: string) => apiClient.deleteProject(projectName),
+    mutationFn: (projectId: string) => apiClient.deleteProject(projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
@@ -46,7 +46,7 @@ export default function Dashboard() {
     e.preventDefault();
     if (newProjectName.trim()) {
       createMutation.mutate({
-        name: newProjectName.trim(),
+        display_name: newProjectName.trim(),
         description: newProjectDescription.trim() || undefined,
       });
     }
@@ -139,11 +139,11 @@ export default function Dashboard() {
       {projectsData && projectsData.projects.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projectsData.projects.map((project) => (
-            <div key={project.name} className="card hover:shadow-lg transition-shadow">
+            <div key={project.project_id} className="card hover:shadow-lg transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {project.name}
+                    {project.display_name}
                   </h3>
                   {project.description && (
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -196,22 +196,22 @@ export default function Dashboard() {
 
               <div className="flex gap-2">
                 <Link
-                  to={`/interview/${project.name}`}
+                  to={`/interview/${project.project_id}`}
                   className="btn btn-primary flex-1 flex items-center justify-center gap-2 text-sm"
                 >
                   インタビュー開始
                   <ExternalLink className="h-4 w-4" />
                 </Link>
                 <Link
-                  to={`/specs/${project.name}`}
+                  to={`/specs/${project.project_id}`}
                   className="btn btn-secondary flex items-center justify-center gap-2 text-sm"
                 >
                   仕様書
                 </Link>
                 <button
                   onClick={() => {
-                    if (confirm(`プロジェクト「${project.name}」を削除しますか？`)) {
-                      deleteMutation.mutate(project.name);
+                    if (confirm(`プロジェクト「${project.display_name}」を削除しますか？`)) {
+                      deleteMutation.mutate(project.project_id);
                     }
                   }}
                   className="btn btn-danger p-2"

@@ -1,14 +1,13 @@
 """
 Interview API Router
 
-Endpoints for conducting real-time interviews via WebSocket and REST.
+Endpoints for conducting interviews via REST.
 """
 
 import logging
-import json
 from typing import Dict, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
@@ -21,7 +20,6 @@ from ..models import (
     InterviewStartResponse,
     UserAnswerRequest,
     AssistantQuestionResponse,
-    WebSocketMessage
 )
 
 logger = logging.getLogger(__name__)
@@ -29,9 +27,6 @@ router = APIRouter()
 
 settings = get_settings()
 phase_manager = PhaseManager()
-
-# Active interview sessions (WebSocket connections)
-active_sessions: Dict[str, InterviewEngine] = {}
 
 
 @router.post("/start", response_model=InterviewStartResponse)
@@ -42,8 +37,8 @@ async def start_interview(request: InterviewStartRequest):
     Initializes an interview for the specified project and phase.
     """
     try:
-        # Create or load context
-        context = ContextManager(request.project_name)
+        # Load existing project context
+        context = ContextManager.load_project(request.project_id, data_dir=settings.data_dir)
 
         # Determine which phase to start
         if request.phase_num:
@@ -68,15 +63,21 @@ async def start_interview(request: InterviewStartRequest):
         phase_info = phase_manager.get_phase_info(phase_num)
         initial_question = engine._generate_initial_question(phase_num)
 
-        logger.info(f"Started interview for {request.project_name}, phase {phase_num}")
+        logger.info(f"Started interview for {request.project_id}, phase {phase_num}")
 
         return InterviewStartResponse(
-            project_name=request.project_name,
+            project_id=request.project_id,
+            display_name=context.display_name,
             phase_num=phase_num,
             phase_name=phase_info.name,
             initial_message=initial_question
         )
 
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{request.project_id}' not found"
+        )
     except Exception as e:
         logger.error(f"Failed to start interview: {e}")
         raise HTTPException(
@@ -94,7 +95,7 @@ async def submit_answer(request: UserAnswerRequest):
     """
     try:
         # Load context
-        context = ContextManager(request.project_name)
+        context = ContextManager.load_project(request.project_id, data_dir=settings.data_dir)
 
         # Determine current phase using context's completed flag
         current_phase = 1
@@ -111,13 +112,11 @@ async def submit_answer(request: UserAnswerRequest):
             context_manager=context
         )
 
-        # Process answer (this would normally happen in the interview loop)
-        # For simplicity, we'll add the Q&A pair directly
+        # Save the Q&A pair to persistent storage
+        context.add_qa_pair(current_phase, request.question, request.answer)
+
         phase_context = context.get_phase_context(current_phase)
         qa_pairs = phase_context.get("qa_pairs", [])
-
-        # Get the last question (should be stored in session state in real implementation)
-        # For now, we'll generate a follow-up question
 
         # Check if phase is complete
         phase_complete = engine._is_phase_complete(current_phase, context)
@@ -125,7 +124,7 @@ async def submit_answer(request: UserAnswerRequest):
         if phase_complete:
             # Generate spec and move to next phase
             try:
-                engine._generate_and_save_spec(current_phase, request.project_name)
+                engine._generate_and_save_spec(current_phase)
             except Exception as e:
                 logger.warning(f"Failed to generate spec: {e}")
 
@@ -134,8 +133,8 @@ async def submit_answer(request: UserAnswerRequest):
                 return AssistantQuestionResponse(
                     question=next_question,
                     phase_complete=True,
-                    phase_num=current_phase + 1,
-                    qa_count=0
+                    phase_num=current_phase,
+                    qa_count=len(qa_pairs)
                 )
             else:
                 return AssistantQuestionResponse(
@@ -155,176 +154,14 @@ async def submit_answer(request: UserAnswerRequest):
                 qa_count=len(qa_pairs)
             )
 
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{request.project_id}' not found"
+        )
     except Exception as e:
         logger.error(f"Failed to process answer: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process answer: {str(e)}"
         )
-
-
-@router.websocket("/ws/{project_name}")
-async def websocket_interview(websocket: WebSocket, project_name: str):
-    """
-    WebSocket endpoint for real-time interview.
-
-    Provides bidirectional communication for a chat-like interview experience.
-    """
-    await websocket.accept()
-    logger.info(f"WebSocket connection established for project: {project_name}")
-
-    try:
-        # Create or load context
-        context = ContextManager(project_name)
-
-        # Determine current phase using context's completed flag
-        current_phase = 1
-        for i in range(1, 8):
-            if not context.is_phase_complete(i):
-                current_phase = i
-                break
-
-        # Create interview engine
-        llm_client = LLMFactory.create_client(settings=settings)
-        engine = InterviewEngine(
-            llm_client=llm_client,
-            phase_manager=phase_manager,
-            context_manager=context
-        )
-
-        # Store in active sessions
-        session_key = f"{project_name}_{current_phase}"
-        active_sessions[session_key] = engine
-
-        # Send initial question
-        phase_info = phase_manager.get_phase_info(current_phase)
-        initial_question = engine._generate_initial_question(current_phase)
-
-        await websocket.send_json({
-            "type": "question",
-            "content": initial_question,
-            "metadata": {
-                "phase_num": current_phase,
-                "phase_name": phase_info.name,
-                "qa_count": 0
-            }
-        })
-
-        # Message loop
-        while True:
-            # Receive user answer
-            data = await websocket.receive_text()
-            message = json.loads(data)
-
-            if message.get("type") == "answer":
-                user_answer = message.get("content", "")
-
-                # Get last question from context
-                phase_context = context.get_phase_context(current_phase)
-                qa_pairs = phase_context.get("qa_pairs", [])
-
-                # Add Q&A pair
-                context.add_qa_pair(
-                    current_phase,
-                    initial_question if not qa_pairs else qa_pairs[-1].get("question", ""),
-                    user_answer
-                )
-
-                # Save context
-                context.save_to_disk()
-
-                # Check if phase is complete
-                phase_complete = engine._is_phase_complete(current_phase, context)
-
-                if phase_complete:
-                    # Send phase completion message
-                    await websocket.send_json({
-                        "type": "phase_complete",
-                        "content": f"フェーズ{current_phase}が完了しました。仕様書を生成しています...",
-                        "metadata": {
-                            "phase_num": current_phase,
-                            "phase_name": phase_info.name
-                        }
-                    })
-
-                    # Generate specification
-                    try:
-                        engine._generate_and_save_spec(current_phase, project_name)
-
-                        await websocket.send_json({
-                            "type": "spec_generated",
-                            "content": f"仕様書 {phase_info.filename} を生成しました。",
-                            "metadata": {
-                                "phase_num": current_phase,
-                                "filename": phase_info.filename
-                            }
-                        })
-                    except Exception as e:
-                        logger.error(f"Failed to generate spec: {e}")
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": f"仕様書の生成中にエラーが発生しました: {str(e)}"
-                        })
-
-                    # Move to next phase
-                    if current_phase < 7:
-                        current_phase += 1
-                        phase_info = phase_manager.get_phase_info(current_phase)
-                        initial_question = engine._generate_initial_question(current_phase)
-
-                        await websocket.send_json({
-                            "type": "question",
-                            "content": initial_question,
-                            "metadata": {
-                                "phase_num": current_phase,
-                                "phase_name": phase_info.name,
-                                "qa_count": 0
-                            }
-                        })
-                    else:
-                        # All phases complete
-                        await websocket.send_json({
-                            "type": "complete",
-                            "content": "おめでとうございます！全7つの工程のインタビューが完了しました。",
-                            "metadata": {
-                                "project_name": project_name
-                            }
-                        })
-                        break
-                else:
-                    # Generate next question
-                    next_question = engine._generate_follow_up_question(current_phase, context)
-
-                    await websocket.send_json({
-                        "type": "question",
-                        "content": next_question,
-                        "metadata": {
-                            "phase_num": current_phase,
-                            "phase_name": phase_info.name,
-                            "qa_count": len(qa_pairs) + 1
-                        }
-                    })
-
-                    # Update initial_question for next iteration
-                    initial_question = next_question
-
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for project: {project_name}")
-        # Clean up session
-        session_key = f"{project_name}_{current_phase}"
-        if session_key in active_sessions:
-            del active_sessions[session_key]
-
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        try:
-            await websocket.send_json({
-                "type": "error",
-                "content": f"エラーが発生しました: {str(e)}"
-            })
-        except:
-            pass
-        # Clean up session
-        session_key = f"{project_name}_{current_phase}"
-        if session_key in active_sessions:
-            del active_sessions[session_key]

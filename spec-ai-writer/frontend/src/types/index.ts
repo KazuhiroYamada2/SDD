@@ -15,7 +15,8 @@ export interface ChatMessage {
 }
 
 export interface Project {
-  name: string;
+  project_id: string;
+  display_name: string;
   description?: string;
   current_phase: number;
   phase_status: Record<number, PhaseStatus>;
@@ -25,7 +26,7 @@ export interface Project {
 }
 
 export interface ProjectCreate {
-  name: string;
+  display_name: string;
   description?: string;
   llm_provider?: string;
 }
@@ -46,26 +47,28 @@ export interface PhaseInfo {
 }
 
 export interface ProjectStatusResponse {
-  project_name: string;
+  project_id: string;
   current_phase: number;
   phases: PhaseInfo[];
   overall_progress: number;
 }
 
 export interface InterviewStartRequest {
-  project_name: string;
+  project_id: string;
   phase_num?: number;
 }
 
 export interface InterviewStartResponse {
-  project_name: string;
+  project_id: string;
+  display_name: string;
   phase_num: number;
   phase_name: string;
   initial_message: string;
 }
 
 export interface UserAnswerRequest {
-  project_name: string;
+  project_id: string;
+  question: string;
   answer: string;
 }
 
@@ -77,7 +80,7 @@ export interface AssistantQuestionResponse {
 }
 
 export interface SpecificationResponse {
-  project_name: string;
+  project_id: string;
   phase_num: number;
   phase_name: string;
   filename: string;
@@ -95,20 +98,8 @@ export interface SpecificationListItem {
 }
 
 export interface SpecificationListResponse {
-  project_name: string;
+  project_id: string;
   specifications: SpecificationListItem[];
-}
-
-export interface WebSocketMessage {
-  type: 'question' | 'answer' | 'phase_complete' | 'spec_generated' | 'complete' | 'error';
-  content: string;
-  metadata?: {
-    phase_num?: number;
-    phase_name?: string;
-    qa_count?: number;
-    filename?: string;
-    project_name?: string;
-  };
 }
 
 export interface ErrorResponse {
