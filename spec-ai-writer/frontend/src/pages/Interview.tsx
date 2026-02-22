@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Send, ArrowLeft, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useInterviewStore } from '@/store/useInterviewStore';
 import apiClient from '@/api/client';
 import type { ChatMessage } from '@/types';
@@ -14,6 +16,7 @@ export default function Interview() {
 
   const {
     messages,
+    displayName,
     currentPhase,
     phaseName,
     isWaitingForResponse,
@@ -21,6 +24,7 @@ export default function Interview() {
     addMessage,
     setCurrentPhase,
     setProjectId,
+    setDisplayName,
     setInterviewActive,
     setWaitingForResponse,
   } = useInterviewStore();
@@ -38,7 +42,8 @@ export default function Interview() {
         project_id: projectId,
       });
 
-      // Set phase info
+      // Set phase info and display name
+      setDisplayName(response.display_name);
       setCurrentPhase(response.phase_num, response.phase_name);
       setInterviewActive(true);
 
@@ -92,8 +97,15 @@ export default function Interview() {
     setError(null);
 
     try {
+      // Find the last assistant message to use as the question being answered
+      const lastAssistantMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === 'assistant');
+      const currentQuestion = lastAssistantMessage?.content ?? '';
+
       const response = await apiClient.submitAnswer({
         project_id: projectId,
+        question: currentQuestion,
         answer: userAnswer,
       });
 
@@ -161,7 +173,7 @@ export default function Interview() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              インタビュー: {projectId}
+              インタビュー: {displayName || projectId}
             </h2>
             {phaseName && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -215,7 +227,15 @@ export default function Interview() {
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <p
                     className={`text-xs mt-1 ${
                       message.role === 'user'

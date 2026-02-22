@@ -10,6 +10,13 @@ export default function Specifications() {
   const { projectId } = useParams<{ projectId: string }>();
   const [selectedPhase, setSelectedPhase] = useState<number | null>(null);
 
+  // Fetch project info for display name
+  const { data: projectData } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => apiClient.getProject(projectId!),
+    enabled: !!projectId,
+  });
+
   // Fetch specifications list
   const { data: specsData, isLoading } = useQuery({
     queryKey: ['specifications', projectId],
@@ -76,7 +83,7 @@ export default function Specifications() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              仕様書: {projectId}
+              仕様書: {projectData?.display_name || projectId}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               生成された仕様書を確認・ダウンロードできます

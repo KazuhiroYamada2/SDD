@@ -77,6 +77,7 @@ class InterviewStartRequest(BaseModel):
 class InterviewStartResponse(BaseModel):
     """Response model for interview start."""
     project_id: str
+    display_name: str
     phase_num: int
     phase_name: str
     initial_message: str
@@ -85,6 +86,7 @@ class InterviewStartResponse(BaseModel):
 class UserAnswerRequest(BaseModel):
     """Request model for user answer."""
     project_id: str
+    question: str
     answer: str
 
 

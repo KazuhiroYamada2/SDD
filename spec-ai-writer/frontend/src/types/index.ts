@@ -60,6 +60,7 @@ export interface InterviewStartRequest {
 
 export interface InterviewStartResponse {
   project_id: string;
+  display_name: string;
   phase_num: number;
   phase_name: string;
   initial_message: string;
@@ -67,6 +68,7 @@ export interface InterviewStartResponse {
 
 export interface UserAnswerRequest {
   project_id: string;
+  question: string;
   answer: string;
 }
 

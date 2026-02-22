@@ -67,6 +67,7 @@ async def start_interview(request: InterviewStartRequest):
 
         return InterviewStartResponse(
             project_id=request.project_id,
+            display_name=context.display_name,
             phase_num=phase_num,
             phase_name=phase_info.name,
             initial_message=initial_question
@@ -111,8 +112,9 @@ async def submit_answer(request: UserAnswerRequest):
             context_manager=context
         )
 
-        # Process answer (this would normally happen in the interview loop)
-        # For simplicity, we'll add the Q&A pair directly
+        # Save the Q&A pair to persistent storage
+        context.add_qa_pair(current_phase, request.question, request.answer)
+
         phase_context = context.get_phase_context(current_phase)
         qa_pairs = phase_context.get("qa_pairs", [])
 
@@ -131,8 +133,8 @@ async def submit_answer(request: UserAnswerRequest):
                 return AssistantQuestionResponse(
                     question=next_question,
                     phase_complete=True,
-                    phase_num=current_phase + 1,
-                    qa_count=0
+                    phase_num=current_phase,
+                    qa_count=len(qa_pairs)
                 )
             else:
                 return AssistantQuestionResponse(
