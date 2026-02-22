@@ -11,8 +11,8 @@
 - セキュリティやプライバシーに関する要件は、組織や業界によって異なります。必ず組織のセキュリティポリシーや法務部門に確認してください
 - 本ガイドは一般的な情報を提供するものであり、特定の組織や業界の要件を保証するものではありません
 
-本ガイドはMITライセンスで提供されています。詳細は[LICENSE](../../LICENSE)ファイルを参照してください。  
-ご利用にあたっては内容を十分にご確認いただき、自己責任でご活用ください。  
+本ガイドはMITライセンスで提供されています。詳細は[LICENSE](../../LICENSE)ファイルを参照してください。
+ご利用にあたっては内容を十分にご確認いただき、自己責任でご活用ください。
 本ガイドの利用により生じた損害等について、著者および提供元は一切責任を負いません。
 
 ---
@@ -150,7 +150,7 @@ GitGuardianは、GitHubマーケットプレースから簡単に導入できま
 
 GitGuardianは、コミットされたシークレットを自動的に検出し、アラートを送信します。
 
-詳細は、本書の第12章12.5.4節「方法3：シークレット検出ツールの導入」を参照してください。
+詳細は、本書の第12章12.5.4節「機密情報の保護」を参照してください。
 
 ---
 
@@ -201,7 +201,7 @@ from datetime import datetime
 
 def generate_audit_log(repo_path, output_file):
     """監査用のレポートを生成"""
-    
+
     # Gitログを取得
     cmd = [
         'git', '-C', repo_path, 'log',
@@ -209,18 +209,18 @@ def generate_audit_log(repo_path, output_file):
         '--format=%H,%an,%ae,%ad,%s',
         '--date=iso'
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    
+
     # CSVファイルに書き込み
     with open(output_file, 'w', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['コミットハッシュ', '作成者名', 'メールアドレス', '日時', 'コミットメッセージ'])
-        
+
         for line in result.stdout.strip().split('\n'):
             if line:
                 writer.writerow(line.split(',', 4))
-    
+
     print(f"✅ 監査ログを生成しました: {output_file}")
 
 if __name__ == '__main__':
