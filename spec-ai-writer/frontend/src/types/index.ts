@@ -64,6 +64,8 @@ export interface InterviewStartResponse {
   phase_num: number;
   phase_name: string;
   initial_message: string;
+  all_complete?: boolean;
+  chat_history?: ChatMessage[];
 }
 
 export interface UserAnswerRequest {

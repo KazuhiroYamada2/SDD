@@ -191,7 +191,33 @@ export default function Specifications() {
               </div>
 
               <div className="markdown-body prose dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ href, children }) => {
+                      if (href) {
+                        // Handle relative .md spec links like ./01-principle-definition.md
+                        const mdMatch = href.match(/(?:^|\/)(\d{2})-[\w-]+\.md$/);
+                        if (mdMatch) {
+                          const phaseNum = parseInt(mdMatch[1], 10);
+                          return (
+                            <button
+                              onClick={() => setSelectedPhase(phaseNum)}
+                              className="text-primary-600 hover:text-primary-800 underline cursor-pointer bg-transparent border-none p-0 font-[inherit] text-[inherit]"
+                            >
+                              {children}
+                            </button>
+                          );
+                        }
+                      }
+                      return (
+                        <a href={href} target="_blank" rel="noopener noreferrer">
+                          {children}
+                        </a>
+                      );
+                    },
+                  }}
+                >
                   {specContent.content}
                 </ReactMarkdown>
               </div>

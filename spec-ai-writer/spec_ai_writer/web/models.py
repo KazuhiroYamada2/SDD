@@ -74,6 +74,13 @@ class InterviewStartRequest(BaseModel):
     phase_num: Optional[int] = Field(None, description="Specific phase to start (default: next incomplete phase)")
 
 
+class HistoryMessage(BaseModel):
+    """A single message in reconstructed chat history."""
+    role: str  # "assistant", "user", or "system"
+    content: str
+    timestamp: str
+
+
 class InterviewStartResponse(BaseModel):
     """Response model for interview start."""
     project_id: str
@@ -81,6 +88,8 @@ class InterviewStartResponse(BaseModel):
     phase_num: int
     phase_name: str
     initial_message: str
+    all_complete: bool = False
+    chat_history: List[HistoryMessage] = []
 
 
 class UserAnswerRequest(BaseModel):
