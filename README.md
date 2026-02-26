@@ -1,266 +1,290 @@
-# 仕様駆動開発 練習用リポジトリ
+# SDD (Spec-Driven Development) Practice Repository
 
-このリポジトリは、『仕様駆動開発 実践入門』で使用する**練習用リポジトリ**です。このリポジトリについては、本書で「練習用リポジトリ」「SDDリポジトリ」などと呼称しますので、注意してください。
+[English](./README.md) | [日本語](./README_ja.md)
 
-リポジトリ名の「SDD」は「Spec-Driven Development（仕様駆動開発）」の略称です。このリモートリポジトリには、書籍で記載されている「仕様駆動開発の4つの原則と7つの工程」に沿ったサンプルファイルが含まれており、**実際のプロジェクトでどのようにリポジトリを構成するかの参考**になります。
+[![Elvez](https://img.shields.io/badge/Elvez-Product-3F61A7?style=flat-square)](https://elvez.co.jp/)
+[![IXV Ecosystem](https://img.shields.io/badge/IXV-Ecosystem-3F61A7?style=flat-square)](https://elvez.co.jp/ixv/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Stars](https://img.shields.io/github/stars/elvezjp/SDD?style=social)](https://github.com/elvezjp/SDD/stargazers)
 
-## このリポジトリの目的
+This repository is the **practice repository** used in *Spec-Driven Development: A Practical Introduction*.
+In the book, it is referred to as the "practice repository" or "SDD repository."
 
-このリモートリポジトリを参考にすることで、仕様駆動開発の全体像を理解しやすくなります。本書を読みながら、実際にCursorを使って仕様を書く練習をしていただくためのリポジトリです。以下のことを体験できます：
+The name "SDD" stands for **Spec-Driven Development**. This remote repository contains sample files organized around the "4 Principles and 7 Processes of Spec-Driven Development" described in the book, and serves as **a reference for how to structure a repository in real projects**.
 
-- Cursorでのリモートリポジトリのクローンまたはフォーク
-- フォークしたリモートリポジトリをローカルリポジトリにクローンして、README.mdを編集
-- AIとの対話による仕様の改善
-- Git操作（コミット、プッシュ）の基本
+## Use Cases
 
-**重要**: このリモートリポジトリは参考用です。編集したい場合は、必ずフォーク（Fork）してからご自身のリモートリポジトリをローカルリポジトリにクローンして作業してください。
+By referencing this remote repository, you can better understand the overall picture of Spec-Driven Development.
+This repository lets you practice writing specifications with Cursor while reading the book:
+
+- Cloning or forking a remote repository with Cursor
+- Editing README.md in your local clone of the forked repository
+- Improving specifications through dialogue with AI
+- Basic Git operations (commit, push)
+
+**Important**: This remote repository is for reference only. If you want to make edits, always fork it first and then clone your own remote repository to work locally.
 
 ---
 
-## フォークとクローンの違い（重要）
+## Fork vs Clone (Important)
 
-GitHub には「フォーク（Fork）」と「クローン（Clone）」という似ているが役割の異なる操作があります。**目的に応じて使い分けること**が大切です。
+GitHub has two similar but distinct operations: **Fork** and **Clone**. It is important to use each one for the right purpose.
 
-### フォーク（Fork）とは
-- このリポジトリを **ご自身の GitHub アカウント配下にコピー**する操作です
-- 自分のリポジトリになるため以下のことができるようになります。
-  - 自由に編集できる
-  - コミット・プッシュが可能
-  - 失敗しても元のリポジトリに影響しない
+### What is a Fork?
+- Copies this repository **under your own GitHub account**
+- Since it becomes your own repository, you can:
+  - Edit it freely
+  - Commit and push changes
+  - Work without affecting the original repository
 
-### クローン（Clone）とは
-- GitHub 上のリポジトリを **ローカル（PC）にコピー**する操作です
-- クローンだけでは、GitHub 上に自分のリポジトリは作られません
+### What is a Clone?
+- Copies a GitHub repository **to your local machine (PC)**
+- Cloning alone does not create your own repository on GitHub
 
-### フォークとクローンの違い（整理表）
+### Fork vs Clone Comparison
 
-| 項目 | フォーク（GitHub上での操作） | 直接クローン（ローカリリポジトリに保存をする操作） |
-|---|---|---|
-| GitHub上に自分のリポジトリが作られる | ✅ | ❌ |
-| README.mdを自由に編集してpushできる | ✅ | ❌ |
-| 失敗しても元のリポジトリに影響しない | ✅ | ✅ |
-| Pull Requestが出せる | ✅ | ❌ |
-| 参考・閲覧のみ | △ | ✅ |
-| 本リポジトリでの推奨用途 | **編集・練習** | **閲覧のみ** |
+| Item | Fork (operation on GitHub) | Direct Clone (saves to local repository) |
+|------|---------------------------|------------------------------------------|
+| Creates your own repository on GitHub | ✅ | ❌ |
+| Allows free editing and pushing of README.md | ✅ | ❌ |
+| Failures don't affect the original repository | ✅ | ✅ |
+| Can submit Pull Requests | ✅ | ❌ |
+| For reference/viewing only | △ | ✅ |
+| Recommended use in this repository | **Editing & Practice** | **Viewing Only** |
 
-## 使い方
+## Usage
 
-### 1. このリモートリポジトリをフォークまたはクローンする
+### 1. Fork or Clone This Remote Repository
 
-**推奨：フォークする方法**
+**Recommended: Fork**
 
-1. GitHubでこのリモートリポジトリ（https://github.com/elvezjp/SDD）を開く
-2. 右上の「Fork」ボタンをクリックして、ご自身のアカウントにフォーク
-3. Cursorでフォークしたリモートリポジトリをローカルリポジトリにクローン：
-   - Cursorのメニューから「File」>「Clone Repository」を選択
-   - フォークしたリモートリポジトリのURLを入力（例：`https://github.com/あなたのユーザー名/SDD.git`）
-   - 保存先のフォルダを選択して「Clone」をクリック
-Cursor の最新版では、**メニューに「File > Clone Repository」が表示されない場合があります**。
-そのため、以下では **コマンドパレット（Command Palette）を使う方法**を案内します。
+1. Open this remote repository on GitHub (https://github.com/elvezjp/SDD)
+2. Click the "Fork" button in the upper right to fork it to your account
+3. Clone your forked repository locally with Cursor:
+   - From the Cursor menu, select "File" > "Clone Repository"
+   - Enter the URL of your forked repository (e.g., `https://github.com/your-username/SDD.git`)
+   - Select a destination folder and click "Clone"
 
-**参考用にクローンする場合**
+In recent versions of Cursor, **"File > Clone Repository" may not appear in the menu**.
+In that case, use the **Command Palette** approach.
 
-1. Cursorのメニューから「File」>「Clone Repository」を選択
-2. 以下のURLを入力：
+**For Reference Only (Direct Clone)**
+
+1. From the Cursor menu, select "File" > "Clone Repository"
+2. Enter the following URL:
    ```
    https://github.com/elvezjp/SDD.git
    ```
-3. 保存先のフォルダを選択
-4. 「Clone」をクリック
+3. Select a destination folder
+4. Click "Clone"
 
-### 2. README.mdを開いて確認・編集する
+### 2. Open and Review README.md
 
-クローンまたはフォークが完了したら、左側のエクスプローラーパネルで`README.md`を開いてください。
+After cloning or forking, open `README.md` in the left Explorer panel.
 
-**注意**: このリモートリポジトリ（elvezjp/SDD）を直接編集することは避けてください。編集したい場合は、必ずフォークしたリモートリポジトリをローカルリポジトリにクローンして作業してください。
+**Note**: Avoid editing this remote repository (elvezjp/SDD) directly. If you want to make edits, always fork it first and clone your own remote repository to work locally.
 
-### 3. AIと対話しながら仕様を書く
+### 3. Write Specifications While Dialoguing with AI
 
-右側のAIチャットパネルで、以下のような質問をしてみてください：
+In the AI chat panel on the right, try asking questions like:
 
-- 「このREADME.mdを読んで、どんな情報を追加すべきか教えてください」
-- 「この仕様で不明な点はありますか？」
-- 「この書き方で分かりやすいですか？」
+- "Please read this README.md and tell me what information should be added."
+- "Are there any unclear points in this specification?"
+- "Is this written clearly?"
 
-### 4. 変更を保存して共有する（フォークしたリモートリポジトリをローカルリポジトリにクローンした場合）
+### 4. Save and Share Your Changes (if you cloned your forked repository)
 
-ローカルリポジトリで編集が完了したら：
+Once you have finished editing locally:
 
-1. `Ctrl+S`（Macでは`Cmd+S`）で保存
-2. AIチャットで「コミットしてプッシュして」と指示する
-   - または、Source Controlパネルから手動でコミット・プッシュ
+1. Save with `Ctrl+S` (or `Cmd+S` on Mac)
+2. Tell the AI chat "commit and push"
+   - Or manually commit and push from the Source Control panel
 
-**注意**: このリモートリポジトリ（elvezjp/SDD）への直接のプッシュは行わないでください。フォークしたリモートリポジトリにのみプッシュしてください。
+**Note**: Do not push directly to this remote repository (elvezjp/SDD). Only push to your forked repository.
 
-## このリポジトリの構成
+## Features
 
-このリモートリポジトリは、仕様駆動開発の**4つの原則**と**7つの工程**に沿って構成されています。
+### 4 Principles
+
+1. **Specifications are "living documents"**: They evolve alongside the project
+2. **Specifications are the "single source of truth"**: Referenced by all team members
+3. **Specifications assume "change and iteration"**: Updated while recording change history
+4. **Reduce costs with AI**: Leverage AI for specification refinement and review
+
+### 7 Processes
+
+Each process is managed in a single Markdown file:
+
+1. **Principle Definition**: `examples/01-principle-definition.md` (Project Charter)
+2. **Planning & Requirements**: `examples/02-planning-requirement.md` (Specification)
+3. **Design Planning**: `examples/03-design-planning.md` (Design Plan)
+4. **Task Breakdown**: `examples/04-task-breakdown.md` (Task Breakdown)
+5. **Implementation**: `examples/05-implementation.md` (Implementation Log)
+6. **Verification & Acceptance**: `examples/06-verification-acceptance.md` (Verification Log)
+7. **Migration & Operations**: `examples/07-migration-operation.md` (Operations Log)
+
+## Sample Project: Customer Management System
+
+The `examples/` directory contains a sample "Customer Management System" specification covering all 7 processes:
+
+- **Principle Definition**: How to write a project charter
+- **Planning & Requirements**: How to write a specification and operate by the 4 principles
+- **Design Planning**: Technology stack selection and AI utilization examples
+- **Task Breakdown**: Task decomposition granularity and progress management
+- **Implementation**: AI-assisted implementation and review records
+- **Verification & Acceptance**: Specification diff reports and acceptance testing
+- **Migration & Operations**: Operations improvement cycles and feedback integration
+
+Each sample file clearly indicates which process it belongs to.
+
+## Directory Structure
 
 ```
 SDD/
-├── README.md                    # このファイル（メインの仕様書として使用）
-├── LICENSE                      # MITライセンス
-├── docs/                        # 補足資料
-│   ├── README.md               # ガイドの索引
-│   ├── conversion/             # 変換ガイド
-│   │   ├── markdown-basics.md  # Markdown記法の基本
-│   │   ├── word-excel-conversion-guide.md # Word/ExcelからMarkdownへの変換ガイド
-│   │   └── oasys-ichitaro-conversion-guide.md # OASYS/一太郎からMarkdownへの変換ガイド
-│   ├── tools/                  # ツール関連
-│   │   ├── cursor-videos.md    # Cursor関連動画一覧
-│   │   ├── git-commands.md     # Gitコマンド一覧
-│   │   ├── prompts.md          # プロンプト集（Cursor、GitHub Copilot用）
-│   │   └── scripts.md          # スクリプト集（CI/CD設定、Git hooksなど）
-│   └── guides/                 # 実践ガイド
-│       ├── scale-based-practice-guide.md  # 規模別実践ガイド
-│       ├── 90-day-introduction-plan.md    # 90日間導入プラン
-│       ├── security-privacy-guide.md      # セキュリティとプライバシーガイド（規制産業・公的機関向け）
-│       ├── troubleshooting.md  # トラブルシューティング
-│       ├── markdown-friendly-document-creation.md # Markdownにしやすい文書の作り方
-│       └── errata.md           # 書籍の正誤表
-├── examples/                    # サンプルファイル（7つの工程ごとに1ファイル）
-│   ├── 01-principle-definition.md      # 原則決定工程
-│   ├── 02-planning-requirement.md      # 企画・要件定義工程
-│   ├── 03-design-planning.md            # 設計計画工程
-│   ├── 04-task-breakdown.md              # タスク分割工程
-│   ├── 05-implementation.md             # 実装工程
-│   ├── 06-verification-acceptance.md    # 検証・受入工程
-│   ├── 07-migration-operation.md        # 移行・運用工程
-│   └── README.md                        # サンプルファイルの説明
-└── spec-ai-writer/              # 仕様駆動開発支援AIツール（オプション）
-    ├── README.md               # ツールの説明
-    ├── QUICKSTART.md           # クイックスタートガイド
-    └── ...                     # ツールの実装ファイル
+├── README.md                    # This file (English)
+├── README_ja.md                 # Japanese version
+├── LICENSE                      # MIT License
+├── CONTRIBUTING.md              # Contribution guidelines
+├── SECURITY.md                  # Security policy
+├── CHANGELOG.md                 # Version history
+├── docs/                        # Supplementary materials
+│   ├── README.md               # Guide index
+│   ├── conversion/             # Conversion guides
+│   │   ├── markdown-basics.md  # Markdown basics
+│   │   ├── word-excel-conversion-guide.md # Word/Excel to Markdown guide
+│   │   └── oasys-ichitaro-conversion-guide.md # OASYS/Ichitaro to Markdown guide
+│   ├── tools/                  # Tool-related
+│   │   ├── cursor-videos.md    # Cursor video list
+│   │   ├── git-commands.md     # Git command reference
+│   │   ├── prompts.md          # Prompt collection (for Cursor, GitHub Copilot)
+│   │   └── scripts.md          # Script collection (CI/CD settings, Git hooks, etc.)
+│   └── guides/                 # Practical guides
+│       ├── scale-based-practice-guide.md  # Scale-based practice guide
+│       ├── 90-day-introduction-plan.md    # 90-day introduction plan
+│       ├── security-privacy-guide.md      # Security and privacy guide (regulated industries/public agencies)
+│       ├── troubleshooting.md  # Troubleshooting
+│       ├── markdown-friendly-document-creation.md # How to create Markdown-friendly documents
+│       └── errata.md           # Book errata
+├── examples/                    # Sample files (one file per process)
+│   ├── 01-principle-definition.md      # Principle definition process
+│   ├── 02-planning-requirement.md      # Planning & requirements process
+│   ├── 03-design-planning.md            # Design planning process
+│   ├── 04-task-breakdown.md              # Task breakdown process
+│   ├── 05-implementation.md             # Implementation process
+│   ├── 06-verification-acceptance.md    # Verification & acceptance process
+│   ├── 07-migration-operation.md        # Migration & operations process
+│   └── README.md                        # Sample file descriptions
+└── spec-ai-writer/              # Spec-Driven Development support AI tool (optional)
+    ├── README.md               # Tool description
+    ├── QUICKSTART.md           # Quick start guide
+    └── ...                     # Tool implementation files
 ```
 
-## 仕様駆動開発の4つの原則と7つの工程
+## FAQ
 
-このリモートリポジトリは、以下の原則と工程に基づいて構成されています：
+### Q: Is it okay to edit this remote repository?
 
-### 4つの原則
+A: **No, this remote repository (elvezjp/SDD) is for reference only. Please avoid editing it directly.** If you want to make edits, always fork it first and clone your own remote repository to work locally. This ensures all readers always have access to the latest reference material.
 
-1. **仕様は"生きたドキュメント"**：プロジェクトとともに進化する
-2. **仕様は"信頼できる唯一の情報源"**：すべてのメンバーが参照する
-3. **仕様は"変更と反復が前提"**：変更履歴を記録しながら更新する
-4. **AIでコストを抑える**：AIを活用して仕様の詳細化やレビューを行う
+**Fork steps**:
+1. Open this remote repository on GitHub
+2. Click the "Fork" button in the upper right
+3. Clone your forked remote repository locally and work from there
 
-### 7つの工程
+### Q: What should I do if I encounter an error?
 
-各工程ごとに1つのMarkdownファイルで管理します：
+A: `docs/guides/troubleshooting.md` contains common errors and their solutions. Please check there first. If the issue remains unresolved, ask a question in GitHub Issues.
 
-1. **原則決定工程**：`examples/01-principle-definition.md`（プロジェクト憲章）
-2. **企画・要件定義工程**：`examples/02-planning-requirement.md`（仕様書）
-3. **設計計画工程**：`examples/03-design-planning.md`（設計計画）
-4. **タスク分割工程**：`examples/04-task-breakdown.md`（タスク分割）
-5. **実装工程**：`examples/05-implementation.md`（実装記録）
-6. **検証・受入工程**：`examples/06-verification-acceptance.md`（検証記録）
-7. **移行・運用工程**：`examples/07-migration-operation.md`（運用記録）
+### Q: Which should I use—the repository I created in Chapter 1, or this one?
 
-## サンプルプロジェクト：顧客管理システム
+A: Either is fine. If you already created a repository in Chapter 1, you can continue using that. This remote repository is for those who skipped Chapter 1 or want to practice with a fresh repository.
 
-このリモートリポジトリの`examples/`ディレクトリには、サンプルプロジェクトとして「顧客管理システム」の仕様が含まれています。7つの工程すべての例を体験できます：
+## About the Book
 
-- **原則決定工程**：プロジェクト憲章の書き方
-- **企画・要件定義工程**：仕様書の書き方と、4つの原則に基づく運用
-- **設計計画工程**：技術スタックの選定とAI活用の例
-- **タスク分割工程**：タスク分解の粒度と進捗管理
-- **実装工程**：AIを活用した実装とレビューの記録
-- **検証・受入工程**：仕様差分レポートと受入テスト
-- **移行・運用工程**：運用改善サイクルとフィードバックの反映
+This remote repository is used in the following book:
 
-各サンプルファイルには、どの工程の成果物かが明記されています。参考にしてください。
+**"Spec-Driven Development: A Practical Introduction"**
 
-## よくある質問（FAQ）
+This repository is the practice repository referenced throughout the entire book. Main usage locations:
 
-### Q: このリモートリポジトリを編集しても大丈夫ですか？
+- **Introduction**: Introduced as a source of practical resources (script collection, prompt collection, etc.)
+- **Chapter 2**: Introduced in detail as the practice repository (Section 2.5 "Utilizing the Practice Repository (SDD Repository)")
+- **Chapter 3**: Reference to Cursor video list (`docs/tools/cursor-videos.md`)
+- **Chapter 4**: Reference to Git command reference (`docs/tools/git-commands.md`)
+- **Chapter 5**: Reference to prompt collection (`docs/tools/prompts.md`) and 90-day introduction plan (`docs/guides/90-day-introduction-plan.md`)
+- **Chapter 10**: References to various guides (Markdown basics, Word/Excel conversion, OASYS/Ichitaro conversion, etc.)
+- **Chapter 11**: Reference to 90-day introduction plan (`docs/guides/90-day-introduction-plan.md`)
+- **Chapter 12**: Reference to script collection (`docs/tools/scripts.md`) and security & privacy guide (`docs/guides/security-privacy-guide.md`)
+- **Chapter 13**: References to 90-day introduction plan and prompt collection
 
-A: **いいえ、このリモートリポジトリ（elvezjp/SDD）は参考用です。直接編集することは避けてください。** 編集したい場合は、必ずフォーク（Fork）してご自身のリモートリポジトリをローカルリポジトリにクローンして作業してください。これにより、他の読者も常に最新の参考資料を参照できます。
+You can use the resources in this repository to practice Spec-Driven Development while reading the book.
 
-**フォークの手順**：
-1. GitHubでこのリモートリポジトリを開く
-2. 右上の「Fork」ボタンをクリック
-3. フォークしたリモートリポジトリをローカルリポジトリにクローンして作業する
+## YouTube Channel
 
-### Q: エラーが発生した場合はどうすればいいですか？
+We operate the YouTube channel **"ソフトウェアの作り方チャンネル Tech千一夜"**.
 
-A: `docs/guides/troubleshooting.md`に、よくあるエラーとその対処法をまとめています。まずはそちらを確認してください。それでも解決しない場合は、GitHubのIssuesで質問してください。
+This channel shares information about Cursor and Spec-Driven Development. We explain practical usage and the latest information in video format, so please take a look.
 
-### Q: 第1章で作成したリポジトリと、どちらを使えばいいですか？
+**Channel URL**: https://www.youtube.com/@tech1018/
 
-A: どちらでも構いません。第1章で既にリポジトリを作成した方は、そちらを使い続けても問題ありません。このリモートリポジトリは、第1章をスキップした方や、新しいリポジトリで練習したい方向けです。
+**Cursor Video List**: [docs/tools/cursor-videos.md](docs/tools/cursor-videos.md) provides a list of Cursor-related videos.
 
-## 本書について
+## Next Steps
 
-このリモートリポジトリは、以下の書籍で使用されています：
-
-**『仕様駆動開発 実践入門』**
-
-このリポジトリは、本書全体を通じて参照される練習用リポジトリです。主な使用箇所は以下の通りです。
-
-- **はじめに**: 実践的なリソース（スクリプト集、プロンプト集など）の提供元として紹介
-- **第2章**: 練習用リポジトリとして詳しく紹介（2.5節「練習用リポジトリ（SDDリポジトリ）を活用する」）
-- **第3章**: Cursor関連動画一覧（`docs/tools/cursor-videos.md`）への参照
-- **第4章**: Gitコマンド一覧（`docs/tools/git-commands.md`）への参照
-- **第5章**: プロンプト集（`docs/tools/prompts.md`）への参照、90日間導入プラン（`docs/guides/90-day-introduction-plan.md`）への参照
-- **第10章**: 各種ガイド（Markdown記法、Word/Excel変換、OASYS/一太郎変換など）への参照
-- **第11章**: 90日間導入プラン（`docs/guides/90-day-introduction-plan.md`）への参照
-- **第12章**: スクリプト集（`docs/tools/scripts.md`）への参照、セキュリティとプライバシーガイド（`docs/guides/security-privacy-guide.md`）への参照
-- **第13章**: 90日間導入プラン（`docs/guides/90-day-introduction-plan.md`）への参照、プロンプト集（`docs/tools/prompts.md`）への参照
-
-本書を読みながら、このリポジトリのリソースを活用して仕様駆動開発を実践できます。
-
-## YouTubeチャンネル
-
-私たちは、YouTubeチャンネル「**ソフトウェアの作り方チャンネル Tech千一夜**」を運営しています。
-
-このチャンネルでは、Cursorや仕様駆動開発についての情報発信を行っています。実践的な使い方や最新の情報を動画で解説していますので、ぜひご覧ください。
-
-**チャンネルURL**: https://www.youtube.com/@tech1018/
-
-**Cursor関連動画一覧**: [docs/tools/cursor-videos.md](docs/tools/cursor-videos.md) で、Cursor関連の動画を一覧で確認できます。
-
-## 次のステップ
-
-1. このリモートリポジトリをフォークする（または参考用にローカルリポジトリにクローンする）
-2. Cursorでフォークしたリモートリポジトリをローカルリポジトリにクローンして開く
-3. README.mdを編集して、あなたのプロジェクトの仕様を書いてみる
-4. AIと対話しながら、仕様を育てていく
-5. 変更をコミット・プッシュして、フォークしたリモートリポジトリに反映する
+1. Fork this remote repository (or clone it locally for reference)
+2. Open the forked remote repository locally with Cursor
+3. Edit README.md and write your project's specifications
+4. Grow your specifications through dialogue with AI
+5. Commit and push changes to reflect them in your forked remote repository
 
 ---
 
-## リポジトリの保護について
+## Repository Protection
 
-このリモートリポジトリは参考用として保護されています。以下の点にご注意ください：
+This remote repository is maintained for reference. Please note the following:
 
-- **このリモートリポジトリ（elvezjp/SDD）は直接編集しないでください**
-- 編集したい場合は、必ずフォーク（Fork）してからご自身のリモートリポジトリをローカルリポジトリにクローンして作業してください
-- このリモートリポジトリは、すべての読者が参照できる参考資料として維持されます
-
-以下、備忘録：公開時には、削除予定
-
-**GitHubでの保護設定**（リポジトリ管理者向け）：
-- Settings > General > Features で「Template repository」を有効化することを推奨
-- **Branch Protection Rules（推奨）**：mainブランチを保護
-  - オーナーは編集可能、他ユーザーはプッシュ不可
-  - 設定：Settings > Branches > Branch protection rules
-
-**Branch Protection Rulesを設定した場合の動作**：
-- **クローン**：可能（読み取り操作のため）
-- **フォーク**：可能
-- **プッシュ（オーナー以外）**：不可（Branch Protection Rulesにより保護されているため）
-- **プッシュ（オーナー）**：可能（オーナーは編集可能）
-- **ローカル環境での編集**：可能（ただし、オーナー以外は元のリモートリポジトリには反映不可）
+- **Do not edit this remote repository (elvezjp/SDD) directly**
+- If you want to make edits, always fork it first and clone your own remote repository to work locally
+- This remote repository is maintained as a reference resource for all readers
 
 ---
 
-## 開発の背景
+## Documentation
 
-本ツールは、日本語の開発文書・仕様書を対象とした開発支援AI **IXV（イクシブ）** の開発過程で生まれた小さな実用品です。
+- [CHANGELOG.md](CHANGELOG.md) - Version history
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
+- [SECURITY.md](SECURITY.md) - Security policy
 
-IXVでは、システム開発における日本語の文書について、理解・構造化・活用という課題に取り組んでおり、本リポジトリでは、その一部を切り出して公開しています。
+## Security
 
-## ライセンス
+For security details, see [SECURITY.md](SECURITY.md).
 
-MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
+- This repository consists solely of documentation and sample files; no executable code is included
+- If you discover a vulnerability, please report it by email rather than opening a public Issue (info@elvez.co.jp)
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+- Bug reports / typo fixes: [GitHub Issues](https://github.com/elvezjp/SDD/issues)
+- Feature proposals (new samples/guides, etc.): [GitHub Issues](https://github.com/elvezjp/SDD/issues)
+- Pull requests: [GitHub Pull Requests](https://github.com/elvezjp/SDD/pulls)
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
+
+## Background
+
+This tool was created as a small utility during the development of **IXV (Ixiv)**, a development support AI for Japanese development documents and specifications.
+
+IXV addresses the challenges of understanding, structuring, and utilizing Japanese documents in system development. This repository publishes a portion of that work.
+
+## License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## Contact
+
+- **Email**: info@elvez.co.jp
+- **Recipient**: Elvez Inc. (株式会社エルブズ)
