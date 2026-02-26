@@ -159,72 +159,10 @@ spec resume <project_id>
 
 プロジェクトIDを指定して、中断したインタビューを再開できます。プロジェクトIDは `spec list` で確認できます。
 
-### LLMプロバイダーの選択
+### LLMプロバイダーの設定
 
-#### Claude (Anthropic API)
-
-`.env`ファイル:
-```env
-ANTHROPIC_API_KEY=sk-ant-api03-...
-DEFAULT_LLM_PROVIDER=claude
-```
-
-#### OpenAI (GPT-4 / GPT-3.5-turbo)
-
-OpenAI APIを使用してGPT-4やGPT-3.5-turboでインタビューを実施できます。
-
-**セットアップ:**
-
-1. OpenAI APIキーを取得: https://platform.openai.com/api-keys
-
-2. `.env`ファイルを設定:
-```env
-OPENAI_API_KEY=sk-...
-DEFAULT_LLM_PROVIDER=openai
-```
-
-3. openaiパッケージをインストール:
-```bash
-uv add openai
-```
-
-**利用可能なモデル:**
-- `gpt-4-turbo-preview` (デフォルト) - 最新のGPT-4 Turbo
-- `gpt-4` - GPT-4 (8K context)
-- `gpt-4-32k` - GPT-4 (32K context)
-- `gpt-3.5-turbo` - GPT-3.5 Turbo (コスト効率が良い)
-- `gpt-3.5-turbo-16k` - GPT-3.5 Turbo (16K context)
-
-**料金 (2024年12月時点):**
-- GPT-4 Turbo: 入力 $10/MTok、出力 $30/MTok
-- GPT-4: 入力 $30/MTok、出力 $60/MTok
-- GPT-3.5 Turbo: 入力 $0.50/MTok、出力 $1.50/MTok
-
-#### AWS Bedrock (エンタープライズ向け)
-
-AWS Bedrockを使用すると、既存のAWSインフラ内でClaudeモデルを実行できます。
-
-**クイックスタート:**
-
-1. boto3をインストール:
-```bash
-uv add boto3
-```
-
-2. `.env`ファイルを設定:
-```env
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-west-2
-DEFAULT_LLM_PROVIDER=bedrock
-```
-
-3. AWS Consoleでモデルアクセスを有効化:
-   - AWS Bedrock → Model access → Claude Haiku 4.5を有効化
-
-**詳細な設定手順:**
-
-Bedrock固有の設定、IAMポリシー、VPC Endpoint、コスト最適化などの詳細は、[BEDROCK_SETUP.md](./docs/BEDROCK_SETUP.md)を参照してください。
+Claude (Anthropic API)、OpenAI、AWS Bedrockに対応しています。
+各プロバイダーのセットアップ手順は [LLM_SETUP.md](./docs/LLM_SETUP.md) を参照してください。
 
 ### コマンド一覧
 
