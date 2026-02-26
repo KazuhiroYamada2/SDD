@@ -5,58 +5,52 @@
 ## 前提条件
 
 - Python 3.9以上がインストールされている
-- Claude APIキー（Anthropic）を持っている
+- [uv](https://docs.astral.sh/uv/) がインストールされている
+- LLM APIキー（Claude、OpenAI、またはAWS Bedrockのいずれか）を持っている
 
 ## セットアップ（5分）
 
 ### 1. リポジトリをクローン
 
 ```bash
-cd /Users/hdkworks/Projects/SDD
+git clone <repository-url>
 cd spec-ai-writer
 ```
 
-### 2. 仮想環境を作成・有効化
+### 2. 依存パッケージをインストール
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windowsの場合: venv\Scripts\activate
+uv sync
 ```
 
-### 3. 依存パッケージをインストール
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. 環境変数を設定
+### 3. 環境変数を設定
 
 ```bash
 cp .env.example .env
 ```
 
-`.env`ファイルを編集して、Claude APIキーを設定:
+`.env`ファイルを編集して、使用するLLMプロバイダーのAPIキーを設定:
 
 ```env
+# 使用するプロバイダーのキーのみ設定すればOK
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-DEFAULT_LLM_PROVIDER=claude
-OUTPUT_DIR=./spec_output
-AUTO_GIT_COMMIT=true
-TEMPERATURE=0.7
+DEFAULT_LLM_PROVIDER=claude  # claude, openai, bedrockから選択
 ```
+
+各プロバイダーの詳細な設定手順は [LLM_SETUP.md](./docs/LLM_SETUP.md) を参照してください。
 
 ## 使い方
 
 ### 新しいプロジェクトのインタビューを開始
 
 ```bash
-python -m spec_ai_writer.main start my-project
+uv run python -m spec_ai_writer.main start
 ```
 
-または、モジュールとしてインストール済みの場合:
+または、パッケージとしてインストール済みの場合:
 
 ```bash
-spec start my-project
+spec start
 ```
 
 ### インタビューの流れ
@@ -68,6 +62,51 @@ spec start my-project
 5. システムが情報を整理し、仕様書を生成
 6. 自動的にGitコミット（設定している場合）
 
+### 実行例
+
+```
+% uv run python -m spec_ai_writer.main start
+プロジェクト名を入力してください: my-project
+プロジェクトID: 543501a0
+CLAUDE を使用します...
+
+============================================================
+仕様駆動開発（SDD）インタビューを開始します
+プロジェクト: 543501a0
+現在のフェーズ: 1
+============================================================
+
+
+────────────────────────────────────────────────────────────
+フェーズ 1: 原則決定工程
+プロジェクトの存在意義・原則・制約条件を明文化し、合意形成する
+────────────────────────────────────────────────────────────
+
+# フェーズ1: 原則決定工程
+
+プロジェクトの存在意義・原則・制約条件を明文化し、合意形成する
+
+このフェーズでは、以下の情報を収集します：
+- 背景
+- 目的
+- 基本原則
+- 含まれるもの（スコープ内）
+- 含まれないもの（スコープ外）
+- 制約条件
+- ステークホルダー
+- 成功基準
+
+これから質問をしていきますので、できるだけ詳しく答えてください。
+
+
+質問: このプロジェクトが立ち上がった背景を教えていただけますか？
+つまり、現在どのような問題や課題があって、なぜこのプロジェクトが
+必要になったのかを聞かせてください。
+回答:
+```
+
+LLMからの質問に答えていくと、各フェーズの仕様書が自動的に生成されます。
+
 ### 中断と再開
 
 #### 中断方法
@@ -76,121 +115,22 @@ spec start my-project
 
 #### 再開方法
 ```bash
-python -m spec_ai_writer.main resume my-project
+uv run python -m spec_ai_writer.main resume <project_id>
 ```
+
+プロジェクトIDは `spec list` で確認できます。
 
 ### プロジェクト一覧を確認
 
 ```bash
-python -m spec_ai_writer.main list
+uv run python -m spec_ai_writer.main list
 ```
 
 ### 進捗状況を確認
 
 ```bash
-python -m spec_ai_writer.main status my-project
+uv run python -m spec_ai_writer.main status <project_id>
 ```
-
-## 実際の例
-
-### ステップ1: インタビュー開始
-
-```bash
-$ python -m spec_ai_writer.main start customer-management
-
-============================================================
-仕様駆動開発（SDD）インタビューを開始します
-プロジェクト: customer-management
-現在のフェーズ: 1
-============================================================
-
-────────────────────────────────────────────────────────────
-フェーズ 1: 原則決定工程
-プロジェクトの存在意義・原則・制約条件を明文化
-────────────────────────────────────────────────────────────
-
-# フェーズ1: 原則決定工程
-
-プロジェクト憲章（Project Constitution）を作成するための情報を収集します...
-
-質問: まず、このプロジェクトの背景について教えてください。
-どのような問題を解決したいのか、あるいはどのような機会を追求したいのでしょうか？
-
-回答: Excelで顧客管理をしていますが、営業担当者が増えて限界を感じています...
-```
-
-### ステップ2: 質問に回答
-
-LLMが生成する質問に、できるだけ詳しく答えてください。例:
-
-```
-質問: このプロジェクトで達成したい目的を教えてください。
-
-回答:
-- リアルタイムで顧客情報を共有できるようにする
-- 営業活動の履歴を一元管理する
-- 売上予測を自動化する
-```
-
-### ステップ3: 仕様書の生成
-
-5〜10個の質問に答えると、システムが自動的に:
-
-1. 情報を整理
-2. Markdown仕様書を生成 (`spec_output/01-principle-definition.md`)
-3. Gitコミット（`AUTO_GIT_COMMIT=true`の場合）
-
-### ステップ4: 生成された仕様書を確認
-
-```bash
-cat spec_output/01-principle-definition.md
-```
-
-生成されたファイルの例:
-
-```markdown
-# customer-management - プロジェクト憲章
-
-## プロジェクトの存在意義（Why）
-
-### 背景
-
-Excelで顧客管理をしていますが、営業担当者が増えて
-情報の共有や更新が困難になってきました...
-
-### 目的
-
-- リアルタイムで顧客情報を共有できるようにする
-- 営業活動の履歴を一元管理する
-- 売上予測を自動化する
-...
-```
-
-## トラブルシューティング
-
-### API キーエラー
-
-```
-❌ LLM設定エラー:
-  - ANTHROPIC_API_KEY is required for Claude provider
-```
-
-**解決方法**: `.env`ファイルで`ANTHROPIC_API_KEY`を設定してください。
-
-### プロジェクトが見つからない
-
-```
-❌ プロジェクト 'my-project' が見つかりません。
-```
-
-**解決方法**: `spec start my-project`で新規作成するか、`spec list`で既存プロジェクトを確認してください。
-
-### インタビューが長すぎる
-
-**解決方法**:
-- 質問には簡潔に答えてください
-- 箇条書きを活用してください
-- 不要な詳細は省略してください
 
 ## Tips
 
@@ -203,10 +143,8 @@ Excelで顧客管理をしていますが、営業担当者が増えて
 
 1. フェーズ1が完了したら、システムが自動的にフェーズ2（企画・要件定義）に進みます
 2. すべてのフェーズ（1-7）を完了すると、プロジェクトの完全な仕様書セットが生成されます
-3. 生成された仕様書は`spec_output/`ディレクトリで確認できます
+3. 生成された仕様書は `data/{project_id}/specs/` ディレクトリで確認できます
 
 ## サポート
 
 問題が発生した場合は、GitHubのIssuesで報告してください。
-
-Happy specification writing! 📝
