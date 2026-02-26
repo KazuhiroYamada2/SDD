@@ -1,4 +1,4 @@
-# SDD
+# SDD (Spec-Driven Development) Practice Repository
 
 [English](./README.md) | [日本語](./README_ja.md)
 
@@ -6,8 +6,6 @@
 [![IXV Ecosystem](https://img.shields.io/badge/IXV-Ecosystem-3F61A7?style=flat-square)](https://elvez.co.jp/ixv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Stars](https://img.shields.io/github/stars/elvezjp/SDD?style=social)](https://github.com/elvezjp/SDD/stargazers)
-
-# Spec-Driven Development Practice Repository
 
 This repository is the **practice repository** used in *Spec-Driven Development: A Practical Introduction*.
 In the book, it is referred to as the "practice repository" or "SDD repository."
@@ -54,7 +52,7 @@ GitHub has two similar but distinct operations: **Fork** and **Clone**. It is im
 | For reference/viewing only | △ | ✅ |
 | Recommended use in this repository | **Editing & Practice** | **Viewing Only** |
 
-## Setup
+## Usage
 
 ### 1. Fork or Clone This Remote Repository
 
@@ -79,8 +77,6 @@ In that case, use the **Command Palette** approach.
    ```
 3. Select a destination folder
 4. Click "Clone"
-
-## Usage
 
 ### 2. Open and Review README.md
 
