@@ -27,12 +27,15 @@ export default function Interview() {
     setDisplayName,
     setInterviewActive,
     setWaitingForResponse,
+    reset,
   } = useInterviewStore();
 
   // Start interview via REST API
   const startInterview = useCallback(async () => {
     if (!projectId) return;
 
+    // Reset previous session state (messages may persist during SPA navigation)
+    reset();
     setIsStarting(true);
     setError(null);
     setProjectId(projectId);
@@ -42,17 +45,22 @@ export default function Interview() {
         project_id: projectId,
       });
 
-      // Set phase info and display name
       setDisplayName(response.display_name);
       setCurrentPhase(response.phase_num, response.phase_name);
-      setInterviewActive(true);
 
-      // Add initial question as assistant message
-      addMessage({
-        role: 'assistant',
-        content: response.initial_message,
-        timestamp: new Date().toISOString(),
-      });
+      if (response.all_complete && response.chat_history) {
+        // All phases complete: restore full chat history and disable input
+        response.chat_history.forEach((msg) => addMessage(msg));
+        setInterviewActive(false);
+      } else {
+        // Normal start: show initial question and enable input
+        setInterviewActive(true);
+        addMessage({
+          role: 'assistant',
+          content: response.initial_message,
+          timestamp: new Date().toISOString(),
+        });
+      }
     } catch (err) {
       console.error('Failed to start interview:', err);
       setError('インタビューの開始に失敗しました。バックエンドサーバーの接続を確認してください。');

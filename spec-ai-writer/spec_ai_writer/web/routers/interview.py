@@ -18,12 +18,49 @@ from spec_ai_writer.llm.factory import LLMFactory
 from ..models import (
     InterviewStartRequest,
     InterviewStartResponse,
+    HistoryMessage,
     UserAnswerRequest,
     AssistantQuestionResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _reconstruct_chat_history(context: ContextManager) -> list:
+    """Reconstruct full chat history from completed interview data in interview.json."""
+    messages = []
+    for phase_num in range(1, 8):
+        phase_data = context.get_phase_context(phase_num)
+        qa_pairs = phase_data.get("qa_pairs", [])
+        if not qa_pairs:
+            continue
+
+        for qa in qa_pairs:
+            messages.append(HistoryMessage(
+                role="assistant",
+                content=qa["question"],
+                timestamp=qa.get("timestamp", ""),
+            ))
+            messages.append(HistoryMessage(
+                role="user",
+                content=qa["answer"],
+                timestamp=qa.get("timestamp", ""),
+            ))
+
+        last_ts = qa_pairs[-1].get("timestamp", "")
+        messages.append(HistoryMessage(
+            role="system",
+            content=f"フェーズ {phase_num} が完了しました。",
+            timestamp=last_ts,
+        ))
+
+    messages.append(HistoryMessage(
+        role="system",
+        content="全てのフェーズが完了しました。仕様書が生成されました。",
+        timestamp="",
+    ))
+    return messages
 
 settings = get_settings()
 phase_manager = PhaseManager()
@@ -45,11 +82,26 @@ async def start_interview(request: InterviewStartRequest):
             phase_num = request.phase_num
         else:
             # Find next incomplete phase using context's completed flag
-            phase_num = 1
+            phase_num = None
             for i in range(1, 8):
                 if not context.is_phase_complete(i):
                     phase_num = i
                     break
+
+        # All phases complete - return reconstructed chat history
+        if phase_num is None:
+            chat_history = _reconstruct_chat_history(context)
+            phase_info = phase_manager.get_phase_info(7)
+            logger.info(f"All phases complete for {request.project_id}, returning chat history")
+            return InterviewStartResponse(
+                project_id=request.project_id,
+                display_name=context.display_name,
+                phase_num=7,
+                phase_name=phase_info.name,
+                initial_message="",
+                all_complete=True,
+                chat_history=chat_history,
+            )
 
         # Create interview engine
         llm_client = LLMFactory.create_client(settings=settings)
@@ -96,6 +148,15 @@ async def submit_answer(request: UserAnswerRequest):
     try:
         # Load context
         context = ContextManager.load_project(request.project_id, data_dir=settings.data_dir)
+
+        # Guard: if all phases complete, do not process further answers
+        if all(context.is_phase_complete(i) for i in range(1, 8)):
+            return AssistantQuestionResponse(
+                question="全てのフェーズが完了しています。仕様書をご確認ください。",
+                phase_complete=True,
+                phase_num=7,
+                qa_count=0,
+            )
 
         # Determine current phase using context's completed flag
         current_phase = 1
