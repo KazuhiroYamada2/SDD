@@ -7,9 +7,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Stars](https://img.shields.io/github/stars/elvezjp/SDD?style=social)](https://github.com/elvezjp/SDD/stargazers)
 
+
 このリポジトリは、『仕様駆動開発 実践入門』で使用する**練習用リポジトリ**です。このリポジトリについては、本書で「練習用リポジトリ」「SDDリポジトリ」などと呼称しますので、注意してください。
 
 リポジトリ名の「SDD」は「Spec-Driven Development（仕様駆動開発）」の略称です。このリモートリポジトリには、書籍で記載されている「仕様駆動開発の4つの原則と7つの工程」に沿ったサンプルファイルが含まれており、**実際のプロジェクトでどのようにリポジトリを構成するかの参考**になります。
+
+> 本書をお読みの方へ：書籍の誤植・修正事項は[正誤表](./docs/guides/errata.md)をご確認ください。
 
 ## このリポジトリの目的
 

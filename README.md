@@ -12,6 +12,8 @@ In the book, it is referred to as the "practice repository" or "SDD repository."
 
 The name "SDD" stands for **Spec-Driven Development**. This remote repository contains sample files organized around the "4 Principles and 7 Processes of Spec-Driven Development" described in the book, and serves as **a reference for how to structure a repository in real projects**.
 
+> For readers of the book: Please check the [Errata](./docs/guides/errata.md) for any known corrections.
+
 ## Use Cases
 
 By referencing this remote repository, you can better understand the overall picture of Spec-Driven Development.
