@@ -1,3 +1,8 @@
+> [!NOTE]
+> **日本語版をお探しの方へ**  
+> このリポジトリは書籍『仕様駆動開発 実践入門』の練習用リポジトリです。  
+> 日本語の README は [README_ja.md](./README_ja.md) をご覧ください。
+
 # SDD (Spec-Driven Development) Practice Repository
 
 [English](./README.md) | [日本語](./README_ja.md)
