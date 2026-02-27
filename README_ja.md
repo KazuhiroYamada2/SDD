@@ -162,13 +162,13 @@ SDD/
 
 各工程ごとに1つのMarkdownファイルで管理します：
 
-1. **原則決定工程**：`examples/01-principle-definition.md`（プロジェクト憲章）
-2. **企画・要件定義工程**：`examples/02-planning-requirement.md`（仕様書）
-3. **設計計画工程**：`examples/03-design-planning.md`（設計計画）
-4. **タスク分割工程**：`examples/04-task-breakdown.md`（タスク分割）
-5. **実装工程**：`examples/05-implementation.md`（実装記録）
-6. **検証・受入工程**：`examples/06-verification-acceptance.md`（検証記録）
-7. **移行・運用工程**：`examples/07-migration-operation.md`（運用記録）
+1. **原則決定工程**：[`examples/01-principle-definition.md`](examples/01-principle-definition.md)（プロジェクト憲章）
+2. **企画・要件定義工程**：[`examples/02-planning-requirement.md`](examples/02-planning-requirement.md)（仕様書）
+3. **設計計画工程**：[`examples/03-design-planning.md`](examples/03-design-planning.md)（設計計画）
+4. **タスク分割工程**：[`examples/04-task-breakdown.md`](examples/04-task-breakdown.md)（タスク分割）
+5. **実装工程**：[`examples/05-implementation.md`](examples/05-implementation.md)（実装記録）
+6. **検証・受入工程**：[`examples/06-verification-acceptance.md`](examples/06-verification-acceptance.md)（検証記録）
+7. **移行・運用工程**：[`examples/07-migration-operation.md`](examples/07-migration-operation.md)（運用記録）
 
 ## サンプルプロジェクト：顧客管理システム
 
@@ -186,9 +186,9 @@ SDD/
 
 ## よくある質問（FAQ）
 
-### Q: このリモートリポジトリを編集しても大丈夫ですか？
+### Q: このリモートリポジトリを編集できますか？
 
-A: **いいえ、このリモートリポジトリ（elvezjp/SDD）は参考用です。直接編集することは避けてください。** 編集したい場合は、必ずフォーク（Fork）してご自身のリモートリポジトリをローカルリポジトリにクローンして作業してください。これにより、他の読者も常に最新の参考資料を参照できます。
+A: **このリモートリポジトリ（elvezjp/SDD）は参考用のため、直接編集する権限はありません。** 編集を試したい場合は、フォーク（Fork）してご自身のリモートリポジトリをローカルリポジトリにクローンして作業してください。
 
 **フォークの手順**：
 1. GitHubでこのリモートリポジトリを開く

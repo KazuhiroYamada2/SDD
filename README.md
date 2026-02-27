@@ -123,13 +123,13 @@ Once you have finished editing locally:
 
 Each process is managed in a single Markdown file:
 
-1. **Principle Definition**: `examples/01-principle-definition.md` (Project Charter)
-2. **Planning & Requirements**: `examples/02-planning-requirement.md` (Specification)
-3. **Design Planning**: `examples/03-design-planning.md` (Design Plan)
-4. **Task Breakdown**: `examples/04-task-breakdown.md` (Task Breakdown)
-5. **Implementation**: `examples/05-implementation.md` (Implementation Log)
-6. **Verification & Acceptance**: `examples/06-verification-acceptance.md` (Verification Log)
-7. **Migration & Operations**: `examples/07-migration-operation.md` (Operations Log)
+1. **Principle Definition**: [`examples/01-principle-definition.md`](examples/01-principle-definition.md) (Project Charter)
+2. **Planning & Requirements**: [`examples/02-planning-requirement.md`](examples/02-planning-requirement.md) (Specification)
+3. **Design Planning**: [`examples/03-design-planning.md`](examples/03-design-planning.md) (Design Plan)
+4. **Task Breakdown**: [`examples/04-task-breakdown.md`](examples/04-task-breakdown.md) (Task Breakdown)
+5. **Implementation**: [`examples/05-implementation.md`](examples/05-implementation.md) (Implementation Log)
+6. **Verification & Acceptance**: [`examples/06-verification-acceptance.md`](examples/06-verification-acceptance.md) (Verification Log)
+7. **Migration & Operations**: [`examples/07-migration-operation.md`](examples/07-migration-operation.md) (Operations Log)
 
 ## Sample Project: Customer Management System
 
@@ -190,9 +190,9 @@ SDD/
 
 ## FAQ
 
-### Q: Is it okay to edit this remote repository?
+### Q: Can I edit this remote repository?
 
-A: **No, this remote repository (elvezjp/SDD) is for reference only. Please avoid editing it directly.** If you want to make edits, always fork it first and clone your own remote repository to work locally. This ensures all readers always have access to the latest reference material.
+A: **This remote repository (elvezjp/SDD) is for reference only, and you do not have permission to edit it directly.** If you want to try editing, fork it first and then clone your forked repository to work locally.
 
 **Fork steps**:
 1. Open this remote repository on GitHub
