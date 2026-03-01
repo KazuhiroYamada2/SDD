@@ -68,7 +68,6 @@
 - **`sdd/docs/guides/scale-based-practice-guide.md`**: 規模別の実践ポイントと移行パス
 - **`sdd/docs/tools/scripts.md`**: CI/CD設定、Git hooksなど、自動化・チェック機能を実現するスクリプト集
 - **`sdd/docs/guides/troubleshooting.md`**: よくあるエラーとその対処法
-- **`チェックリスト一覧.md`**: 各章の理解度と実践度を確認するチェックリスト
 
 ## 注意事項
 
