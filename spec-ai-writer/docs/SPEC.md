@@ -18,7 +18,7 @@
 AIとの対話形式のインタビューにより、SDD仕様書の作成を自動化する。
 SDD方法論の実践ハードルを下げ、誰でも一定品質の仕様書を作成できるようにする。
 
-詳細は、[01-principle-definition.md](./01-principle-definition.md)（プロジェクト憲章）を参照してください。
+詳細は、[CONSTITUTION.md](./CONSTITUTION.md)（プロジェクト憲章）を参照してください。
 
 ### 背景
 
