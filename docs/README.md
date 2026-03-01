@@ -19,7 +19,7 @@
 - [Cursor関連動画一覧](tools/cursor-videos.md) - Cursor操作の動画リソース
 - [Gitコマンド一覧](tools/git-commands.md) - よく使うGitコマンドのリファレンス
 - [プロンプト集](tools/prompts.md) - AIエディタで使える実践的なプロンプト
-- [スクリプト集](tools/scripts.md) - CI/CD、Git hooks、トレーサビリティなどのスクリプト
+- [スクリプト集](tools/scripts.md) - CI/CD設定、Git hooksなど、自動化・チェック機能を実現するスクリプト
 
 ### 📖 実践ガイド（guides/）
 
