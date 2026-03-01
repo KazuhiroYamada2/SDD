@@ -15,7 +15,7 @@ from spec_ai_writer.llm.factory import create_default_client
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="1.0.0")
 def cli():
     """Spec AIライター - AI対話型仕様駆動開発支援ツール
 
