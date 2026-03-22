@@ -18,6 +18,7 @@ except ImportError:
     BOTO3_AVAILABLE = False
 
 from .base import BaseLLMClient
+from .exceptions import LLMAuthenticationError, LLMConnectionError, LLMResponseError
 
 logger = logging.getLogger(__name__)
 
@@ -179,12 +180,18 @@ class BedrockClient(BaseLLMClient):
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
             error_message = e.response.get("Error", {}).get("Message", str(e))
             logger.error(f"Bedrock ClientError [{error_code}]: {error_message}")
-            raise RuntimeError(f"Bedrock API error [{error_code}]: {error_message}")
+            if error_code in ("UnrecognizedClientException", "AccessDeniedException", "InvalidSignatureException"):
+                raise LLMAuthenticationError(
+                    "AWS認証情報が無効です。.env ファイルの AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY を確認してください。"
+                ) from e
+            raise LLMResponseError(f"Bedrock API error [{error_code}]: {error_message}") from e
 
         except BotoCoreError as e:
             logger.error(f"Bedrock BotoCoreError: {e}")
-            raise RuntimeError(f"Bedrock connection error: {e}")
+            raise LLMConnectionError(
+                f"Bedrock APIに接続できません。ネットワーク接続とAWSリージョン設定を確認してください: {e}"
+            ) from e
 
         except Exception as e:
             logger.error(f"Unexpected error during Bedrock API call: {e}")
-            raise RuntimeError(f"Bedrock API call failed: {e}")
+            raise LLMResponseError(f"Bedrock API call failed: {e}") from e

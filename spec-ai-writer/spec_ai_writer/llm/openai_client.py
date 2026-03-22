@@ -10,12 +10,13 @@ from typing import List, Dict, Optional
 import httpx
 
 try:
-    from openai import OpenAI
+    from openai import OpenAI, AuthenticationError, APIConnectionError, APITimeoutError
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
 
 from .base import BaseLLMClient
+from .exceptions import LLMAuthenticationError, LLMConnectionError, LLMResponseError
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +108,19 @@ class OpenAIClient(BaseLLMClient):
 
             return result
 
+        except AuthenticationError as e:
+            logger.error(f"OpenAI authentication failed: {e}")
+            raise LLMAuthenticationError(
+                "OpenAI APIキーが無効です。.env ファイルの OPENAI_API_KEY を確認してください。"
+            ) from e
+        except (APIConnectionError, APITimeoutError) as e:
+            logger.error(f"OpenAI connection error: {e}")
+            raise LLMConnectionError(
+                f"OpenAI APIに接続できません。ネットワーク接続を確認してください: {e}"
+            ) from e
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")
-            raise RuntimeError(f"OpenAI API call failed: {e}")
+            raise LLMResponseError(f"OpenAI API call failed: {e}") from e
 
 
 # Commonly used models

@@ -137,6 +137,25 @@ class ProjectStatusResponse(BaseModel):
     overall_progress: float  # 0.0 to 1.0
 
 
+class ProjectUpdateRequest(BaseModel):
+    """Request model for updating a project."""
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class PhaseResetRequest(BaseModel):
+    """Request model for resetting a phase."""
+    project_id: str
+    phase_num: int = Field(..., ge=1, le=7)
+
+
+class PhaseResetResponse(BaseModel):
+    """Response model for phase reset."""
+    project_id: str
+    phase_num: int
+    message: str
+
+
 class ErrorResponse(BaseModel):
     """Error response model."""
     error: str

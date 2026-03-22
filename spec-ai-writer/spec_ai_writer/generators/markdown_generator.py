@@ -1,11 +1,14 @@
 """Markdown generator for creating specification files."""
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader, Template, TemplateNotFound, TemplateSyntaxError
+
+logger = logging.getLogger(__name__)
 
 
 class MarkdownGenerator:
@@ -29,6 +32,12 @@ class MarkdownGenerator:
             templates_dir = project_root / "templates"
 
         self.templates_dir = Path(templates_dir)
+        if not self.templates_dir.is_dir():
+            logger.warning(
+                "Template directory does not exist: %s. "
+                "Fallback generators will be used.",
+                self.templates_dir,
+            )
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(self.templates_dir)),
             trim_blocks=True,
@@ -61,8 +70,17 @@ class MarkdownGenerator:
 
         try:
             template = self.jinja_env.get_template(template_filename)
-        except Exception as e:
-            print(f"Warning: Could not load template {template_filename}: {e}")
+        except TemplateSyntaxError as e:
+            logger.error(
+                "Template syntax error in %s: %s", template_filename, e
+            )
+            raise
+        except TemplateNotFound as e:
+            logger.warning(
+                "Template %s not found in %s. Using fallback generator.",
+                template_filename,
+                self.templates_dir,
+            )
             # Fallback to old method
             if phase_num == 1:
                 content = self._generate_phase_01(data, display_name)

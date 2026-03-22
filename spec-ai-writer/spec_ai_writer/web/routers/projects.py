@@ -4,6 +4,7 @@ Projects API Router
 Endpoints for project management (CRUD operations).
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import List
@@ -19,6 +20,7 @@ from ..models import (
     ProjectResponse,
     ProjectListResponse,
     ProjectStatusResponse,
+    ProjectUpdateRequest,
     PhaseInfo,
     PhaseStatus,
     ErrorResponse
@@ -43,7 +45,8 @@ async def create_project(project: ProjectCreate):
         # Create project with auto-generated ID
         context = ContextManager.create_project(
             display_name=project.display_name,
-            data_dir=settings.data_dir
+            data_dir=settings.data_dir,
+            description=project.description or ""
         )
 
         logger.info(f"Created new project: {context.project_id} ({project.display_name})")
@@ -61,6 +64,11 @@ async def create_project(project: ProjectCreate):
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Failed to create project: {e}")
         raise HTTPException(
@@ -121,7 +129,7 @@ async def list_projects():
                 projects.append(ProjectResponse(
                     project_id=project_id,
                     display_name=proj_meta.get("display_name", ""),
-                    description=None,
+                    description=proj_meta.get("description", ""),
                     current_phase=current_phase,
                     phase_status=phase_status,
                     created_at=created_at,
@@ -185,7 +193,7 @@ async def get_project(project_id: str):
         return ProjectResponse(
             project_id=project_id,
             display_name=context.display_name,
-            description=None,
+            description=context.description,
             current_phase=current_phase,
             phase_status=phase_status,
             created_at=datetime.fromisoformat(context.context.get("created_at", datetime.now().isoformat())),
@@ -303,4 +311,83 @@ async def delete_project(project_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete project: {str(e)}"
+        )
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+async def update_project(project_id: str, update: ProjectUpdateRequest):
+    """
+    Update project metadata (display_name and/or description).
+    """
+    try:
+        context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
+
+        # Read current project.json
+        project_json_path = context.get_project_dir() / "project.json"
+        with open(project_json_path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        # Apply updates
+        if update.display_name is not None:
+            metadata["display_name"] = update.display_name
+        if update.description is not None:
+            metadata["description"] = update.description
+        metadata["updated_at"] = datetime.now().isoformat()
+
+        # Save updated project.json
+        with open(project_json_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+        # Reload context to reflect changes
+        context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
+
+        # Determine phase status
+        phase_status = {}
+        for i in range(1, 8):
+            phase_context = context.get_phase_context(i)
+            if not phase_context.get("qa_pairs"):
+                phase_status[i] = PhaseStatus.NOT_STARTED
+            elif phase_manager.validate_phase_completion(i, phase_context):
+                phase_status[i] = PhaseStatus.COMPLETED
+            else:
+                phase_status[i] = PhaseStatus.IN_PROGRESS
+
+        # Find current phase
+        current_phase = 1
+        for i in range(1, 8):
+            if phase_status[i] != PhaseStatus.COMPLETED:
+                current_phase = i
+                break
+        else:
+            current_phase = 7
+
+        # Count total Q&A pairs
+        total_qa = sum(
+            len(context.get_phase_context(i).get("qa_pairs", []))
+            for i in range(1, 8)
+        )
+
+        return ProjectResponse(
+            project_id=project_id,
+            display_name=context.display_name,
+            description=context.description,
+            current_phase=current_phase,
+            phase_status=phase_status,
+            created_at=datetime.fromisoformat(context.context.get("created_at", datetime.now().isoformat())),
+            updated_at=datetime.fromisoformat(context.context.get("updated_at", datetime.now().isoformat())),
+            total_qa_pairs=total_qa
+        )
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{project_id}' not found"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update project: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update project: {str(e)}"
         )

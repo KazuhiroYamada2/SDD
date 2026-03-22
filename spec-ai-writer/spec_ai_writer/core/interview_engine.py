@@ -1,5 +1,6 @@
 """Interview engine for conducting SDD interviews."""
 
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -7,6 +8,13 @@ from typing import Any, Dict, List, Optional
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.phase_manager import PhaseManager
 from spec_ai_writer.llm.base import BaseLLMClient
+from spec_ai_writer.llm.exceptions import (
+    LLMAuthenticationError,
+    LLMConnectionError,
+    LLMResponseError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class InterviewEngine:
@@ -151,7 +159,16 @@ class InterviewEngine:
         try:
             question = self.llm.generate_question(system_prompt, context)
             return question.strip()
-        except Exception as e:
+        except LLMAuthenticationError as e:
+            logger.error(f"LLM認証エラー: {e}")
+            print(f"\nエラー: APIキーが無効です。.env ファイルの設定を確認してください。")
+            return ""
+        except LLMConnectionError as e:
+            logger.error(f"LLM接続エラー: {e}")
+            print(f"\nエラー: LLMサービスに接続できません。ネットワーク接続を確認してください。")
+            return ""
+        except (LLMResponseError, Exception) as e:
+            logger.error(f"質問生成エラー: {e}")
             print(f"\n質問の生成中にエラーが発生しました: {e}")
             return ""
 
@@ -202,6 +219,11 @@ class InterviewEngine:
             schema = self.phase_mgr.get_schema_for_phase(phase_num)
             structured_data = self.llm.extract_structured_data(conversation, schema)
 
+            # Check if extraction returned empty result
+            if not structured_data:
+                logger.info(f"フェーズ{phase_num}: 構造化データの抽出結果が空です")
+                return False
+
             # Validate completeness
             is_valid, missing = self.phase_mgr.validate_phase_completion(
                 phase_num,
@@ -209,15 +231,23 @@ class InterviewEngine:
             )
 
             return is_valid
-        except Exception:
+        except LLMAuthenticationError:
+            raise  # 認証エラーは上位に伝播
+        except LLMConnectionError:
+            raise  # 接続エラーは上位に伝播
+        except (LLMResponseError, Exception) as e:
+            logger.warning(f"フェーズ完了判定中にエラー: {e}")
             return False
 
-    def _extract_and_save_structured_data(self, phase_num: int) -> None:
+    def _extract_and_save_structured_data(self, phase_num: int) -> bool:
         """
         Extract structured data from conversation and save it.
 
         Args:
             phase_num: Phase number
+
+        Returns:
+            True if extraction succeeded with non-empty data, False otherwise
         """
         try:
             schema = self.phase_mgr.get_schema_for_phase(phase_num)
@@ -226,9 +256,37 @@ class InterviewEngine:
                 self.llm,
                 schema
             )
-            print(f"データを抽出しました（{len(structured_data)}項目）")
-        except Exception as e:
+
+            non_null_count = sum(1 for v in structured_data.values() if v is not None)
+
+            if non_null_count == 0:
+                logger.warning(f"フェーズ{phase_num}: 構造化データの抽出に失敗しました。リトライします...")
+                # 1回リトライ
+                structured_data = self.context_mgr.extract_structured_data(
+                    phase_num,
+                    self.llm,
+                    schema
+                )
+                non_null_count = sum(1 for v in structured_data.values() if v is not None)
+
+            if non_null_count == 0:
+                print("警告: 構造化データの抽出に失敗しました。インタビュー内容を見直してください。")
+                return False
+
+            print(f"データを抽出しました（有効項目: {non_null_count}/{len(structured_data)}）")
+            return True
+        except LLMAuthenticationError as e:
+            logger.error(f"LLM認証エラー: {e}")
+            print(f"エラー: APIキーが無効です。.env ファイルの設定を確認してください。")
+            return False
+        except LLMConnectionError as e:
+            logger.error(f"LLM接続エラー: {e}")
+            print(f"エラー: LLMサービスに接続できません。ネットワーク接続を確認してください。")
+            return False
+        except (LLMResponseError, Exception) as e:
+            logger.error(f"データ抽出中にエラー: {e}")
             print(f"データ抽出中にエラーが発生しました: {e}")
+            return False
 
     def _get_system_prompt_for_phase(self, phase_num: int) -> str:
         """
@@ -323,8 +381,14 @@ class InterviewEngine:
         try:
             question = self.llm.generate_question(system_prompt, context)
             return question.strip() if question else phase_info.description
-        except Exception as e:
-            # Fallback to phase description if LLM fails
+        except LLMAuthenticationError as e:
+            logger.error(f"LLM認証エラー: {e}")
+            raise
+        except LLMConnectionError as e:
+            logger.error(f"LLM接続エラー: {e}")
+            raise
+        except (LLMResponseError, Exception) as e:
+            logger.warning(f"初回質問の生成に失敗、フォールバックを使用: {e}")
             return f"フェーズ{phase_num}「{phase_info.name}」を開始します。\n\n{phase_info.description}\n\nまず、プロジェクトの概要を教えてください。"
 
     def _generate_follow_up_question(
@@ -348,7 +412,12 @@ class InterviewEngine:
         try:
             question = self.llm.generate_question(system_prompt, context)
             return question.strip() if question else ""
-        except Exception as e:
+        except LLMAuthenticationError:
+            raise
+        except LLMConnectionError:
+            raise
+        except (LLMResponseError, Exception) as e:
+            logger.warning(f"フォローアップ質問の生成に失敗: {e}")
             return "もう少し詳しく教えていただけますか？"
 
     def _is_phase_complete(
@@ -451,12 +520,15 @@ class InterviewEngine:
         }
         return dependencies.get(phase_num, [])
 
-    def _load_previous_phase_specs(self, phase_num: int) -> str:
+    def _load_previous_phase_specs(self, phase_num: int, max_phases: int = 2) -> str:
         """
         Load specification documents from previous phases that this phase depends on.
 
+        Limits to the most recent `max_phases` dependencies to avoid excessive context size.
+
         Args:
             phase_num: Current phase number
+            max_phases: Maximum number of previous phase specs to include
 
         Returns:
             Combined content of previous phase specifications
@@ -465,10 +537,13 @@ class InterviewEngine:
         if not dependencies:
             return ""
 
+        # Limit to most recent dependencies to control context size
+        recent_deps = dependencies[-max_phases:]
+
         specs_dir = self.context_mgr.get_specs_dir()
 
         specs_content = []
-        for dep_phase in dependencies:
+        for dep_phase in recent_deps:
             phase_info = self.phase_mgr.get_phase_info(dep_phase)
             spec_path = specs_dir / phase_info.filename
 
@@ -478,7 +553,7 @@ class InterviewEngine:
                     specs_content.append(
                         f"### フェーズ{dep_phase}: {phase_info.name}\n\n{content}"
                     )
-                except Exception:
-                    pass  # Skip if file cannot be read
+                except OSError as e:
+                    logger.warning(f"仕様書ファイルの読み込みに失敗: {spec_path}: {e}")
 
         return "\n\n---\n\n".join(specs_content)

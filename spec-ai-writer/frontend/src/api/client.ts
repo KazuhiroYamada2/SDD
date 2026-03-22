@@ -136,6 +136,12 @@ class APIClient {
     });
     return response.data;
   }
+
+  // Phase reset (re-interview)
+  async resetPhase(data: { project_id: string; phase_num: number }): Promise<{ project_id: string; phase_num: number; message: string }> {
+    const response = await this.client.post('/api/interview/reset-phase', data);
+    return response.data;
+  }
 }
 
 // Export appropriate client based on environment

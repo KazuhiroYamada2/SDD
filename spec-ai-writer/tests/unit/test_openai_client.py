@@ -194,9 +194,8 @@ class TestOpenAIClient:
         schema = {"field1": "Field 1", "field2": "Field 2"}
 
         data = client.extract_structured_data("conversation", schema)
-        # Should return dict with None values as fallback
-        assert data["field1"] is None
-        assert data["field2"] is None
+        # Should return empty dict as fallback
+        assert data == {}
 
     @patch('spec_ai_writer.llm.openai_client.OpenAI')
     def test_chat_api_error(self, mock_openai):
@@ -208,7 +207,8 @@ class TestOpenAIClient:
         client = OpenAIClient(api_key="test-key")
         messages = [{"role": "user", "content": "Test"}]
 
-        with pytest.raises(RuntimeError, match="OpenAI API call failed"):
+        from spec_ai_writer.llm.exceptions import LLMResponseError
+        with pytest.raises(LLMResponseError, match="OpenAI API call failed"):
             client.chat(messages)
 
     def test_model_constants(self):

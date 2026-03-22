@@ -15,12 +15,18 @@ from spec_ai_writer.core.interview_engine import InterviewEngine
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.phase_manager import PhaseManager
 from spec_ai_writer.llm.factory import LLMFactory
+from spec_ai_writer.llm.exceptions import (
+    LLMAuthenticationError,
+    LLMConnectionError,
+)
 from ..models import (
     InterviewStartRequest,
     InterviewStartResponse,
     HistoryMessage,
     UserAnswerRequest,
     AssistantQuestionResponse,
+    PhaseResetRequest,
+    PhaseResetResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -130,6 +136,23 @@ async def start_interview(request: InterviewStartRequest):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project '{request.project_id}' not found"
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except LLMAuthenticationError as e:
+        logger.error(f"LLM authentication error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"LLM APIキーが無効です。サーバーの .env 設定を確認してください。"
+        )
+    except LLMConnectionError as e:
+        logger.error(f"LLM connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLMサービスに接続できません。ネットワーク接続を確認してください。"
+        )
     except Exception as e:
         logger.error(f"Failed to start interview: {e}")
         raise HTTPException(
@@ -220,9 +243,67 @@ async def submit_answer(request: UserAnswerRequest):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project '{request.project_id}' not found"
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except LLMAuthenticationError as e:
+        logger.error(f"LLM authentication error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"LLM APIキーが無効です。サーバーの .env 設定を確認してください。"
+        )
+    except LLMConnectionError as e:
+        logger.error(f"LLM connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLMサービスに接続できません。ネットワーク接続を確認してください。"
+        )
     except Exception as e:
         logger.error(f"Failed to process answer: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process answer: {str(e)}"
+        )
+
+
+@router.post("/reset-phase", response_model=PhaseResetResponse)
+async def reset_phase(request: PhaseResetRequest):
+    """
+    Reset a specific phase to allow re-interviewing.
+
+    Clears the Q&A data for the specified phase and deletes the generated spec file.
+    """
+    try:
+        context = ContextManager.load_project(request.project_id, data_dir=settings.data_dir)
+
+        # Reset the phase data (Q&A pairs, structured data, completed flag)
+        context.reset_phase(request.phase_num)
+
+        # Delete the generated spec file if it exists
+        phase_info = phase_manager.get_phase_info(request.phase_num)
+        spec_file = context.get_specs_dir() / phase_info.filename
+        if spec_file.exists():
+            spec_file.unlink()
+            logger.info(f"Deleted spec file: {spec_file}")
+
+        logger.info(f"Reset phase {request.phase_num} for project {request.project_id}")
+
+        return PhaseResetResponse(
+            project_id=request.project_id,
+            phase_num=request.phase_num,
+            message=f"フェーズ {request.phase_num} をリセットしました。再インタビューを開始できます。"
+        )
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{request.project_id}' not found"
+        )
+    except Exception as e:
+        logger.error(f"Failed to reset phase: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset phase: {str(e)}"
         )

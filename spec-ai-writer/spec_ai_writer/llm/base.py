@@ -1,9 +1,13 @@
 """Base abstract interface for LLM clients."""
 
 import json
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+from .exceptions import LLMResponseError
+
+logger = logging.getLogger(__name__)
 
 # 共通プロンプト定義（spec.md 3.7.4）
 QUESTION_GENERATION_INSTRUCTION = "次の質問を1つだけ生成してください。質問のみを出力し、説明や前置きは不要です。"
@@ -156,9 +160,9 @@ class BaseLLMClient(ABC):
             else:
                 return json.loads(cleaned_response)
 
-        except json.JSONDecodeError:
-            # Return empty dict as fallback
-            return {field: None for field in schema.keys()}
+        except json.JSONDecodeError as e:
+            logger.warning(f"LLM応答のJSON解析に失敗しました: {e}")
+            return {}
 
     def _build_context_prompt(
         self,
