@@ -513,61 +513,61 @@ def create_project(cls, display_name: str, description: str = "", data_dir: str 
 
 ### フェーズ1: LLM レスポンス検証の追加
 
-- [ ] `base.py`: `extract_structured_data()` の JSON パース失敗時に空 dict `{}` を返すよう変更
-- [ ] `base.py`: パース失敗時に `logging.warning` で警告を出力
-- [ ] `interview_engine.py`: `_extract_and_save_structured_data()` で抽出結果の空チェックを追加
-- [ ] `interview_engine.py`: 抽出失敗時に1回リトライする処理を追加
-- [ ] `interview_engine.py`: リトライ後も失敗した場合にユーザーへ警告メッセージを表示
-- [ ] `interview_engine.py`: `_check_phase_completion()` の `except Exception: return False` を個別例外に分離
+- [x] `base.py`: `extract_structured_data()` の JSON パース失敗時に空 dict `{}` を返すよう変更
+- [x] `base.py`: パース失敗時に `logging.warning` で警告を出力
+- [x] `interview_engine.py`: `_extract_and_save_structured_data()` で抽出結果の空チェックを追加
+- [x] `interview_engine.py`: 抽出失敗時に1回リトライする処理を追加
+- [x] `interview_engine.py`: リトライ後も失敗した場合にユーザーへ警告メッセージを表示
+- [x] `interview_engine.py`: `_check_phase_completion()` の `except Exception: return False` を個別例外に分離
 - [ ] 動作確認: LLM が不正な JSON を返した場合にリトライ→警告が表示されること
 
 ### フェーズ2: Markdown ジェネレーターの修正
 
-- [ ] `markdown_generator.py`: `except Exception` を `jinja2.TemplateNotFound` と `jinja2.TemplateSyntaxError` に分離
-- [ ] `markdown_generator.py`: `TemplateSyntaxError` は例外を伝播（`raise`）するよう変更
-- [ ] `markdown_generator.py`: `TemplateNotFound` 時のフォールバックで `logging.warning` を出力
-- [ ] `markdown_generator.py`: `__init__` でテンプレートディレクトリの存在を検証
+- [x] `markdown_generator.py`: `except Exception` を `jinja2.TemplateNotFound` と `jinja2.TemplateSyntaxError` に分離
+- [x] `markdown_generator.py`: `TemplateSyntaxError` は例外を伝播（`raise`）するよう変更
+- [x] `markdown_generator.py`: `TemplateNotFound` 時のフォールバックで `logging.warning` を出力
+- [x] `markdown_generator.py`: `__init__` でテンプレートディレクトリの存在を検証
 - [ ] 動作確認: テンプレートが正常に読み込まれ、全7フェーズの仕様書が Jinja2 から生成されること
 
 ### フェーズ3: インタビューの双方向対話対応
 
-- [ ] `phase_01_prompts.py` 〜 `phase_07_prompts.py`: システムプロンプトにユーザー質問への対応指示を追加（全7ファイル）
-- [ ] `interview_engine.py`: `_build_context_for_question()` で前フェーズの仕様書をコンテキストに含める
-- [ ] コンテキストサイズが過大にならないよう、直近2フェーズ分に制限
+- [x] `phase_01_prompts.py` 〜 `phase_07_prompts.py`: システムプロンプトにユーザー質問への対応指示を追加（全7ファイル）
+- [x] `interview_engine.py`: `_build_context_for_question()` で前フェーズの仕様書をコンテキストに含める（既存実装を確認）
+- [x] コンテキストサイズが過大にならないよう、直近2フェーズ分に制限（`_load_previous_phase_specs(max_phases=2)`）
 - [ ] 動作確認: インタビュー中にユーザーが質問すると AI が回答してからインタビューを継続すること
 
 ### フェーズ4: フェーズ再インタビュー機能の公開
 
-- [ ] `models.py`: `PhaseResetRequest` / `PhaseResetResponse` モデルを追加
-- [ ] `interview.py`: `POST /api/interview/reset-phase` エンドポイントを追加
-- [ ] `interview.py`: リセット時に対象フェーズの生成済み仕様書ファイルを削除
-- [ ] `interview.py`: `/start` でリセット済みフェーズからの再開が正しく動作することを確認
-- [ ] `Specifications.tsx`: 各フェーズカードに「再インタビュー」ボタンを追加
-- [ ] `Specifications.tsx`: ボタン押下時に確認ダイアログを表示
+- [x] `models.py`: `PhaseResetRequest` / `PhaseResetResponse` モデルを追加
+- [x] `interview.py`: `POST /api/interview/reset-phase` エンドポイントを追加
+- [x] `interview.py`: リセット時に対象フェーズの生成済み仕様書ファイルを削除
+- [x] `interview.py`: `/start` でリセット済みフェーズからの再開が正しく動作することを確認（既存ロジックでカバー）
+- [x] `Specifications.tsx`: 各フェーズカードに「再インタビュー」ボタンを追加
+- [x] `Specifications.tsx`: ボタン押下時に確認ダイアログを表示
 - [ ] 動作確認: 仕様書画面から再インタビューを実行し、Q&A リセット→再インタビュー→仕様書再生成が完了すること
 
 ### フェーズ5: 例外ハンドリングの改善
 
-- [ ] `base.py` または新規ファイル: `LLMAuthenticationError`, `LLMConnectionError`, `LLMResponseError` を定義
-- [ ] `claude_client.py`: プロバイダー固有の例外を共通例外に変換
-- [ ] `openai_client.py`: プロバイダー固有の例外を共通例外に変換
-- [ ] `bedrock_client.py`: プロバイダー固有の例外を共通例外に変換
-- [ ] `interview_engine.py`: 例外型ごとに適切なエラーメッセージを表示
-- [ ] `projects.py`: `FileNotFoundError` → 404、`ValueError` → 400 等のマッピングを実装
-- [ ] `interview.py`: `LLMAuthenticationError` → 401、`LLMConnectionError` → 502 のマッピングを実装
-- [ ] `interview_engine.py`, `markdown_generator.py`: エラー・警告系の `print()` を `logging` に移行
+- [x] `base.py` または新規ファイル: `LLMAuthenticationError`, `LLMConnectionError`, `LLMResponseError` を定義（`exceptions.py` 新規作成）
+- [x] `claude_client.py`: プロバイダー固有の例外を共通例外に変換
+- [x] `openai_client.py`: プロバイダー固有の例外を共通例外に変換
+- [x] `bedrock_client.py`: プロバイダー固有の例外を共通例外に変換
+- [x] `interview_engine.py`: 例外型ごとに適切なエラーメッセージを表示
+- [x] `projects.py`: `FileNotFoundError` → 404、`ValueError` → 400 等のマッピングを実装
+- [x] `interview.py`: `LLMAuthenticationError` → 401、`LLMConnectionError` → 502 のマッピングを実装
+- [x] `interview_engine.py`, `markdown_generator.py`: エラー・警告系の `print()` を `logging` に移行（CLI向けユーザー出力の `print` は維持）
 - [ ] 動作確認: API キー未設定時に「API キーを確認してください」と表示されること
 - [ ] 動作確認: ネットワーク切断時に「接続できません」と表示されること
 
 ### フェーズ6: プロジェクト説明の永続化と表示
 
-- [ ] `context_manager.py`: `create_project()` に `description` 引数を追加
-- [ ] `context_manager.py`: `project.json` に `description` を保存
-- [ ] `context_manager.py`: `load_project()` で `description` を読み込む
-- [ ] `projects.py`: プロジェクト作成時に `description` を `ContextManager` に渡す
-- [ ] `projects.py`: 一覧取得・詳細取得で `project.json` から `description` を返す（`None` ハードコード削除）
-- [ ] `models.py`: `ProjectUpdateRequest` モデルを追加
-- [ ] `projects.py`: `PATCH /api/projects/{project_id}` エンドポイントを追加
+- [x] `context_manager.py`: `create_project()` に `description` 引数を追加
+- [x] `context_manager.py`: `project.json` に `description` を保存
+- [x] `context_manager.py`: `load_project()` で `description` を読み込む
+- [x] `projects.py`: プロジェクト作成時に `description` を `ContextManager` に渡す
+- [x] `projects.py`: 一覧取得・詳細取得で `project.json` から `description` を返す（`None` ハードコード削除）
+- [x] `models.py`: `ProjectUpdateRequest` モデルを追加
+- [x] `projects.py`: `PATCH /api/projects/{project_id}` エンドポイントを追加
 - [ ] 動作確認: ダッシュボードのプロジェクトカードに説明が表示されること
 - [ ] 動作確認: プロジェクト名・説明の編集が `project.json` に反映されること
 
