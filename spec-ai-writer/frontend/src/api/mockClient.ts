@@ -287,6 +287,15 @@ class MockAPIClient {
     const content = completedSpecs.map(s => `# ${s.phase_name}\n\n[仕様書内容]\n\n`).join('\n\n---\n\n');
     return new Blob([content], { type: 'text/markdown' });
   }
+
+  async resetPhase(data: { project_id: string; phase_num: number }): Promise<{ project_id: string; phase_num: number; message: string }> {
+    await delay(500);
+    return {
+      project_id: data.project_id,
+      phase_num: data.phase_num,
+      message: `フェーズ ${data.phase_num} をリセットしました。再インタビューを開始できます。`,
+    };
+  }
 }
 
 export const mockApiClient = new MockAPIClient();

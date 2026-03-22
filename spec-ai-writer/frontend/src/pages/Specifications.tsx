@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Download, Eye, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Eye, FileText, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import apiClient from '@/api/client';
 
 export default function Specifications() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [selectedPhase, setSelectedPhase] = useState<number | null>(null);
 
   // Fetch project info for display name
@@ -62,6 +63,19 @@ export default function Specifications() {
     } catch (error) {
       console.error('Download all failed:', error);
       alert('一括ダウンロードに失敗しました');
+    }
+  };
+
+  const handleReInterview = async (phaseNum: number) => {
+    if (!window.confirm(`フェーズ ${phaseNum} のインタビューをリセットして再インタビューを開始しますか？\n既存の回答データと生成済み仕様書は削除されます。`)) {
+      return;
+    }
+    try {
+      await apiClient.resetPhase({ project_id: projectId!, phase_num: phaseNum });
+      navigate(`/interview/${projectId}?phase=${phaseNum}`);
+    } catch (error) {
+      console.error('Reset phase failed:', error);
+      alert('フェーズのリセットに失敗しました');
     }
   };
 
@@ -141,19 +155,31 @@ export default function Specifications() {
                     </p>
                   )}
                 </div>
-                {spec.exists ? (
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDownload(spec.phase_num, spec.filename);
+                      handleReInterview(spec.phase_num);
                     }}
                     className="btn btn-ghost p-1"
+                    title="再インタビュー"
                   >
-                    <Download className="h-4 w-4" />
+                    <RotateCcw className="h-4 w-4" />
                   </button>
-                ) : (
-                  <span className="badge badge-gray">未生成</span>
-                )}
+                  {spec.exists ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(spec.phase_num, spec.filename);
+                      }}
+                      className="btn btn-ghost p-1"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <span className="badge badge-gray">未生成</span>
+                  )}
+                </div>
               </div>
             </div>
           ))}

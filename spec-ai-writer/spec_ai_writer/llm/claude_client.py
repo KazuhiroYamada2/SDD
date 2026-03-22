@@ -1,11 +1,15 @@
 """Claude API client implementation."""
 
+import logging
 from typing import Dict, List, Optional
 
 import httpx
-from anthropic import Anthropic
+from anthropic import Anthropic, AuthenticationError, APIConnectionError, APITimeoutError
 
 from .base import BaseLLMClient
+from .exceptions import LLMAuthenticationError, LLMConnectionError, LLMResponseError
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeClient(BaseLLMClient):
@@ -84,5 +88,16 @@ class ClaudeClient(BaseLLMClient):
 
             response = self.client.messages.create(**api_kwargs)
             return response.content[0].text
+        except AuthenticationError as e:
+            logger.error(f"Claude authentication failed: {e}")
+            raise LLMAuthenticationError(
+                "Anthropic APIキーが無効です。.env ファイルの ANTHROPIC_API_KEY を確認してください。"
+            ) from e
+        except (APIConnectionError, APITimeoutError) as e:
+            logger.error(f"Claude connection error: {e}")
+            raise LLMConnectionError(
+                f"Claude APIに接続できません。ネットワーク接続を確認してください: {e}"
+            ) from e
         except Exception as e:
-            raise Exception(f"Claude API error: {str(e)}")
+            logger.error(f"Claude API error: {e}")
+            raise LLMResponseError(f"Claude API error: {str(e)}") from e
