@@ -1,5 +1,8 @@
 # Spec AIライター - 仕様駆動開発 インタビュー & 生成システム
 
+[![Python](https://img.shields.io/badge/Python-3.9+-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
 LLM APIを使用してユーザーにインタビューを行い、仕様駆動開発（Specification Driven Development）の7つの仕様書を自動生成するAI支援Pythonプログラムです。
 
 ## 特徴
