@@ -1,64 +1,66 @@
-# セキュリティポリシー
+[English](./SECURITY.md) | [日本語](./SECURITY_ja.md)
 
-## サポートバージョン
+# Security Policy
 
-| バージョン | サポート状況       |
-| ---------- | ------------------ |
-| 1.0.x      | :white_check_mark: |
-| < 1.0      | :x:                |
+## Supported Versions
 
-常に最新バージョンの使用を推奨します。
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.0.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
-## 脆弱性の報告方法
+We recommend always using the latest version.
 
-**公開の GitHub Issue でセキュリティ脆弱性を報告しないでください。**
+## Reporting a Vulnerability
 
-セキュリティ上の脆弱性を発見した場合は、以下のメールアドレスにご連絡ください：
+**Please do not report security vulnerabilities through public GitHub Issues.**
 
-- **メールアドレス**: info@elvez.co.jp
-- **宛先**: 株式会社エルブズ
+If you discover a security vulnerability, please contact us at the following email address:
 
-### 報告に含めるべき情報
+- **Email**: info@elvez.co.jp
+- **Recipient**: Elvez Inc. (株式会社エルブズ)
 
-以下の情報をご報告ください：
+### Information to Include in Your Report
 
-- 脆弱性の説明
-- 問題を再現する手順
-- 潜在的な影響と重大度
-- 修正案や緩和策の提案（可能であれば）
-- 連絡先情報（任意）
+Please provide the following information:
 
-## 対応スケジュール
+- Description of the vulnerability
+- Steps to reproduce the issue
+- Potential impact and severity
+- Suggested fix or mitigation (if available)
+- Contact information (optional)
 
-- **初回応答**: 48時間以内
-- **状況更新**: 7日以内
-- **解決**: 重大度に応じて
-  - 緊急: 14日以内
-  - 高: 30日以内
-  - 中: 60日以内
-  - 低: 次回リリースサイクル
+## Response Schedule
 
-## セキュリティに関する考慮事項
+- **Initial response**: Within 48 hours
+- **Status update**: Within 7 days
+- **Resolution**: Depending on severity
+  - Critical: Within 14 days
+  - High: Within 30 days
+  - Medium: Within 60 days
+  - Low: Next release cycle
 
-本リポジトリは Markdown ドキュメントとサンプルファイルのみで構成されているため、攻撃対象は限定的です。ただし、以下の点にご注意ください：
+## Security Considerations
 
-- **ファイルの内容**: サンプルファイルはあくまで例示目的であり、実際の認証情報・API キー・個人情報は含まれていません
-- **リンク**: ドキュメント内の外部リンクは公開リソースを指していますが、クリック前に URL を確認してください
-- **スクリプト**: `docs/tools/scripts.md` のスクリプトはあくまで例示です。実際の環境で実行する前に内容を十分に確認してください
-- **依存関係**: 本リポジトリは外部依存関係を持たないため、依存関係に起因するセキュリティリスクはありません
+Since this repository consists solely of Markdown documents and sample files, the attack surface is limited. However, please be aware of the following:
 
-## セキュリティのベストプラクティス
+- **File contents**: Sample files are for illustrative purposes only and do not contain actual credentials, API keys, or personal information
+- **Links**: External links in documents point to public resources, but please verify URLs before clicking
+- **Scripts**: Scripts in `docs/tools/scripts.md` are examples only. Please review the content thoroughly before executing in your environment
+- **Dependencies**: This repository has no external dependencies, so there are no security risks from dependency vulnerabilities
 
-本リポジトリを利用する際は、以下を推奨します：
+## Security Best Practices
 
-1. 常に最新バージョンを使用する
-2. フォークして改変する場合、実際の認証情報や個人情報をファイルに含めない
-3. スクリプトを追加する場合は、サンドボックス環境でテストしてから使用する
-4. 外部リンクはクリック前に意図した URL を指しているか確認する
+When using this repository, we recommend:
 
-## 問い合わせ先
+1. Always use the latest version
+2. When forking and modifying, do not include actual credentials or personal information in files
+3. When adding scripts, test them in a sandbox environment before use
+4. Verify that external links point to the intended URL before clicking
 
-脆弱性報告ではないセキュリティ関連の質問：
+## Contact
 
-- **GitHub Issues**: [https://github.com/elvezjp/SDD/issues](https://github.com/elvezjp/SDD/issues)（`security` ラベルを付けてください）
-- **メールアドレス**: info@elvez.co.jp
+For security-related questions that are not vulnerability reports:
+
+- **GitHub Issues**: [https://github.com/elvezjp/SDD/issues](https://github.com/elvezjp/SDD/issues) (please add the `security` label)
+- **Email**: info@elvez.co.jp

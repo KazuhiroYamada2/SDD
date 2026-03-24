@@ -20,7 +20,7 @@ The name "SDD" stands for **Spec-Driven Development**. This remote repository co
 
 > For readers of the book: Please check the [Errata](./docs/guides/errata.md) for any known corrections.
 
-## Use Cases
+## Purpose of This Repository
 
 By referencing this remote repository, you can better understand the overall picture of Spec-Driven Development.
 This repository lets you practice writing specifications with Cursor while reading the book:
@@ -31,6 +31,12 @@ This repository lets you practice writing specifications with Cursor while readi
 - Basic Git operations (commit, push)
 
 **Important**: This remote repository is for reference only. If you want to make edits, always fork it first and then clone your own remote repository to work locally.
+
+## Use Cases
+
+- **Book Practice**: Follow along with *Spec-Driven Development: A Practical Introduction* and explore the 7-process sample files hands-on
+- **SDD Adoption Reference**: Use this repository as a structural template when introducing Spec-Driven Development to your team or organization
+- **Learning How to Write Specifications**: Refer to concrete examples of each process deliverable (project charters, specifications, design plans, etc.)
 
 ---
 
@@ -110,41 +116,6 @@ Once you have finished editing locally:
 
 **Note**: Do not push directly to this remote repository (elvezjp/SDD). Only push to your forked repository.
 
-## Features
-
-### 4 Principles
-
-1. **Specifications are "living documents"**: They evolve alongside the project
-2. **Specifications are the "single source of truth"**: Referenced by all team members
-3. **Specifications assume "change and iteration"**: Updated while recording change history
-4. **Reduce costs with AI**: Leverage AI for specification refinement and review
-
-### 7 Processes
-
-Each process is managed in a single Markdown file:
-
-1. **Principle Definition**: [`examples/01-principle-definition.md`](examples/01-principle-definition.md) (Project Charter)
-2. **Planning & Requirements**: [`examples/02-planning-requirement.md`](examples/02-planning-requirement.md) (Specification)
-3. **Design Planning**: [`examples/03-design-planning.md`](examples/03-design-planning.md) (Design Plan)
-4. **Task Breakdown**: [`examples/04-task-breakdown.md`](examples/04-task-breakdown.md) (Task Breakdown)
-5. **Implementation**: [`examples/05-implementation.md`](examples/05-implementation.md) (Implementation Log)
-6. **Verification & Acceptance**: [`examples/06-verification-acceptance.md`](examples/06-verification-acceptance.md) (Verification Log)
-7. **Migration & Operations**: [`examples/07-migration-operation.md`](examples/07-migration-operation.md) (Operations Log)
-
-## Sample Project: Customer Management System
-
-The `examples/` directory contains a sample "Customer Management System" specification covering all 7 processes:
-
-- **Principle Definition**: How to write a project charter
-- **Planning & Requirements**: How to write a specification and operate by the 4 principles
-- **Design Planning**: Technology stack selection and AI utilization examples
-- **Task Breakdown**: Task decomposition granularity and progress management
-- **Implementation**: AI-assisted implementation and review records
-- **Verification & Acceptance**: Specification diff reports and acceptance testing
-- **Migration & Operations**: Operations improvement cycles and feedback integration
-
-Each sample file clearly indicates which process it belongs to.
-
 ## Directory Structure
 
 ```
@@ -187,6 +158,49 @@ SDD/
     ├── QUICKSTART.md           # Quick start guide
     └── ...                     # Tool implementation files
 ```
+
+## The 4 Principles and 7 Processes of Spec-Driven Development
+
+This remote repository is structured around the following principles and processes:
+
+### 4 Principles
+
+1. **Specifications are "living documents"**: They evolve alongside the project
+2. **Specifications are the "single source of truth"**: Referenced by all team members
+3. **Specifications assume "change and iteration"**: Updated while recording change history
+4. **Reduce costs with AI**: Leverage AI for specification refinement and review
+
+### 7 Processes
+
+Each process is managed in a single Markdown file:
+
+1. **Principle Definition**: [`examples/01-principle-definition.md`](examples/01-principle-definition.md) (Project Charter)
+2. **Planning & Requirements**: [`examples/02-planning-requirement.md`](examples/02-planning-requirement.md) (Specification)
+3. **Design Planning**: [`examples/03-design-planning.md`](examples/03-design-planning.md) (Design Plan)
+4. **Task Breakdown**: [`examples/04-task-breakdown.md`](examples/04-task-breakdown.md) (Task Breakdown)
+5. **Implementation**: [`examples/05-implementation.md`](examples/05-implementation.md) (Implementation Log)
+6. **Verification & Acceptance**: [`examples/06-verification-acceptance.md`](examples/06-verification-acceptance.md) (Verification Log)
+7. **Migration & Operations**: [`examples/07-migration-operation.md`](examples/07-migration-operation.md) (Operations Log)
+
+## Sample Project: Customer Management System
+
+The `examples/` directory contains a sample "Customer Management System" specification covering all 7 processes:
+
+- **Principle Definition**: How to write a project charter
+- **Planning & Requirements**: How to write a specification and operate by the 4 principles
+- **Design Planning**: Technology stack selection and AI utilization examples
+- **Task Breakdown**: Task decomposition granularity and progress management
+- **Implementation**: AI-assisted implementation and review records
+- **Verification & Acceptance**: Specification diff reports and acceptance testing
+- **Migration & Operations**: Operations improvement cycles and feedback integration
+
+Each sample file clearly indicates which process it belongs to.
+
+## spec-ai-writer (Specification Generation Tool)
+
+The `spec-ai-writer/` directory contains an optional AI tool that supports Spec-Driven Development. It conducts interviews via LLM API and automatically generates specification documents for all 7 processes (requires Python 3.9+ and Node.js).
+
+For setup instructions and usage details, see [spec-ai-writer/README.md](spec-ai-writer/README.md).
 
 ## FAQ
 
