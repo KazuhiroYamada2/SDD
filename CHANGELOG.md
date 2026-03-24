@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-03-24
+
+### Changed
+
+- **README.md / README_ja.md**: Added spec-ai-writer section with link to `spec-ai-writer/README.md` and unified section order between English and Japanese versions
+- **spec-ai-writer/README.md**: Added Python and TypeScript language/framework badges
+- **CHANGELOG.md / CONTRIBUTING.md / SECURITY.md**: Split into English default + `_ja.md` Japanese versions with language switch links
+
+---
+
 ## [1.0.0] - 2026-02-26
 
 Initial release. Published as the practice repository for *Spec-Driven Development: A Practical Introduction*.
@@ -40,4 +50,5 @@ Initial release. Published as the practice repository for *Spec-Driven Developme
 
 | Version | Key Features |
 |---------|-------------|
+| 1.0.1   | GitHub publication rule compliance: README improvements, doc split into English/Japanese |
 | 1.0.0   | Initial release: 7-process samples, practical guides, spec-ai-writer, publication documents |
