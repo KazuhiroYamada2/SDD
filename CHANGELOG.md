@@ -1,42 +1,43 @@
-# 変更履歴
+[English](./CHANGELOG.md) | [日本語](./CHANGELOG_ja.md)
 
-このプロジェクトのすべての重要な変更を記録します。
+# Changelog
 
-フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に基づき、
-バージョン管理は [セマンティックバージョニング](https://semver.org/lang/ja/) に準拠しています。
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
 ## [1.0.0] - 2026-02-26
 
-初回リリース。『仕様駆動開発 実践入門』の練習用リポジトリとして公開。
+Initial release. Published as the practice repository for *Spec-Driven Development: A Practical Introduction*.
 
-### 追加
+### Added
 
-- **サンプルファイル（7工程）**: 仕様駆動開発の7つの工程に対応したサンプルファイル群（顧客管理システムを題材として）
+- **Sample files (7 processes)**: Sample files for all 7 processes of Spec-Driven Development (using a Customer Management System as the subject)
+- **Practical guides**: Scale-based practice guide, 90-day introduction plan, security and privacy guide, troubleshooting guide, and more
+- **Tool documentation**: Cursor video list, Git command reference, prompt collection, script collection
+- **Conversion guides**: Word/Excel and OASYS/Ichitaro to Markdown conversion guides
+- **spec-ai-writer**: AI tool for Spec-Driven Development support
+- **Publication documents**: README.md (English), README_ja.md (Japanese), CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, LICENSE
 
-- **実践ガイド群**: 規模別実践ガイド、90日間導入プラン、セキュリティとプライバシーガイド、トラブルシューティングなど
-- **ツール関連ドキュメント**: Cursor関連動画一覧、Gitコマンド一覧、プロンプト集、スクリプト集
-- **変換ガイド**: Word/Excel・OASYS/一太郎からMarkdownへの変換ガイド
-- **spec-ai-writer**: 仕様駆動開発支援AIツール
-- **公開用ドキュメント**: README.md（英語）、README_ja.md（日本語）、CONTRIBUTING.md、SECURITY.md、CHANGELOG.md、LICENSE
+### Technical Details
 
-### 技術詳細
-
-- 本リポジトリは Markdown ファイルのみで構成（実行可能なコードなし）
-- ライセンス: MIT（Copyright (c) 2025 Hideki Tanaka）
-
----
-
-## リンク
-
-- [リポジトリ](https://github.com/elvezjp/SDD)
-- [Issueトラッカー](https://github.com/elvezjp/SDD/issues)
+- This repository consists solely of Markdown files (no executable code)
+- License: MIT (Copyright (c) 2025 Hideki Tanaka)
 
 ---
 
-## バージョン比較
+## Links
 
-| バージョン | 主な機能 |
-|------------|----------|
-| 1.0.0      | 初回リリース。7工程サンプル、ガイド群、spec-ai-writer、公開用ドキュメント |
+- [Repository](https://github.com/elvezjp/SDD)
+- [Issue Tracker](https://github.com/elvezjp/SDD/issues)
+
+---
+
+## Version Comparison
+
+| Version | Key Features |
+|---------|-------------|
+| 1.0.0   | Initial release: 7-process samples, practical guides, spec-ai-writer, publication documents |

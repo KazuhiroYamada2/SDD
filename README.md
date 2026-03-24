@@ -20,7 +20,7 @@ The name "SDD" stands for **Spec-Driven Development**. This remote repository co
 
 > For readers of the book: Please check the [Errata](./docs/guides/errata.md) for any known corrections.
 
-## Use Cases
+## Purpose of This Repository
 
 By referencing this remote repository, you can better understand the overall picture of Spec-Driven Development.
 This repository lets you practice writing specifications with Cursor while reading the book:
@@ -31,6 +31,12 @@ This repository lets you practice writing specifications with Cursor while readi
 - Basic Git operations (commit, push)
 
 **Important**: This remote repository is for reference only. If you want to make edits, always fork it first and then clone your own remote repository to work locally.
+
+## Use Cases
+
+- **Book Practice**: Follow along with *Spec-Driven Development: A Practical Introduction* and explore the 7-process sample files hands-on
+- **SDD Adoption Reference**: Use this repository as a structural template when introducing Spec-Driven Development to your team or organization
+- **Learning How to Write Specifications**: Refer to concrete examples of each process deliverable (project charters, specifications, design plans, etc.)
 
 ---
 
@@ -153,7 +159,9 @@ SDD/
     └── ...                     # Tool implementation files
 ```
 
-## Features
+## The 4 Principles and 7 Processes of Spec-Driven Development
+
+This remote repository is structured around the following principles and processes:
 
 ### 4 Principles
 
