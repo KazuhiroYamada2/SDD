@@ -68,17 +68,23 @@
 {{ design_decisions }}
 {% elif design_decisions is mapping %}
 {% for decision_id, decision in design_decisions.items() %}
-### {{ decision_id }}: {{ decision.title if decision.title is defined else "（タイトルなし）" }}
+{% if decision is string %}
+### {{ decision_id }}
 
-**日付**: {{ decision.date if decision.date is defined else generation_date }}
+{{ decision }}
+{% else %}
+### {{ decision_id }}: {{ decision.title if decision is mapping and decision.title is defined else "（タイトルなし）" }}
 
-**背景**: {{ decision.context if decision.context is defined else "（記載なし）" }}
+**日付**: {{ decision.date if decision is mapping and decision.date is defined else generation_date }}
 
-**決定内容**: {{ decision.decision if decision.decision is defined else "（記載なし）" }}
+**背景**: {{ decision.context if decision is mapping and decision.context is defined else "（記載なし）" }}
 
-**理由**: {{ decision.rationale if decision.rationale is defined else "（記載なし）" }}
+**決定内容**: {{ decision.decision if decision is mapping and decision.decision is defined else "（記載なし）" }}
 
-**影響**: {{ decision.consequences if decision.consequences is defined else "（記載なし）" }}
+**理由**: {{ decision.rationale if decision is mapping and decision.rationale is defined else "（記載なし）" }}
+
+**影響**: {{ decision.consequences if decision is mapping and decision.consequences is defined else "（記載なし）" }}
+{% endif %}
 
 ---
 

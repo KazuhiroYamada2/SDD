@@ -37,12 +37,15 @@
 {% for review_id, review in review_results.items() %}
 ### {{ review_id }}
 
-- **レビュー日**: {{ review.date if review.date is defined else "（未記録）" }}
-- **レビュアー**: {{ review.reviewer if review.reviewer is defined else "（未記録）" }}
-- **対象**: {{ review.target if review.target is defined else "（未記録）" }}
+{% if review is string %}
+{{ review }}
+{% else %}
+- **レビュー日**: {{ review.date if review is mapping and review.date is defined else "（未記録）" }}
+- **レビュアー**: {{ review.reviewer if review is mapping and review.reviewer is defined else "（未記録）" }}
+- **対象**: {{ review.target if review is mapping and review.target is defined else "（未記録）" }}
 
 **指摘事項**:
-{% if review.issues is defined %}
+{% if review is mapping and review.issues is defined %}
 {% for issue in review.issues %}
 - {{ issue }}
 {% endfor %}
@@ -51,7 +54,8 @@
 {% endif %}
 
 **対応状況**:
-{{ review.resolution if review.resolution is defined else "（未記録）" }}
+{{ review.resolution if review is mapping and review.resolution is defined else "（未記録）" }}
+{% endif %}
 
 ---
 
@@ -64,6 +68,15 @@
 
 {% if ai_usage is string %}
 {{ ai_usage }}
+{% elif ai_usage is mapping %}
+{% for feature, tool in ai_usage.items() %}
+### {{ feature }}
+
+- **AIツール**: {{ tool if tool is string else "（未記録）" }}
+
+---
+
+{% endfor %}
 {% elif ai_usage is sequence %}
 {% for usage in ai_usage %}
 ### {{ usage.feature if usage is mapping and usage.feature is defined else "AI利用" ~ loop.index }}
