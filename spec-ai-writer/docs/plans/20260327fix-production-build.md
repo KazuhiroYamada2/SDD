@@ -157,6 +157,48 @@ if frontend_build_dir.exists():
 
 ---
 
+### README.md: 起動手順の更新
+
+**期待する動作**：`npm run dev` なしで Python サーバー単体で Web UI が起動する手順が記載されている。
+
+**現在の実装**（`README.md:112-131`）：
+
+```markdown
+#### 通常モード（LLM API使用）
+
+1. **バックエンドサーバー起動**:
+   uv run python -m spec_ai_writer.web.app
+
+2. **フロントエンド開発サーバー起動** (別ターミナル):
+   cd frontend
+   npm install  # 初回のみ
+   npm run dev
+
+ブラウザで http://localhost:3000 を開きます。
+```
+
+**修正内容**：フロントエンドをビルドして `dist/` を Python サーバーがサーブする手順に変更する。
+
+```markdown
+#### 通常モード（LLM API使用）
+
+1. **フロントエンドをビルド**（初回またはソース変更後のみ）:
+   cd frontend
+   npm install  # 初回のみ
+   npm run build
+
+2. **バックエンドサーバー起動**:
+   # spec-ai-writer/ ディレクトリで
+   uv run python -m spec_ai_writer.web.app
+
+ブラウザで http://localhost:8000 を開きます。
+```
+
+また「前提条件」セクションから Node.js が開発時のみ必要な旨を明記し、
+モックモードの説明も同様に `http://localhost:8000` に統一する。
+
+---
+
 ## 修正対象ファイル
 
 | ファイル | 変更内容 |
@@ -167,6 +209,7 @@ if frontend_build_dir.exists():
 | `frontend/src/store/__tests__/useProjectStore.test.ts` | モックデータのフィールドを `project_id` + `display_name` に修正 |
 | `frontend/src/test/setup.ts` | `global` を `(global as unknown as Window)` にキャスト |
 | `spec_ai_writer/web/app.py` | 静的ファイルサーブのコメントアウトを解除 |
+| `README.md` | 通常モードの起動手順を `npm run build` + Python サーバーのみに変更。アクセス先を `localhost:8000` に統一 |
 
 ---
 
@@ -179,3 +222,4 @@ if frontend_build_dir.exists():
 | 3 | `python -m spec_ai_writer.web.app` 起動後、`http://localhost:8000/` でWeb UIが表示される | ブラウザ目視確認 | | |
 | 4 | APIエンドポイント（`/api/health` 等）が引き続き動作する | `curl http://localhost:8000/api/health` | | |
 | 5 | インタビュー開始・回答送信が正常に動作する（StrictMode二重呼び出し問題が解消） | ブラウザ目視確認 | | |
+| 6 | README の起動手順が `npm run build` + `localhost:8000` に更新されている | コードレビュー | | |
