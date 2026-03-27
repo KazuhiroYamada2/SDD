@@ -8,7 +8,9 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class PhaseStatus(str, Enum):
@@ -73,6 +75,13 @@ class InterviewStartRequest(BaseModel):
     project_id: str
     phase_num: Optional[int] = Field(None, description="Specific phase to start (default: next incomplete phase)")
 
+    @field_validator('project_id')
+    @classmethod
+    def validate_project_id(cls, v):
+        if not re.match(r'^[a-f0-9]{8}$', v):
+            raise ValueError('Invalid project_id format')
+        return v
+
 
 class HistoryMessage(BaseModel):
     """A single message in reconstructed chat history."""
@@ -98,6 +107,13 @@ class UserAnswerRequest(BaseModel):
     question: str
     answer: str
 
+    @field_validator('project_id')
+    @classmethod
+    def validate_project_id(cls, v):
+        if not re.match(r'^[a-f0-9]{8}$', v):
+            raise ValueError('Invalid project_id format')
+        return v
+
 
 class AssistantQuestionResponse(BaseModel):
     """Response model for assistant question."""
@@ -111,6 +127,13 @@ class SpecificationGenerateRequest(BaseModel):
     """Request model for generating specification."""
     project_id: str
     phase_num: int
+
+    @field_validator('project_id')
+    @classmethod
+    def validate_project_id(cls, v):
+        if not re.match(r'^[a-f0-9]{8}$', v):
+            raise ValueError('Invalid project_id format')
+        return v
 
 
 class SpecificationResponse(BaseModel):
@@ -147,6 +170,13 @@ class PhaseResetRequest(BaseModel):
     """Request model for resetting a phase."""
     project_id: str
     phase_num: int = Field(..., ge=1, le=7)
+
+    @field_validator('project_id')
+    @classmethod
+    def validate_project_id(cls, v):
+        if not re.match(r'^[a-f0-9]{8}$', v):
+            raise ValueError('Invalid project_id format')
+        return v
 
 
 class PhaseResetResponse(BaseModel):

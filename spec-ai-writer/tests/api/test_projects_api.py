@@ -75,7 +75,7 @@ class TestProjectsAPI:
 
     def test_get_project_not_found(self, test_client: TestClient):
         """Test getting non-existent project."""
-        response = test_client.get("/api/projects/nonexistent-project")
+        response = test_client.get("/api/projects/00000000")
         assert response.status_code == 404
 
     def test_get_project_status(self, test_client: TestClient, sample_project_data: dict):
@@ -118,7 +118,7 @@ class TestProjectsAPI:
 
     def test_delete_project_not_found(self, test_client: TestClient):
         """Test deleting non-existent project."""
-        response = test_client.delete("/api/projects/nonexistent-project")
+        response = test_client.delete("/api/projects/00000000")
         assert response.status_code == 404
 
 
