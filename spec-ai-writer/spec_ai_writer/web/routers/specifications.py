@@ -157,12 +157,6 @@ async def get_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), ph
     Returns the content of the specification file.
     """
     try:
-        if phase_num < 1 or phase_num > 7:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid phase number: {phase_num}. Must be between 1 and 7."
-            )
-
         phase_info = phase_manager.get_phase_info(phase_num)
         spec_file = _get_spec_file(project_id, phase_info.filename)
 
@@ -202,12 +196,6 @@ async def download_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'
     Returns the specification as a downloadable Markdown file.
     """
     try:
-        if phase_num < 1 or phase_num > 7:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid phase number: {phase_num}. Must be between 1 and 7."
-            )
-
         phase_info = phase_manager.get_phase_info(phase_num)
         spec_file = _get_spec_file(project_id, phase_info.filename)
 
