@@ -15,6 +15,10 @@
 - 再インタビュー・ダウンロードボタンのスタイルを `btn-ghost` から `btn-secondary` に変更
 - 再インタビューボタンは `spec.exists === true` のフェーズのみ表示
 
+## 注意事項
+
+`spec.exists` によるボタン非表示はUX改善であり、セキュリティ上の認可制御ではない。`resetPhase` / `downloadSpecification` のアクセス権チェックはバックエンド側で担保すること。
+
 ## 変更ファイル
 
 - `spec-ai-writer/frontend/src/pages/Specifications.tsx` L158-183

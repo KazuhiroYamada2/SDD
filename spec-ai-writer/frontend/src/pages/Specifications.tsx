@@ -164,6 +164,7 @@ export default function Specifications() {
                       }}
                       className="btn btn-secondary p-1"
                       title="再インタビュー"
+                      aria-label="再インタビュー"
                     >
                       <RotateCcw className="h-4 w-4" />
                     </button>
@@ -175,6 +176,7 @@ export default function Specifications() {
                         handleDownload(spec.phase_num, spec.filename);
                       }}
                       className="btn btn-secondary p-1"
+                      aria-label="ダウンロード"
                     >
                       <Download className="h-4 w-4" />
                     </button>
