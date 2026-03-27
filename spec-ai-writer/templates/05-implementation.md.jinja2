@@ -37,6 +37,9 @@
 {% for review_id, review in review_results.items() %}
 ### {{ review_id }}
 
+{% if review is string %}
+{{ review }}
+{% elif review is mapping %}
 - **レビュー日**: {{ review.date if review.date is defined else "（未記録）" }}
 - **レビュアー**: {{ review.reviewer if review.reviewer is defined else "（未記録）" }}
 - **対象**: {{ review.target if review.target is defined else "（未記録）" }}
@@ -52,6 +55,9 @@
 
 **対応状況**:
 {{ review.resolution if review.resolution is defined else "（未記録）" }}
+{% else %}
+（不明な型のデータです）
+{% endif %}
 
 ---
 
@@ -64,6 +70,15 @@
 
 {% if ai_usage is string %}
 {{ ai_usage }}
+{% elif ai_usage is mapping %}
+{% for feature, tool in ai_usage.items() %}
+### {{ feature }}
+
+- **AIツール**: {{ tool if tool is string else tool | string if tool is defined else "（未記録）" }}
+
+---
+
+{% endfor %}
 {% elif ai_usage is sequence %}
 {% for usage in ai_usage %}
 ### {{ usage.feature if usage is mapping and usage.feature is defined else "AI利用" ~ loop.index }}

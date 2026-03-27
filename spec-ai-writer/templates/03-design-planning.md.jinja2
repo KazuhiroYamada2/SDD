@@ -68,6 +68,11 @@
 {{ design_decisions }}
 {% elif design_decisions is mapping %}
 {% for decision_id, decision in design_decisions.items() %}
+{% if decision is string %}
+### {{ decision_id }}
+
+{{ decision }}
+{% elif decision is mapping %}
 ### {{ decision_id }}: {{ decision.title if decision.title is defined else "（タイトルなし）" }}
 
 **日付**: {{ decision.date if decision.date is defined else generation_date }}
@@ -79,6 +84,9 @@
 **理由**: {{ decision.rationale if decision.rationale is defined else "（記載なし）" }}
 
 **影響**: {{ decision.consequences if decision.consequences is defined else "（記載なし）" }}
+{% else %}
+（不明な型のデータです）
+{% endif %}
 
 ---
 

@@ -35,12 +35,18 @@
 
 {% if test_results.details is defined %}
 {% for result in test_results.details %}
+{% if result is mapping %}
 #### {{ result.name if result.name is defined else "テスト" ~ loop.index }}
 
 - **結果**: {{ result.status if result.status is defined else "（未記録）" }}
 - **実施日**: {{ result.date if result.date is defined else "（未記録）" }}
 {% if result.notes is defined %}
 - **備考**: {{ result.notes }}
+{% endif %}
+{% else %}
+#### テスト{{ loop.index }}
+
+{{ result }}
 {% endif %}
 
 {% endfor %}
