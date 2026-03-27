@@ -115,18 +115,18 @@ import { FileText, LayoutDashboard } from 'lucide-react';
 
 ### エラー6: `setup.ts` の `global` 型未解決
 
-**期待する動作**：`global.IntersectionObserver` をモックできる。
+**期待する動作**：`IntersectionObserver` をテスト環境でモックできる。
 
-**現在の実装**：`@types/node` 未インストールのため `global` が型エラー。
+**現在の実装**：`@types/node` 未インストールのため、Node.js 固有の `global` が TypeScript に未定義。
 
-**修正内容**：`global` を `(global as unknown as Window)` にキャストする（`@types/node` の追加は不要）。
+**修正内容**：`global` を `globalThis` に置き換える。`globalThis` は ES2020 の標準グローバルであり、`tsconfig.json` の `"lib": ["ES2020", ...]` に含まれるため型エラーにならない。`@types/node` を追加する方法もあるが、ブラウザ向けプロジェクトに Node.js 型が混入し意図しない型安全性の低下につながるため採用しない。
 
 ```typescript
 // 修正前
 global.IntersectionObserver = class IntersectionObserver { ... } as any
 
 // 修正後
-(global as unknown as Window).IntersectionObserver = class IntersectionObserver { ... } as any
+globalThis.IntersectionObserver = class IntersectionObserver { ... } as any
 ```
 
 ---
