@@ -99,12 +99,15 @@
 
 ## 試験項目表（2026-03-27）
 
+確認プロジェクト: `data/8302bcf0`（再インタビューして全フェーズ生成）
+
 | # | テンプレート | 確認方法 | 結果 | 備考 |
 |---|------------|---------|------|------|
-| 1 | `02-planning-requirement` | データ型をstringにして生成・目視確認 | | |
-| 2 | `03-design-planning` | ADRセクションをstringにして生成・`<built-in method ...>` が消えることを確認 | | |
-| 3 | `04-task-breakdown` | マイルストーン・タスクをstringにして生成・目視確認 | | |
-| 4 | `05-implementation` | `usage` をdictにして生成・反復が正常かを確認 | | |
-| 5 | `06-verification-acceptance` | テスト項目・結果をstringにして生成・目視確認 | | |
-| 6 | `07-migration-operation` | 運用体制をstringにして生成・目視確認 | | |
-| 7 | 全テンプレート | 正常なdict型データで生成し、既存の表示が壊れないことを確認（リグレッション） | | |
+| 1 | `02-planning-requirement` | データ型をstringにして生成・目視確認 | ✅ | テンプレートは修正前から `is mapping` チェック済みで問題なし |
+| 2 | `03-design-planning` | ADRセクションをstringにして生成・`<built-in method ...>` が消えることを確認 | ✅ | `frontend: React` 等、全ADRが正常表示に。`<built-in method title>` は解消 |
+| 3 | `04-task-breakdown` | マイルストーン・タスクをstringにして生成・目視確認 | ✅ | テンプレートは修正前から `is mapping` チェック済みで問題なし |
+| 4 | `05-implementation` | `review_results` の値がstringのとき正常表示されることを確認 | ✅ | `code_review`・`security_review` セクションが表示される。値がdictの場合はLLM依存のためデータ品質の問題 |
+| 4 | `05-implementation` | `ai_usage` をdictにして生成・反復が正常かを確認 | ✅ | `is mapping` ブランチで key/value が表示される |
+| 5 | `06-verification-acceptance` | テスト項目・結果をstringにして生成・目視確認 | ✅ | テスト項目表・受入テスト結果が正常表示。`test_results.details` は今回データなしのため `is mapping` ブランチのリグレッションは未確認 |
+| 6 | `07-migration-operation` | 運用体制をstringにして生成・目視確認 | ✅ | テンプレートは `is string` / `is mapping` 分岐済みで問題なし |
+| 7 | 全テンプレート | 正常なdict型データで生成し、既存の表示が壊れないことを確認（リグレッション） | ✅ | 全フェーズ生成し、従来正常だった箇所に崩れなし |
