@@ -11,12 +11,12 @@ class TestSpecificationsAPI:
     """Test Specifications API endpoints."""
 
     def test_list_specifications_project_not_found(self, test_client: TestClient):
-        """Test listing specs for non-existent project."""
-        response = test_client.get("/api/specs/nonexistent-project")
+        """Test listing specs for non-existent project (valid ID format, no data)."""
+        response = test_client.get("/api/specs/00000000")
         assert response.status_code == 200
 
         data = response.json()
-        assert data["project_id"] == "nonexistent-project"
+        assert data["project_id"] == "00000000"
         assert "specifications" in data
         # When specs directory doesn't exist, returns empty list
         assert len(data["specifications"]) == 0
@@ -50,12 +50,12 @@ class TestSpecificationsAPI:
         create_response = test_client.post("/api/projects/", json=sample_project_data)
         project_id = create_response.json()["project_id"]
 
-        # Invalid phase numbers
+        # Invalid phase numbers - now rejected by Path(ge=1, le=7) with 422
         response = test_client.get(f"/api/specs/{project_id}/0")
-        assert response.status_code == 400
+        assert response.status_code == 422
 
         response = test_client.get(f"/api/specs/{project_id}/8")
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_download_specification_not_found(self, test_client: TestClient, sample_project_data: dict):
         """Test downloading non-existent specification."""
@@ -66,7 +66,7 @@ class TestSpecificationsAPI:
         assert response.status_code == 404
 
     def test_download_all_specifications_not_found(self, test_client: TestClient):
-        """Test downloading all specs for non-existent project."""
-        response = test_client.get("/api/specs/nonexistent-project/download-all")
+        """Test downloading all specs for non-existent project (valid ID format, no data)."""
+        response = test_client.get("/api/specs/00000000/download-all")
         # Should return 404 when no specs directory exists
         assert response.status_code == 404

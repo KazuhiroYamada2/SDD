@@ -5,11 +5,11 @@ Endpoints for viewing and managing generated specifications.
 """
 
 import logging
-from pathlib import Path
+from pathlib import Path as FSPath
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Path, status
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from config.settings import get_settings
@@ -27,18 +27,18 @@ settings = get_settings()
 phase_manager = PhaseManager()
 
 
-def _get_specs_dir(project_id: str) -> Path:
+def _get_specs_dir(project_id: str) -> FSPath:
     """Get specs directory for project."""
-    return Path(settings.data_dir) / project_id / "specs"
+    return FSPath(settings.data_dir) / project_id / "specs"
 
 
-def _get_spec_file(project_id: str, filename: str) -> Path:
+def _get_spec_file(project_id: str, filename: str) -> FSPath:
     """Get specification file path."""
     return _get_specs_dir(project_id) / filename
 
 
 @router.get("/{project_id}/download-all")
-async def download_all_specifications(project_id: str):
+async def download_all_specifications(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
     """
     Download all specifications as a ZIP file.
 
@@ -83,7 +83,7 @@ async def download_all_specifications(project_id: str):
             zip_buffer,
             media_type="application/zip",
             headers={
-                "Content-Disposition": f"attachment; filename={project_id}_specifications.zip"
+                "Content-Disposition": f'attachment; filename="{project_id}_specifications.zip"'
             }
         )
 
@@ -98,7 +98,7 @@ async def download_all_specifications(project_id: str):
 
 
 @router.get("/{project_id}", response_model=SpecificationListResponse)
-async def list_specifications(project_id: str):
+async def list_specifications(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
     """
     List all generated specifications for a project.
 
@@ -150,7 +150,7 @@ async def list_specifications(project_id: str):
 
 
 @router.get("/{project_id}/{phase_num}", response_model=SpecificationResponse)
-async def get_specification(project_id: str, phase_num: int):
+async def get_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), phase_num: int = Path(ge=1, le=7)):
     """
     Get a specific specification by phase number.
 
@@ -195,7 +195,7 @@ async def get_specification(project_id: str, phase_num: int):
 
 
 @router.get("/{project_id}/{phase_num}/download")
-async def download_specification(project_id: str, phase_num: int):
+async def download_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), phase_num: int = Path(ge=1, le=7)):
     """
     Download a specification file.
 

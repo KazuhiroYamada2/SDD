@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, Path, status
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
@@ -155,7 +155,7 @@ async def list_projects():
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str):
+async def get_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
     """
     Get project details.
 
@@ -217,7 +217,7 @@ async def get_project(project_id: str):
 
 
 @router.get("/{project_id}/status", response_model=ProjectStatusResponse)
-async def get_project_status(project_id: str):
+async def get_project_status(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
     """
     Get detailed project status including all phases.
 
@@ -285,7 +285,7 @@ async def get_project_status(project_id: str):
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_id: str):
+async def delete_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
     """
     Delete a project.
 
@@ -315,7 +315,7 @@ async def delete_project(project_id: str):
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
-async def update_project(project_id: str, update: ProjectUpdateRequest):
+async def update_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), update: ProjectUpdateRequest = Body(...)):
     """
     Update project metadata (display_name and/or description).
     """
