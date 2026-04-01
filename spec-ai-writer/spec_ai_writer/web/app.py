@@ -43,17 +43,6 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-async def root():
-    """Root endpoint - serves React app in production, API info in dev."""
-    return {
-        "app": "spec-ai-writer Web UI",
-        "version": "1.0.0",
-        "docs": "/api/docs",
-        "status": "running"
-    }
-
-
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
@@ -73,9 +62,13 @@ app.include_router(specifications.router, prefix="/api/specs", tags=["specificat
 
 
 # Static files for production build
-# frontend_build_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
-# if frontend_build_dir.exists():
-#     app.mount("/", StaticFiles(directory=str(frontend_build_dir), html=True), name="frontend")
+if settings.app_env == "production":
+    frontend_build_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    if not frontend_build_dir.exists():
+        raise RuntimeError(
+            "frontend/dist not found. Run `cd frontend && npm run build` first."
+        )
+    app.mount("/", StaticFiles(directory=str(frontend_build_dir), html=True), name="frontend")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutDashboard, MessageSquare } from 'lucide-react';
+import { FileText, LayoutDashboard } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Layout() {

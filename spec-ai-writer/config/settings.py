@@ -43,6 +43,12 @@ class Settings(BaseSettings):
         description="LLM temperature for generation"
     )
 
+    # Application environment
+    app_env: str = Field(
+        default="development",
+        description="Application environment: 'production' or 'development'"
+    )
+
     # Model configuration
     model_config = SettingsConfigDict(
         env_file=".env",

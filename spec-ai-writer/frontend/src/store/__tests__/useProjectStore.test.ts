@@ -21,7 +21,8 @@ describe('useProjectStore', () => {
   it('should set projects', () => {
     const mockProjects: Project[] = [
       {
-        name: 'project-1',
+        project_id: 'project-1',
+        display_name: 'Project 1',
         current_phase: 1,
         phase_status: {},
         created_at: '2024-01-01T00:00:00Z',
@@ -37,7 +38,8 @@ describe('useProjectStore', () => {
 
   it('should set current project', () => {
     const mockProject: Project = {
-      name: 'test-project',
+      project_id: 'test-project',
+      display_name: 'Test Project',
       current_phase: 1,
       phase_status: {},
       created_at: '2024-01-01T00:00:00Z',

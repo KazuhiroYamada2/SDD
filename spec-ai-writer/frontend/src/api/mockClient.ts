@@ -166,6 +166,7 @@ class MockAPIClient {
     this.mockAnswerCounts[data.project_id] = 0;
     return {
       project_id: data.project_id,
+      display_name: data.project_id,
       phase_num: phaseNum,
       phase_name: phaseNames[phaseNum - 1],
       initial_message: `こんにちは！フェーズ${phaseNum}「${phaseNames[phaseNum - 1]}」のインタビューを開始します。\n\nまず、プロジェクトの概要について教えてください。`,
