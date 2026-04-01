@@ -1,7 +1,7 @@
 """Configuration management for spec-ai-writer."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     )
 
     # Application environment
-    app_env: str = Field(
+    app_env: Literal["development", "production"] = Field(
         default="development",
         description="Application environment: 'production' or 'development'"
     )
