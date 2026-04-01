@@ -70,8 +70,8 @@ if settings.app_env == "production":
         )
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        file = frontend_build_dir / full_path
-        if file.is_file():
+        file = (frontend_build_dir / full_path).resolve()
+        if file.is_relative_to(frontend_build_dir.resolve()) and file.is_file():
             return FileResponse(file)
         return FileResponse(frontend_build_dir / "index.html")
 
