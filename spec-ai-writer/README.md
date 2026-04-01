@@ -89,6 +89,47 @@ TEMPERATURE=0.7
 
 モダンなブラウザUIでインタビューを実施できます。
 
+1. フロントエンドをビルド（初回またはソース変更後のみ）:
+```bash
+cd frontend
+npm install  # 初回のみ
+npm run build
+cd ..
+```
+
+2. spec-ai-writer/ ディレクトリの `.env` に `APP_ENV=production` を設定:
+```env
+APP_ENV=production
+```
+
+3. **バックエンドサーバー起動**:
+```bash
+uv run python -m spec_ai_writer.web.app
+```
+
+ブラウザで http://localhost:8000 を開きます。
+
+#### 開発モード
+
+フロントエンドのソースコードを変更しながらWeb UIを表示する場合、開発モードで起動します。
+
+1. `.env` の `APP_ENV=development` のまま（デフォルト）
+
+2. **バックエンドサーバー起動**:
+```bash
+# spec-ai-writer/ ディレクトリで
+uv run python -m spec_ai_writer.web.app
+```
+
+3. **フロントエンド開発サーバー起動** (別ターミナル):
+```bash
+cd frontend
+npm install  # 初回のみ
+npm run dev
+```
+
+ブラウザで http://localhost:3000 を開きます（Vite が `/api` を localhost:8000 にプロキシ）。
+
 #### モックモード（APIキー不要）
 
 APIキーを設定せずにUIを確認したい場合は、モックモードを使用できます。
@@ -109,57 +150,13 @@ VITE_USE_MOCK_API=true
 
 モックモードでは、実際のLLM APIを呼び出さずに、サンプルデータでUIを確認できます。ダッシュボードにはモックモードであることが表示されます。
 
-#### 通常モード（LLM API使用）
+#### 起動後の使い方
 
-実際のLLM APIを使用する場合:
-
-**本番ビルド（推奨）**
-
-1. フロントエンドをビルド（初回またはソース変更後のみ）:
-```bash
-cd frontend
-npm install  # 初回のみ
-npm run build
-```
-
-2. `.env` に `APP_ENV=production` を設定:
-```env
-APP_ENV=production
-```
-
-3. **バックエンドサーバー起動**:
-```bash
-# spec-ai-writer/ ディレクトリで
-uv run python -m spec_ai_writer.web.app
-```
-
-ブラウザで http://localhost:8000 を開きます。
-
-**開発モード（フロントエンドを変更する場合）**
-
-1. `.env` の `APP_ENV=development` のまま（デフォルト）
-
-2. **バックエンドサーバー起動**:
-```bash
-# spec-ai-writer/ ディレクトリで
-uv run python -m spec_ai_writer.web.app
-```
-
-3. **フロントエンド開発サーバー起動** (別ターミナル):
-```bash
-cd frontend
-npm install  # 初回のみ
-npm run dev
-```
-
-ブラウザで http://localhost:3000 を開きます（Vite が `/api` を localhost:8000 にプロキシ）。
-
-4. **使い方**:
-   - ダッシュボードで新規プロジェクト作成（表示名を入力するとプロジェクトIDが自動採番される）
-   - 「インタビュー開始」ボタンをクリック
-   - チャット形式でLLMと対話
-   - 各フェーズ完了時に仕様書が自動生成
-   - 生成された仕様書をプレビュー・ダウンロード
+- ダッシュボードで新規プロジェクト作成（表示名を入力するとプロジェクトIDが自動採番される）
+- 「インタビュー開始」ボタンをクリック
+- チャット形式でLLMと対話
+- 各フェーズ完了時に仕様書が自動生成
+- 生成された仕様書をプレビュー・ダウンロード
 
 ### CLI (コマンドライン)
 

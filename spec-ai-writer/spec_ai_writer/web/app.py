@@ -68,7 +68,11 @@ if settings.app_env == "production":
         raise RuntimeError(
             "frontend/dist not found. Run `cd frontend && npm run build` first."
         )
-    app.mount("/", StaticFiles(directory=str(frontend_build_dir), html=True), name="frontend")
+    app.mount("/assets", StaticFiles(directory=str(frontend_build_dir / "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        return FileResponse(frontend_build_dir / "index.html")
 
 
 if __name__ == "__main__":

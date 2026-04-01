@@ -246,11 +246,11 @@ APP_ENV=development
 
 | # | 確認内容 | 確認方法 | 結果 | 備考 |
 |---|---------|---------|------|------|
-| 1 | `npm run build` がエラーなく完了する | `cd frontend && npm run build` | | |
-| 2 | `frontend/dist/` が生成される | ビルド後のディレクトリ確認 | | |
-| 3 | `APP_ENV=production` でサーバー起動後、`http://localhost:8000/` でWeb UIが表示される | ブラウザ目視確認 | | |
-| 4 | `APP_ENV=development` かつ `dist/` が存在する状態でサーバー起動後、Web UIはサーブされない | `curl -o /dev/null -w "%{http_code}" http://localhost:8000/` で404を確認 | | |
-| 5 | APIエンドポイント（`/api/health` 等）が両モードで引き続き動作する | `curl http://localhost:8000/api/health` | | |
-| 6 | インタビュー開始・回答送信が正常に動作する（StrictMode二重呼び出し問題が解消） | ブラウザ目視確認（`APP_ENV=production`） | | |
-| 7 | 開発モード（`npm run dev` + `APP_ENV=development`）でも引き続き動作する | `http://localhost:3000` でアクセス | | |
-| 8 | README の起動手順が本番ビルド・開発モード両方記載されている | コードレビュー | | |
+| 1 | `npm run build` がエラーなく完了する | `cd frontend && npm run build` | ✓ | |
+| 2 | `frontend/dist/` が生成される | ビルド後のディレクトリ確認 | ✓ | |
+| 3 | `APP_ENV=production` でサーバー起動後、`http://localhost:8000/` でWeb UIが表示される | ブラウザ目視確認 | ✓ | |
+| 4 | `APP_ENV=development` かつ `dist/` が存在する状態でサーバー起動後、Web UIはサーブされない | `curl -o /dev/null -w "%{http_code}" http://localhost:8000/` で404を確認 | ✓ | |
+| 5 | APIエンドポイント（`/api/health` 等）が両モードで引き続き動作する | `curl http://localhost:8000/api/health` | ✓ | |
+| 6 | インタビュー開始・回答送信が正常に動作する（StrictMode二重呼び出し問題が解消） | ブラウザ目視確認（`APP_ENV=production`） | ✓ | |
+| 7 | 開発モード（`npm run dev` + `APP_ENV=development`）でも引き続き動作する | `http://localhost:3000` でアクセス | ✓ | |
+| 8 | README の起動手順が本番ビルド・開発モード両方記載されている | コードレビュー | ✓ | |
