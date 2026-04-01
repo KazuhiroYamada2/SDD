@@ -1,7 +1,7 @@
 """Configuration management for spec-ai-writer."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,6 +41,12 @@ class Settings(BaseSettings):
         ge=0.0,
         le=2.0,
         description="LLM temperature for generation"
+    )
+
+    # Application environment
+    app_env: Literal["development", "production"] = Field(
+        default="development",
+        description="Application environment: 'production' or 'development'"
     )
 
     # Model configuration
