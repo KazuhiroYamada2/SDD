@@ -119,7 +119,7 @@ import { FileText, LayoutDashboard } from 'lucide-react';
 
 **現在の実装**：`@types/node` 未インストールのため、Node.js 固有の `global` が TypeScript に未定義。
 
-**修正内容**：`global` を `globalThis` に置き換える。`globalThis` は ES2020 の標準グローバルであり、`tsconfig.json` の `"lib": ["ES2020", ...]` に含まれるため型エラーにならない。`@types/node` を追加する方法もあるが、ブラウザ向けプロジェクトに Node.js 型が混入し意図しない型安全性の低下につながるため採用しない。
+**修正内容**：`global` を `globalThis` に置き換える。`globalThis` は ES2020 の標準グローバルであり、`tsconfig.json` の `"lib": ["ES2020", ...]` に含まれるため型エラーにならない。`@types/node` を追加する方法もあるが、ブラウザ向けプロジェクトに Node.js 型が混入し意図しない型安全性の低下につながるため採用しない。`(global as unknown as Window)` へのキャストは `global` 自体の型未解決エラーを解消できないため採用しない。
 
 ```typescript
 // 修正前
@@ -150,28 +150,32 @@ globalThis.IntersectionObserver = class IntersectionObserver { ... } as any
 
 ```python
 app_env: str = Field(
-    default="production",
+    default="development",
     description="Application environment: 'production' or 'development'"
 )
 ```
 
-**(b) `spec_ai_writer/web/app.py`** — `settings.app_env` で条件分岐する。
+**(b) `spec_ai_writer/web/app.py`** — `settings.app_env` で条件分岐する。`dist/` が存在しない場合は起動を明示的に失敗させる（サイレントに起動してUIが表示されない状態を防ぐ）。
 
 ```python
 # Static files for production build
 if settings.app_env == "production":
     frontend_build_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    if not frontend_build_dir.exists():
+        raise RuntimeError(
+            "frontend/dist not found. Run `cd frontend && npm run build` first."
+        )
     app.mount("/", StaticFiles(directory=str(frontend_build_dir), html=True), name="frontend")
 ```
 
-**(c) `.env.example`** — `APP_ENV` を追加する。
+**(c) `.env.example`** — `APP_ENV` を追加する。デフォルトは `development`。本番運用時は `.env` で `APP_ENV=production` を明示的に指定する。
 
 ```env
 # Application environment
-# production (default): Serve built frontend (frontend/dist) from Python server → http://localhost:8000
+# development (default): Use Vite dev server (npm run dev) for frontend → http://localhost:3000
+# production:            Serve built frontend (frontend/dist) from Python server → http://localhost:8000
 #                        Run `cd frontend && npm run build` before starting.
-# development:           Use Vite dev server (npm run dev) for frontend → http://localhost:3000
-APP_ENV=production
+APP_ENV=development
 ```
 
 ---
@@ -209,7 +213,7 @@ APP_ENV=production
 
 **開発モード（フロントエンドを変更する場合）**
 
-1. .env に APP_ENV=development を設定（またはデフォルトのまま）
+1. .env の APP_ENV=development のまま（デフォルト）
 
 2. バックエンドサーバー起動:
    uv run python -m spec_ai_writer.web.app
@@ -230,7 +234,7 @@ APP_ENV=production
 | `frontend/src/api/mockClient.ts` | `startInterview` 戻り値に `display_name` を追加 |
 | `frontend/src/components/Layout.tsx` | 未使用 `MessageSquare` のインポートを削除 |
 | `frontend/src/store/__tests__/useProjectStore.test.ts` | モックデータのフィールドを `project_id` + `display_name` に修正 |
-| `frontend/src/test/setup.ts` | `global` を `(global as unknown as Window)` にキャスト |
+| `frontend/src/test/setup.ts` | `global` を `globalThis` に置き換え |
 | `config/settings.py` | `app_env: str` フィールドを追加 |
 | `spec_ai_writer/web/app.py` | `settings.app_env == "production"` で静的ファイルサーブを制御 |
 | `.env.example` | `APP_ENV=development` を追記 |
@@ -245,7 +249,7 @@ APP_ENV=production
 | 1 | `npm run build` がエラーなく完了する | `cd frontend && npm run build` | | |
 | 2 | `frontend/dist/` が生成される | ビルド後のディレクトリ確認 | | |
 | 3 | `APP_ENV=production` でサーバー起動後、`http://localhost:8000/` でWeb UIが表示される | ブラウザ目視確認 | | |
-| 4 | `APP_ENV=development` でサーバー起動後、`dist/` があってもWeb UIはサーブされない | `curl http://localhost:8000/` でJSON応答を確認 | | |
+| 4 | `APP_ENV=development` かつ `dist/` が存在する状態でサーバー起動後、Web UIはサーブされない | `curl -o /dev/null -w "%{http_code}" http://localhost:8000/` で404を確認 | | |
 | 5 | APIエンドポイント（`/api/health` 等）が両モードで引き続き動作する | `curl http://localhost:8000/api/health` | | |
 | 6 | インタビュー開始・回答送信が正常に動作する（StrictMode二重呼び出し問題が解消） | ブラウザ目視確認（`APP_ENV=production`） | | |
 | 7 | 開発モード（`npm run dev` + `APP_ENV=development`）でも引き続き動作する | `http://localhost:3000` でアクセス | | |
