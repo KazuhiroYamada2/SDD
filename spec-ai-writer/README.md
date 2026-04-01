@@ -113,24 +113,48 @@ VITE_USE_MOCK_API=true
 
 実際のLLM APIを使用する場合:
 
-1. **バックエンドサーバー起動**:
+**本番ビルド（推奨）**
+
+1. フロントエンドをビルド（初回またはソース変更後のみ）:
+```bash
+cd frontend
+npm install  # 初回のみ
+npm run build
+```
+
+2. `.env` に `APP_ENV=production` を設定:
+```env
+APP_ENV=production
+```
+
+3. **バックエンドサーバー起動**:
 ```bash
 # spec-ai-writer/ ディレクトリで
 uv run python -m spec_ai_writer.web.app
 ```
 
-サーバーが http://localhost:8000 で起動します。
+ブラウザで http://localhost:8000 を開きます。
 
-2. **フロントエンド開発サーバー起動** (別ターミナル):
+**開発モード（フロントエンドを変更する場合）**
+
+1. `.env` の `APP_ENV=development` のまま（デフォルト）
+
+2. **バックエンドサーバー起動**:
+```bash
+# spec-ai-writer/ ディレクトリで
+uv run python -m spec_ai_writer.web.app
+```
+
+3. **フロントエンド開発サーバー起動** (別ターミナル):
 ```bash
 cd frontend
 npm install  # 初回のみ
 npm run dev
 ```
 
-ブラウザで http://localhost:3000 を開きます。
+ブラウザで http://localhost:3000 を開きます（Vite が `/api` を localhost:8000 にプロキシ）。
 
-3. **使い方**:
+4. **使い方**:
    - ダッシュボードで新規プロジェクト作成（表示名を入力するとプロジェクトIDが自動採番される）
    - 「インタビュー開始」ボタンをクリック
    - チャット形式でLLMと対話
