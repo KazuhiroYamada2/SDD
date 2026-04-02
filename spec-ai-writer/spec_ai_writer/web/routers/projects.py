@@ -65,9 +65,10 @@ async def create_project(project: ProjectCreate):
     except HTTPException:
         raise
     except ValueError as e:
+        logger.warning(f"Validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid request parameters"
         )
     except Exception as e:
         logger.error(f"Failed to create project: {e}")
