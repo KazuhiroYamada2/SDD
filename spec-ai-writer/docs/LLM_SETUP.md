@@ -18,7 +18,7 @@ Spec AIライターは3つのLLMプロバイダーに対応しています。使
 
 2. `.env`ファイルを設定:
 ```env
-ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 DEFAULT_LLM_PROVIDER=claude
 ```
 
@@ -59,7 +59,7 @@ DEFAULT_LLM_PROVIDER=claude
 
 2. `.env`ファイルを設定:
 ```env
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=your_openai_api_key_here
 DEFAULT_LLM_PROVIDER=openai
 ```
 
@@ -164,7 +164,7 @@ AWS Bedrockを使用すると、既存のAWSインフラ内でClaudeモデルを
 `.env`ファイル:
 
 ```env
-AWS_ACCESS_KEY_ID=AKIA...
+AWS_ACCESS_KEY_ID=your_aws_access_key_id_here
 AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=ap-northeast-1
 DEFAULT_LLM_PROVIDER=bedrock
