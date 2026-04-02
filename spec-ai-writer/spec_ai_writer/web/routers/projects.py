@@ -73,7 +73,7 @@ async def create_project(project: ProjectCreate):
         logger.error(f"Failed to create project: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create project: {str(e)}"
+            detail="Failed to create project"
         )
 
 
@@ -150,7 +150,7 @@ async def list_projects():
         logger.error(f"Failed to list projects: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list projects: {str(e)}"
+            detail="Failed to list projects"
         )
 
 
@@ -212,7 +212,7 @@ async def get_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
         logger.error(f"Failed to get project: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get project: {str(e)}"
+            detail="Failed to get project"
         )
 
 
@@ -280,7 +280,7 @@ async def get_project_status(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
         logger.error(f"Failed to get project status: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get project status: {str(e)}"
+            detail="Failed to get project status"
         )
 
 
@@ -310,7 +310,7 @@ async def delete_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
         logger.error(f"Failed to delete project: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete project: {str(e)}"
+            detail="Failed to delete project"
         )
 
 
@@ -389,5 +389,5 @@ async def update_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), updat
         logger.error(f"Failed to update project: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update project: {str(e)}"
+            detail="Failed to update project"
         )

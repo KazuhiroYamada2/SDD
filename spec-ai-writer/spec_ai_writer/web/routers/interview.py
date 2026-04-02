@@ -157,7 +157,7 @@ async def start_interview(request: InterviewStartRequest):
         logger.error(f"Failed to start interview: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start interview: {str(e)}"
+            detail="Failed to start interview"
         )
 
 
@@ -264,7 +264,7 @@ async def submit_answer(request: UserAnswerRequest):
         logger.error(f"Failed to process answer: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process answer: {str(e)}"
+            detail="Failed to process answer"
         )
 
 
@@ -305,5 +305,5 @@ async def reset_phase(request: PhaseResetRequest):
         logger.error(f"Failed to reset phase: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset phase: {str(e)}"
+            detail="Failed to reset phase"
         )

@@ -93,7 +93,7 @@ async def download_all_specifications(project_id: str = Path(pattern=r'^[a-f0-9]
         logger.error(f"Failed to download all specifications: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download all specifications: {str(e)}"
+            detail="Failed to download all specifications"
         )
 
 
@@ -145,7 +145,7 @@ async def list_specifications(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
         logger.error(f"Failed to list specifications: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list specifications: {str(e)}"
+            detail="Failed to list specifications"
         )
 
 
@@ -184,7 +184,7 @@ async def get_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), ph
         logger.error(f"Failed to get specification: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get specification: {str(e)}"
+            detail="Failed to get specification"
         )
 
 
@@ -217,5 +217,5 @@ async def download_specification(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'
         logger.error(f"Failed to download specification: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download specification: {str(e)}"
+            detail="Failed to download specification"
         )
