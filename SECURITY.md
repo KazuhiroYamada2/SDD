@@ -47,7 +47,7 @@ Since this repository consists solely of Markdown documents and sample files, th
 - **File contents**: Sample files are for illustrative purposes only and do not contain actual credentials, API keys, or personal information
 - **Links**: External links in documents point to public resources, but please verify URLs before clicking
 - **Scripts**: Scripts in `docs/tools/scripts.md` are examples only. Please review the content thoroughly before executing in your environment
-- **Dependencies**: This repository has no external dependencies, so there are no security risks from dependency vulnerabilities
+- **Dependencies**: This repository uses Python and npm packages. Run `pip audit` and `npm audit` regularly to check for known vulnerabilities in dependencies
 
 ## Security Best Practices
 
