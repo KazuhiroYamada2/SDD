@@ -137,27 +137,28 @@ async def start_interview(request: InterviewStartRequest):
             detail=f"Project '{request.project_id}' not found"
         )
     except ValueError as e:
+        logger.warning(f"Validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid request parameters"
         )
     except LLMAuthenticationError as e:
         logger.error(f"LLM authentication error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"LLM APIキーが無効です。サーバーの .env 設定を確認してください。"
+            detail="LLM APIキーが無効です。管理者に連絡してください。"
         )
     except LLMConnectionError as e:
         logger.error(f"LLM connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLMサービスに接続できません。ネットワーク接続を確認してください。"
+            detail="LLMサービスに接続できません。ネットワーク接続を確認してください。"
         )
     except Exception as e:
         logger.error(f"Failed to start interview: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start interview: {str(e)}"
+            detail="Failed to start interview"
         )
 
 
@@ -244,27 +245,28 @@ async def submit_answer(request: UserAnswerRequest):
             detail=f"Project '{request.project_id}' not found"
         )
     except ValueError as e:
+        logger.warning(f"Validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid request parameters"
         )
     except LLMAuthenticationError as e:
         logger.error(f"LLM authentication error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"LLM APIキーが無効です。サーバーの .env 設定を確認してください。"
+            detail="LLM APIキーが無効です。管理者に連絡してください。"
         )
     except LLMConnectionError as e:
         logger.error(f"LLM connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLMサービスに接続できません。ネットワーク接続を確認してください。"
+            detail="LLMサービスに接続できません。ネットワーク接続を確認してください。"
         )
     except Exception as e:
         logger.error(f"Failed to process answer: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process answer: {str(e)}"
+            detail="Failed to process answer"
         )
 
 
@@ -305,5 +307,5 @@ async def reset_phase(request: PhaseResetRequest):
         logger.error(f"Failed to reset phase: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset phase: {str(e)}"
+            detail="Failed to reset phase"
         )
