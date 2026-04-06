@@ -13,10 +13,26 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' ws: wss:; "
+            "img-src 'self' data:; "
+            "font-src 'self';"
+        )
+        return response
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -27,8 +43,9 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# CORS middleware for React frontend
+# Security and CORS middleware
 settings = get_settings()
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
