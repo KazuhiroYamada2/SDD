@@ -29,8 +29,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline'; "
             "connect-src 'self' ws: wss:; "
             "img-src 'self' data:; "
-            "font-src 'self';"
+            "font-src 'self'; "
+            "frame-ancestors 'none';"
         )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
 
