@@ -4,8 +4,27 @@ import { Send, ArrowLeft, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useInterviewStore } from '@/store/useInterviewStore';
+import axios from 'axios';
 import apiClient from '@/api/client';
 import type { ChatMessage } from '@/types';
+
+function format422Error(detail: Array<{ type: string; ctx?: Record<string, unknown> }>): string {
+  return detail
+    .map(({ type, ctx }) => {
+      switch (type) {
+        case 'string_too_long':
+          return `入力が長すぎます（上限: ${ctx?.max_length}文字）`;
+        case 'string_too_short':
+          return `入力が短すぎます（最低: ${ctx?.min_length}文字）`;
+        case 'greater_than_equal':
+        case 'less_than_equal':
+          return 'フェーズ番号が無効です';
+        default:
+          return 'リクエストの形式が無効です';
+      }
+    })
+    .join('、');
+}
 
 export default function Interview() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -153,9 +172,16 @@ export default function Interview() {
       }
     } catch (err) {
       console.error('Failed to submit answer:', err);
+      const content =
+        axios.isAxiosError(err) &&
+        err.response?.status === 422 &&
+        Array.isArray(err.response.data?.detail) &&
+        err.response.data.detail.length > 0
+          ? format422Error(err.response.data.detail)
+          : '回答の送信中にエラーが発生しました。再度お試しください。';
       addMessage({
         role: 'system',
-        content: '回答の送信中にエラーが発生しました。再度お試しください。',
+        content,
         timestamp: new Date().toISOString(),
       });
     } finally {
