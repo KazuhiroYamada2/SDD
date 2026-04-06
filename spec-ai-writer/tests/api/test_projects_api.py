@@ -18,6 +18,14 @@ class TestProjectsAPI:
         assert "status" in data
         assert data["status"] == "healthy"
 
+    def test_health_check_has_csp_header(self, test_client: TestClient):
+        """Test that CSP header is set on responses."""
+        response = test_client.get("/api/health")
+        csp = response.headers.get("content-security-policy", "")
+        assert "default-src 'self'" in csp
+        assert "script-src 'self'" in csp
+        assert "connect-src 'self' ws: wss:" in csp
+
     def test_create_project(self, test_client: TestClient, sample_project_data: dict):
         """Test creating a new project."""
         response = test_client.post("/api/projects/", json=sample_project_data)
