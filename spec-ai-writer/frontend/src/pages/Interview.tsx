@@ -4,6 +4,7 @@ import { Send, ArrowLeft, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useInterviewStore } from '@/store/useInterviewStore';
+import axios from 'axios';
 import apiClient from '@/api/client';
 import type { ChatMessage } from '@/types';
 
@@ -171,10 +172,12 @@ export default function Interview() {
       }
     } catch (err) {
       console.error('Failed to submit answer:', err);
-      const res = (err as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
       const content =
-        res?.status === 422 && Array.isArray(res.data?.detail)
-          ? format422Error(res.data!.detail as Array<{ type: string; ctx?: Record<string, unknown> }>)
+        axios.isAxiosError(err) &&
+        err.response?.status === 422 &&
+        Array.isArray(err.response.data?.detail) &&
+        err.response.data.detail.length > 0
+          ? format422Error(err.response.data.detail)
           : '回答の送信中にエラーが発生しました。再度お試しください。';
       addMessage({
         role: 'system',
