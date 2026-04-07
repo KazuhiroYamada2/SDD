@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-04-07
+
+### Fixed
+
+- **spec-ai-writer / CSP (Content Security Policy)**: Fixed CSP error when accessing via 127.0.0.1 in production mode (Issue #56)
+- **spec-ai-writer / `.env.example`**: Fixed API base URL description (Issue #56)
+
+---
+
 ## [1.0.1] - 2026-03-24
 
 ### Changed
@@ -50,5 +59,6 @@ Initial release. Published as the practice repository for *Spec-Driven Developme
 
 | Version | Key Features |
 |---------|-------------|
+| 1.0.2   | CSP fix, .env.example fix (Issue #56) |
 | 1.0.1   | GitHub publication rule compliance: README improvements, doc split into English/Japanese |
 | 1.0.0   | Initial release: 7-process samples, practical guides, spec-ai-writer, publication documents |
