@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - Unreleased
+
+### Added
+
+- **spec-ai-writer / OpenRouter & Local LLM support**: The existing `openai` provider now accepts `OPENAI_BASE_URL` and `OPENAI_MODEL`, making it a unified path for the official OpenAI API, OpenRouter, and OpenAI-compatible local servers (Ollama, LM Studio, llama.cpp). When `OPENAI_BASE_URL` points at a local endpoint, `OPENAI_API_KEY` may be left empty (Issue #59).
+- **spec-ai-writer / Web UI settings page**: New `/settings` page in the dashboard lets users edit the active provider, base URL, model ID, API keys and temperature without restarting the server. Presets are provided for OpenAI Official / OpenRouter / Ollama / LM Studio / Custom (Issue #59).
+- **spec-ai-writer / Settings persistence layer**: LLM settings edited from the UI are written atomically to `data/llm_settings.json` with `0600` permissions and overlaid on top of environment variables. `GET /api/settings/llm` returns masked API keys; `PUT /api/settings/llm` ignores empty key fields so re-submitting a masked display value never overwrites the stored secret (Issue #59).
+
+### Changed
+
+- **spec-ai-writer / `reload_settings()`**: Now mutates the existing global Settings instance in place so that module-level references captured by routers observe the updated values without a process restart.
+- **spec-ai-writer / `.env.example`**: Added `OPENAI_BASE_URL` and `OPENAI_MODEL` entries with usage examples for OpenRouter, Ollama and LM Studio.
+- **spec-ai-writer / `docs/LLM_SETUP.md`**: Added OpenRouter and Local LLM (Ollama / LM Studio / llama.cpp) setup sections and a note about the Web UI settings page.
+
+### Fixed
+
+- **spec-ai-writer / Version alignment between Python package and frontend**: Unified the `spec-ai-writer` version across `pyproject.toml`, `uv.lock`, `frontend/package.json`, `frontend/package-lock.json`, the FastAPI app metadata, the Click CLI banner and the dashboard footer. All now report **1.0.3** (Issue #60).
+- **CONTRIBUTING.md / CONTRIBUTING_ja.md**: Added a "Releasing spec-ai-writer" section documenting which files must be bumped together so this desynchronization cannot recur (Issue #60).
+
+---
+
 ## [1.0.2] - 2026-04-07
 
 ### Fixed

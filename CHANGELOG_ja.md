@@ -9,6 +9,27 @@
 
 ---
 
+## [1.0.3] - Unreleased
+
+### 追加
+
+- **spec-ai-writer / OpenRouter・ローカル LLM 対応**: 既存の `openai` プロバイダが `OPENAI_BASE_URL` と `OPENAI_MODEL` を受け付けるようになり、OpenAI 公式 API・OpenRouter・OpenAI 互換ローカルサーバー（Ollama, LM Studio, llama.cpp）を単一の経路で扱えるようになりました。`OPENAI_BASE_URL` がローカルエンドポイントを指している場合は `OPENAI_API_KEY` を空欄にできます（Issue #59）。
+- **spec-ai-writer / Web UI 設定ページ**: ダッシュボードに新しい `/settings` ページを追加。プロバイダ・Base URL・モデル ID・API キー・Temperature をサーバー再起動なしで編集できます。OpenAI 公式 / OpenRouter / Ollama / LM Studio / カスタムのプリセットを用意（Issue #59）。
+- **spec-ai-writer / 設定の永続化レイヤ**: UI から編集した LLM 設定は `data/llm_settings.json` にアトミックに書き込まれ（パーミッション `0600`）、環境変数より優先して適用されます。`GET /api/settings/llm` は API キーをマスクして返し、`PUT /api/settings/llm` は空の API キーを無視するため、マスク表示値を再送信しても保存済みの秘密情報を上書きすることはありません（Issue #59）。
+
+### 変更
+
+- **spec-ai-writer / `reload_settings()`**: グローバル Settings インスタンスを in-place で更新するよう変更。ルーターがモジュールレベルで保持している参照が、プロセス再起動なしで新しい値を観測できるようになりました。
+- **spec-ai-writer / `.env.example`**: `OPENAI_BASE_URL` と `OPENAI_MODEL` の項目を追加し、OpenRouter・Ollama・LM Studio 用の使用例を記載。
+- **spec-ai-writer / `docs/LLM_SETUP.md`**: OpenRouter およびローカル LLM（Ollama / LM Studio / llama.cpp）のセットアップ章を追加し、Web UI 設定ページに関する注記を追記。
+
+### 修正
+
+- **spec-ai-writer / Python パッケージとフロントエンドのバージョン統一**: `pyproject.toml`・`uv.lock`・`frontend/package.json`・`frontend/package-lock.json`・FastAPI アプリのメタデータ・Click CLI バナー・ダッシュボードフッターのバージョン表記を統一し、すべて **1.0.3** を報告するようになりました（Issue #60）。
+- **CONTRIBUTING.md / CONTRIBUTING_ja.md**: 同じ不整合が再発しないよう、一緒にバージョンを上げるべきファイル一覧を含む「spec-ai-writer のリリース手順」セクションを追加しました（Issue #60）。
+
+---
+
 ## [1.0.2] - 2026-04-07
 
 ### 修正

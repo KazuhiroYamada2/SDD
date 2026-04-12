@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutDashboard } from 'lucide-react';
+import { FileText, LayoutDashboard, Settings as SettingsIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Layout() {
@@ -39,12 +39,24 @@ export default function Layout() {
                   <LayoutDashboard className="h-4 w-4" />
                   <span>ダッシュボード</span>
                 </Link>
+                <Link
+                  to="/settings"
+                  className={clsx(
+                    'flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                    isActive('/settings')
+                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  )}
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                  <span>設定</span>
+                </Link>
               </nav>
             </div>
 
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                v1.0.0
+                v1.0.3
               </span>
             </div>
           </div>

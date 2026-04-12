@@ -41,7 +41,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app = FastAPI(
     title="spec-ai-writer Web UI",
     description="LLM-powered interview system for generating SDD specifications",
-    version="1.0.0",
+    version="1.0.3",
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )
@@ -73,12 +73,13 @@ async def health_check():
 
 
 # Import routers
-from .routers import projects, interview, specifications
+from .routers import projects, interview, specifications, settings as settings_router
 
 # Register routers
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(interview.router, prefix="/api/interview", tags=["interview"])
 app.include_router(specifications.router, prefix="/api/specs", tags=["specifications"])
+app.include_router(settings_router.router, prefix="/api/settings", tags=["settings"])
 
 
 # Static files for production build

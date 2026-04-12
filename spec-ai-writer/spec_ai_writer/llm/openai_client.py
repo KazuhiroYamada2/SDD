@@ -34,17 +34,27 @@ class OpenAIClient(BaseLLMClient):
         model: str = "gpt-4-turbo-preview",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        timeout: float = 30.0
+        timeout: float = 30.0,
+        base_url: Optional[str] = None,
     ):
         """
         Initialize OpenAI client.
 
         Args:
-            api_key: OpenAI API key
-            model: Model name (gpt-4, gpt-4-turbo-preview, gpt-3.5-turbo, etc.)
+            api_key: OpenAI API key (or compatible provider key).
+                For local OpenAI-compatible servers that do not require
+                authentication, pass a dummy non-empty string (e.g. "dummy").
+            model: Model name (gpt-4, gpt-4-turbo-preview, gpt-3.5-turbo,
+                or an OpenRouter/local model ID).
             temperature: Sampling temperature (0.0-2.0)
             max_tokens: Maximum tokens to generate
             timeout: Timeout in seconds for API calls
+            base_url: Optional base URL for OpenAI-compatible endpoints.
+                Examples:
+                - None: Official OpenAI API (default)
+                - "https://openrouter.ai/api/v1": OpenRouter
+                - "http://localhost:11434/v1": Ollama
+                - "http://localhost:1234/v1": LM Studio
 
         Raises:
             ImportError: If openai package is not installed
@@ -61,10 +71,17 @@ class OpenAIClient(BaseLLMClient):
 
         super().__init__(api_key, model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
+        self.base_url = base_url
 
         try:
-            self.client = OpenAI(api_key=api_key, timeout=httpx.Timeout(self.timeout))
-            logger.info(f"OpenAI client initialized with model: {model}")
+            client_kwargs = {"api_key": api_key, "timeout": httpx.Timeout(self.timeout)}
+            if base_url:
+                client_kwargs["base_url"] = base_url
+            self.client = OpenAI(**client_kwargs)
+            logger.info(
+                f"OpenAI client initialized with model: {model}"
+                + (f", base_url: {base_url}" if base_url else "")
+            )
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
             raise ValueError(f"Failed to initialize OpenAI client: {e}")

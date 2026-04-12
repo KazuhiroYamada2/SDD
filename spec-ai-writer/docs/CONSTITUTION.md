@@ -46,7 +46,8 @@ Do NOT modify this file unless you are explicitly instructed.
 - 工程ごとのMarkdown仕様書の自動生成（Jinja2テンプレート）
 - CLIインターフェース（ターミナルでの対話）
 - WebUIインターフェース（ブラウザでのチャット形式）
-- 複数LLMプロバイダー対応（Claude API / OpenAI API / AWS Bedrock）
+- 複数LLMプロバイダー対応（Claude API / OpenAI API / OpenRouter / ローカル LLM（Ollama・LM Studio・llama.cpp 等の OpenAI 互換エンドポイント）/ AWS Bedrock）
+- Web UI（ダッシュボード）からの LLM 設定編集（プロバイダ・Base URL・モデル・API キーをサーバー再起動なしで切替）
 - インタビュー状態の永続化と中断・再開
 - 生成した仕様書のGit自動コミット
 

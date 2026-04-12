@@ -109,3 +109,38 @@ export interface ErrorResponse {
   detail?: string;
   status_code: number;
 }
+
+// ---------- LLM Settings ----------
+
+export type LLMProvider = 'claude' | 'openai' | 'bedrock';
+
+export interface LLMSettingsResponse {
+  provider: LLMProvider;
+  openai_base_url: string;
+  openai_model: string;
+  openai_api_key_masked: string;
+  anthropic_api_key_masked: string;
+  bedrock_model_id: string;
+  aws_region: string;
+  aws_access_key_id_masked: string;
+  aws_secret_access_key_masked: string;
+  temperature: number;
+}
+
+/**
+ * Payload for PUT /api/settings/llm.
+ * All fields optional; empty strings on api_key fields are ignored server-side
+ * so re-submitting a masked display value does NOT overwrite the real key.
+ */
+export interface LLMSettingsUpdateRequest {
+  provider?: LLMProvider;
+  openai_base_url?: string;
+  openai_model?: string;
+  openai_api_key?: string;
+  anthropic_api_key?: string;
+  bedrock_model_id?: string;
+  aws_region?: string;
+  aws_access_key_id?: string;
+  aws_secret_access_key?: string;
+  temperature?: number;
+}

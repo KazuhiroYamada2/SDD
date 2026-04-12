@@ -68,12 +68,31 @@ class LLMFactory:
 
     @staticmethod
     def _create_openai_client(settings: Settings) -> BaseLLMClient:
-        """Create OpenAI client."""
+        """Create OpenAI (or OpenAI-compatible) client.
+
+        The same client class backs three use cases:
+
+        - **Official OpenAI**: ``openai_base_url`` empty, real API key required.
+        - **OpenRouter**: ``openai_base_url=https://openrouter.ai/api/v1`` and a
+          real OpenRouter API key.
+        - **Local LLM** (Ollama / LM Studio / llama.cpp): ``openai_base_url``
+          pointing at ``http://localhost:<port>/v1``. Many local servers ignore
+          the API key entirely, so an empty key is replaced with a dummy so
+          the OpenAI SDK initializer (which requires a non-empty string) is
+          satisfied.
+        """
+        base_url = settings.openai_base_url or None
+
         if not settings.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY is required for OpenAI provider. "
-                "Set it in .env file or environment variable."
-            )
+            if not base_url:
+                raise ValueError(
+                    "OPENAI_API_KEY is required for the official OpenAI endpoint. "
+                    "Set it in .env file or environment variable, or configure a "
+                    "custom OPENAI_BASE_URL (OpenRouter / local server)."
+                )
+            api_key = "dummy"
+        else:
+            api_key = settings.openai_api_key
 
         try:
             from .openai_client import OpenAIClient
@@ -84,8 +103,10 @@ class LLMFactory:
             )
 
         return OpenAIClient(
-            api_key=settings.openai_api_key,
-            temperature=settings.temperature
+            api_key=api_key,
+            model=settings.openai_model,
+            temperature=settings.temperature,
+            base_url=base_url,
         )
 
     @staticmethod
