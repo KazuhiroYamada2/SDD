@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { FileText, LayoutDashboard, Settings as SettingsIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { version } from '../../package.json';
 
 export default function Layout() {
   const location = useLocation();
@@ -56,7 +57,7 @@ export default function Layout() {
 
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                v1.0.3
+                v{version}
               </span>
             </div>
           </div>

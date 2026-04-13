@@ -1,6 +1,7 @@
 """Command-line interface for Spec AIライター."""
 
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import click
@@ -15,7 +16,7 @@ from spec_ai_writer.llm.factory import create_default_client
 
 
 @click.group()
-@click.version_option(version="1.0.3")
+@click.version_option(version=version("spec-ai-writer"))
 def cli():
     """Spec AIライター - AI対話型仕様駆動開発支援ツール
 

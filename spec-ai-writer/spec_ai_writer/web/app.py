@@ -6,6 +6,7 @@ specification interviews and managing multiple projects.
 """
 
 import logging
+from importlib.metadata import version
 from pathlib import Path
 from typing import Optional
 
@@ -41,7 +42,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app = FastAPI(
     title="spec-ai-writer Web UI",
     description="LLM-powered interview system for generating SDD specifications",
-    version="1.0.3",
+    version=version("spec-ai-writer"),
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )

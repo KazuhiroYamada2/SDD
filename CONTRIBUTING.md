@@ -131,22 +131,17 @@ When bumping the version (e.g. `1.0.3` → `1.0.4`), update **all** of the follo
 | File | Field |
 |------|-------|
 | `spec-ai-writer/pyproject.toml` | `[project] version` |
-| `spec-ai-writer/uv.lock` | regenerated automatically by `uv sync --extra dev` |
-| `spec-ai-writer/spec_ai_writer/cli.py` | `@click.version_option(version=...)` |
-| `spec-ai-writer/spec_ai_writer/web/app.py` | `FastAPI(..., version=...)` |
 | `spec-ai-writer/frontend/package.json` | top-level `version` |
-| `spec-ai-writer/frontend/package-lock.json` | top-level `version` and `packages[""].version` |
-| `spec-ai-writer/frontend/src/components/Layout.tsx` | dashboard footer `vX.Y.Z` label |
 | `CHANGELOG.md` / `CHANGELOG_ja.md` | new `## [X.Y.Z] - YYYY-MM-DD` section |
 
-After editing, run `uv sync --extra dev` and (if frontend deps changed) `npm install` inside `spec-ai-writer/frontend/` so the lockfiles stay consistent. A quick sanity check:
+After editing, run `uv sync --extra dev` inside `spec-ai-writer/` and `npm install` inside `spec-ai-writer/frontend/` to regenerate the lockfiles. The Python source and React component read the version at runtime, so no further edits are needed. A quick sanity check:
 
 ```bash
-grep -RnE "\"version\": \"[0-9]" spec-ai-writer/pyproject.toml spec-ai-writer/frontend/package.json
-grep -n "version" spec-ai-writer/spec_ai_writer/web/app.py spec-ai-writer/spec_ai_writer/cli.py
+grep -E "^version" spec-ai-writer/pyproject.toml
+grep '"version"' spec-ai-writer/frontend/package.json | head -1
 ```
 
-All reported versions should match. If any drift is found, fix it in the same commit rather than deferring — out-of-band fixes make `git blame` harder to read.
+Both lines should show the same version. If any drift is found, fix it in the same commit rather than deferring — out-of-band fixes make `git blame` harder to read.
 
 ## Contact
 
