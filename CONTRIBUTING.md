@@ -122,6 +122,27 @@ Since this repository consists of Markdown files, please follow these guidelines
 - Use relative paths for links within the repository (e.g., `[CHANGELOG.md](CHANGELOG.md)`)
 - Use ISO 8601 format for dates (`YYYY-MM-DD`)
 
+## Releasing `spec-ai-writer`
+
+The `spec-ai-writer` sub-project ships as both a Python package and a React frontend bundled together. The version number **must be identical** in every location below; a mismatch between the Python package and the frontend makes release notes and support requests ambiguous.
+
+When bumping the version (e.g. `1.0.3` → `1.0.4`), update **all** of the following in the same commit:
+
+| File | Field |
+|------|-------|
+| `spec-ai-writer/pyproject.toml` | `[project] version` |
+| `spec-ai-writer/frontend/package.json` | top-level `version` |
+| `CHANGELOG.md` / `CHANGELOG_ja.md` | new `## [X.Y.Z] - YYYY-MM-DD` section |
+
+After editing, run `uv sync --extra dev` inside `spec-ai-writer/` and `npm install` inside `spec-ai-writer/frontend/` to regenerate the lockfiles. The Python source and React component read the version at runtime, so no further edits are needed. A quick sanity check:
+
+```bash
+grep -E "^version" spec-ai-writer/pyproject.toml
+grep '"version"' spec-ai-writer/frontend/package.json | head -1
+```
+
+Both lines should show the same version. If any drift is found, fix it in the same commit rather than deferring — out-of-band fixes make `git blame` harder to read.
+
 ## Contact
 
 - **GitHub Issues**: [https://github.com/elvezjp/SDD/issues](https://github.com/elvezjp/SDD/issues)

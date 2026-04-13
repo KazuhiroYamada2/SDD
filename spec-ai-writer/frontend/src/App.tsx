@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Interview from './pages/Interview';
 import Specifications from './pages/Specifications';
 import ProjectDetail from './pages/ProjectDetail';
+import Settings from './pages/Settings';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ function App() {
             <Route path="project/:projectId" element={<ProjectDetail />} />
             <Route path="interview/:projectId" element={<Interview />} />
             <Route path="specs/:projectId" element={<Specifications />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

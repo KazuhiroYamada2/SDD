@@ -17,6 +17,8 @@ import type {
   AssistantQuestionResponse,
   SpecificationResponse,
   SpecificationListResponse,
+  LLMSettingsResponse,
+  LLMSettingsUpdateRequest,
 } from '@/types';
 import { mockApiClient } from './mockClient';
 
@@ -89,7 +91,8 @@ class APIClient {
   async startInterview(data: InterviewStartRequest): Promise<InterviewStartResponse> {
     const response = await this.client.post<InterviewStartResponse>(
       '/api/interview/start',
-      data
+      data,
+      { timeout: 120000 }
     );
     return response.data;
   }
@@ -97,7 +100,8 @@ class APIClient {
   async submitAnswer(data: UserAnswerRequest): Promise<AssistantQuestionResponse> {
     const response = await this.client.post<AssistantQuestionResponse>(
       '/api/interview/answer',
-      data
+      data,
+      { timeout: 120000 }
     );
     return response.data;
   }
@@ -140,6 +144,22 @@ class APIClient {
   // Phase reset (re-interview)
   async resetPhase(data: { project_id: string; phase_num: number }): Promise<{ project_id: string; phase_num: number; message: string }> {
     const response = await this.client.post('/api/interview/reset-phase', data);
+    return response.data;
+  }
+
+  // LLM Settings API
+  async getLLMSettings(): Promise<LLMSettingsResponse> {
+    const response = await this.client.get<LLMSettingsResponse>('/api/settings/llm');
+    return response.data;
+  }
+
+  async updateLLMSettings(
+    data: LLMSettingsUpdateRequest
+  ): Promise<LLMSettingsResponse> {
+    const response = await this.client.put<LLMSettingsResponse>(
+      '/api/settings/llm',
+      data
+    );
     return response.data;
   }
 }

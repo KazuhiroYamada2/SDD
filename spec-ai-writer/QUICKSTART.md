@@ -6,7 +6,7 @@
 
 - Python 3.9以上がインストールされている
 - [uv](https://docs.astral.sh/uv/) がインストールされている
-- LLM APIキー（Claude、OpenAI、またはAWS Bedrockのいずれか）を持っている
+- LLM API キー、または OpenAI 互換エンドポイント（Claude / OpenAI 公式 / OpenRouter / AWS Bedrock のいずれか）を持っている。ローカル LLM（Ollama / LM Studio / llama.cpp）を使う場合は API キー不要
 
 ## セットアップ（5分）
 
@@ -34,10 +34,27 @@ cp .env.example .env
 ```env
 # 使用するプロバイダーのキーのみ設定すればOK
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-DEFAULT_LLM_PROVIDER=claude  # claude, openai, bedrockから選択
+# claude / openai / bedrock から選択。OpenRouter・ローカル LLM は openai に
+# OPENAI_BASE_URL を組み合わせて使います（下記参照）。
+DEFAULT_LLM_PROVIDER=claude
 ```
 
-各プロバイダーの詳細な設定手順は [LLM_SETUP.md](./docs/LLM_SETUP.md) を参照してください。
+OpenRouter やローカル LLM (Ollama / LM Studio / llama.cpp) を使う場合は、`DEFAULT_LLM_PROVIDER=openai` にした上で `OPENAI_BASE_URL` と `OPENAI_MODEL` を設定します（ローカル LLM では `OPENAI_API_KEY` は空欄で可）。
+
+```env
+# 例: OpenRouter
+DEFAULT_LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-or-v1-xxxxxxxx
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=anthropic/claude-3.5-sonnet
+
+# 例: Ollama（ローカル）
+DEFAULT_LLM_PROVIDER=openai
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_MODEL=llama3.1:8b
+```
+
+各プロバイダーの詳細な設定手順は [LLM_SETUP.md](./docs/LLM_SETUP.md) を参照してください。Web UI を起動したあとはダッシュボードの **「設定」** ページからも編集できます。
 
 ## 使い方
 

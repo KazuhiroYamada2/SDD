@@ -215,3 +215,30 @@ class TestOpenAIClient:
         """Test that model constants are defined."""
         assert GPT4_TURBO == "gpt-4-turbo-preview"
         assert GPT35_TURBO == "gpt-3.5-turbo"
+
+    @patch('spec_ai_writer.llm.openai_client.OpenAI')
+    def test_base_url_passed_to_sdk(self, mock_openai):
+        """Custom base_url should be forwarded to the OpenAI SDK constructor."""
+        OpenAIClient(
+            api_key="test-key",
+            model="llama3.1:8b",
+            base_url="http://localhost:11434/v1",
+        )
+
+        # The SDK should have been instantiated with base_url in kwargs.
+        assert mock_openai.call_count == 1
+        call_kwargs = mock_openai.call_args.kwargs
+        assert call_kwargs["base_url"] == "http://localhost:11434/v1"
+        assert call_kwargs["api_key"] == "test-key"
+
+    @patch('spec_ai_writer.llm.openai_client.OpenAI')
+    def test_no_base_url_omits_kwarg(self, mock_openai):
+        """When base_url is not set the kwarg should not be passed at all.
+
+        The official OpenAI endpoint is the SDK default, and passing
+        ``base_url=None`` can surface as a subtle bug on older SDK versions.
+        """
+        OpenAIClient(api_key="test-key")
+
+        call_kwargs = mock_openai.call_args.kwargs
+        assert "base_url" not in call_kwargs

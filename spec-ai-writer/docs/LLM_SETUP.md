@@ -1,12 +1,18 @@
 # LLMプロバイダー セットアップガイド
 
-Spec AIライターは3つのLLMプロバイダーに対応しています。使用するプロバイダーのセクションを参照してセットアップしてください。
+Spec AIライターは以下のLLMプロバイダーに対応しています。使用するプロバイダーのセクションを参照してセットアップしてください。
 
 | プロバイダー | 特徴 | 推奨用途 |
 |-------------|------|---------|
 | Claude (Anthropic API) | 高品質な日本語対応、仕様書生成に最適 | 個人・チーム開発 |
-| OpenAI | GPT-5系対応 | OpenAIを既に利用中の場合 |
+| OpenAI (公式) | GPT-5系対応 | OpenAIを既に利用中の場合 |
+| OpenRouter | 100以上のモデルを単一APIで切替可能 | 複数モデルを試したい場合 |
+| ローカルLLM (Ollama / LM Studio / llama.cpp) | API料金不要、オフライン動作、データ外部送信なし | プライバシー重視・検証用途 |
 | AWS Bedrock | 既存AWSインフラ統合、IAM管理 | エンタープライズ環境 |
+
+> **Web UI からの設定**: 上記プロバイダーのほとんどは、Web ダッシュボードの「設定」ページから編集・即時反映できます。`.env` を編集してサーバーを再起動する必要はありません。変更は `data/llm_settings.json` に保存され、環境変数よりも優先されます。
+>
+> **注意**: `data/llm_settings.json` は API キーを**平文**で保存します（`.env` と同じリスクモデル）。共有マシンでの使用は避け、ファイルパーミッションは自動的に `0600` に設定されます。
 
 ---
 
@@ -89,6 +95,133 @@ DEFAULT_LLM_PROVIDER=openai
 **解決策**:
 - OpenAI DashboardでUsageを確認
 - 必要に応じてUsage Limitを引き上げ
+
+---
+
+## OpenRouter
+
+[OpenRouter](https://openrouter.ai/) は 100 以上の LLM を単一 API で切り替えられるサービスです。Spec AI ライターは OpenAI 互換エンドポイントとして接続します。
+
+### セットアップ
+
+1. OpenRouter API キーを取得: https://openrouter.ai/keys
+2. 使用したいモデル ID を確認: https://openrouter.ai/models
+3. `.env` ファイルを設定:
+
+```env
+DEFAULT_LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxx
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=anthropic/claude-3.5-sonnet
+```
+
+または Web UI の「設定」ページでプリセット **「OpenRouter」** を選び、API キーとモデル ID を入力して保存します。
+
+### モデル ID の例
+
+| モデル | モデル ID |
+|--------|----------|
+| Claude 3.5 Sonnet | `anthropic/claude-3.5-sonnet` |
+| GPT-4o | `openai/gpt-4o` |
+| Llama 3.1 70B | `meta-llama/llama-3.1-70b-instruct` |
+| Gemini Pro 1.5 | `google/gemini-pro-1.5` |
+
+料金は [OpenRouter Models](https://openrouter.ai/models) を確認してください。
+
+### トラブルシューティング
+
+#### エラー: "No auth credentials found"
+
+**原因**: `OPENAI_API_KEY` が設定されていない、または OpenRouter のキーではない
+
+**解決策**:
+- [OpenRouter の API キー管理画面](https://openrouter.ai/keys) で発行したキー (`sk-or-v1-...`) を設定
+- `.env` または Web UI の設定画面から更新
+
+#### エラー: "Model not found"
+
+**原因**: `OPENAI_MODEL` が OpenRouter の命名規則と異なる
+
+**解決策**:
+- `anthropic/claude-3.5-sonnet` のように `provider/model` 形式で指定
+- [モデル一覧](https://openrouter.ai/models) から正確な ID をコピー
+
+---
+
+## ローカル LLM (Ollama / LM Studio / llama.cpp)
+
+OpenAI 互換 HTTP API を提供するローカル LLM ランタイムに接続できます。API 料金なし、データが外部に送信されない、オフラインで動作するなどのメリットがあります。
+
+> ⚠️ **品質について**: 小規模モデル (7B 以下) ではインタビュー質問の生成や構造化データ抽出 (JSON) が不安定になる場合があります。**13B 以上** のモデルを推奨します。
+
+### Ollama
+
+1. [Ollama](https://ollama.com/) をインストール
+2. モデルをダウンロード:
+   ```bash
+   ollama pull llama3.1:8b
+   # または
+   ollama pull qwen2.5:14b  # 推奨: より高品質
+   ```
+3. `.env` ファイルを設定:
+   ```env
+   DEFAULT_LLM_PROVIDER=openai
+   OPENAI_BASE_URL=http://localhost:11434/v1
+   OPENAI_MODEL=llama3.1:8b
+   # OPENAI_API_KEY は不要 (空欄で OK)
+   ```
+4. Ollama サーバーが起動していることを確認:
+   ```bash
+   curl http://localhost:11434/api/tags
+   ```
+
+### LM Studio
+
+1. [LM Studio](https://lmstudio.ai/) をインストール
+2. モデルをダウンロード (GGUF 形式)
+3. LM Studio の「Local Server」タブから OpenAI 互換サーバーを起動 (デフォルト: `http://localhost:1234`)
+4. `.env` ファイルを設定:
+   ```env
+   DEFAULT_LLM_PROVIDER=openai
+   OPENAI_BASE_URL=http://localhost:1234/v1
+   OPENAI_MODEL=local-model  # LM Studio は任意の値でOK
+   ```
+
+### llama.cpp (OpenAI 互換モード)
+
+```bash
+./llama-server -m models/your-model.gguf --port 8080
+```
+
+```env
+DEFAULT_LLM_PROVIDER=openai
+OPENAI_BASE_URL=http://localhost:8080/v1
+OPENAI_MODEL=local-model
+```
+
+### Web UI からの設定
+
+Web ダッシュボードの「設定」ページで、プロバイダに **「OpenAI / OpenRouter / ローカル LLM」** を選び、プリセットから **「Ollama (ローカル)」** または **「LM Studio (ローカル)」** を選択すると Base URL が自動入力されます。
+
+### トラブルシューティング
+
+#### エラー: "Connection refused"
+
+**原因**: ローカル LLM サーバーが起動していない
+
+**解決策**:
+- Ollama: `ollama serve` で起動確認、または `ollama run <モデル名>` で自動起動
+- LM Studio: アプリケーションの「Local Server」タブで Start をクリック
+- ポートが `.env` の設定と一致しているか確認
+
+#### エラー: インタビュー質問が壊れる / JSON 抽出に失敗する
+
+**原因**: モデルの能力不足。小規模モデルでは日本語の指示追従や JSON 出力の整合性が不足する
+
+**解決策**:
+- より大きいモデルに切替 (13B 以上を推奨)
+- 量子化レベルを上げる (Q5_K_M 以上を推奨)
+- インタビュー途中で生成に失敗した場合は、Claude または OpenRouter に一時的に切り替えて先に進めることを検討
 
 ---
 

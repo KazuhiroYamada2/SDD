@@ -15,6 +15,8 @@ import type {
   AssistantQuestionResponse,
   SpecificationResponse,
   SpecificationListResponse,
+  LLMSettingsResponse,
+  LLMSettingsUpdateRequest,
 } from '@/types';
 
 // Simulate network delay
@@ -296,6 +298,41 @@ class MockAPIClient {
       phase_num: data.phase_num,
       message: `フェーズ ${data.phase_num} をリセットしました。再インタビューを開始できます。`,
     };
+  }
+
+  // LLM Settings API (mock)
+  private mockLLMSettings: LLMSettingsResponse = {
+    provider: 'claude',
+    openai_base_url: '',
+    openai_model: 'gpt-4-turbo-preview',
+    openai_api_key_masked: '',
+    anthropic_api_key_masked: 'sk-a****mock',
+    bedrock_model_id: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+    aws_region: 'ap-northeast-1',
+    aws_access_key_id_masked: '',
+    aws_secret_access_key_masked: '',
+    temperature: 0.7,
+  };
+
+  async getLLMSettings(): Promise<LLMSettingsResponse> {
+    await delay(200);
+    return { ...this.mockLLMSettings };
+  }
+
+  async updateLLMSettings(data: LLMSettingsUpdateRequest): Promise<LLMSettingsResponse> {
+    await delay(300);
+    if (data.provider) this.mockLLMSettings.provider = data.provider;
+    if (data.openai_base_url !== undefined) this.mockLLMSettings.openai_base_url = data.openai_base_url;
+    if (data.openai_model !== undefined) this.mockLLMSettings.openai_model = data.openai_model;
+    if (data.bedrock_model_id !== undefined) this.mockLLMSettings.bedrock_model_id = data.bedrock_model_id;
+    if (data.aws_region !== undefined) this.mockLLMSettings.aws_region = data.aws_region;
+    if (data.temperature !== undefined) this.mockLLMSettings.temperature = data.temperature;
+    // Secret fields only update when non-empty
+    if (data.openai_api_key) this.mockLLMSettings.openai_api_key_masked = 'sk-****mock';
+    if (data.anthropic_api_key) this.mockLLMSettings.anthropic_api_key_masked = 'sk-a****mock';
+    if (data.aws_access_key_id) this.mockLLMSettings.aws_access_key_id_masked = 'AKIA****mock';
+    if (data.aws_secret_access_key) this.mockLLMSettings.aws_secret_access_key_masked = '****mock';
+    return { ...this.mockLLMSettings };
   }
 }
 
