@@ -91,7 +91,8 @@ class APIClient {
   async startInterview(data: InterviewStartRequest): Promise<InterviewStartResponse> {
     const response = await this.client.post<InterviewStartResponse>(
       '/api/interview/start',
-      data
+      data,
+      { timeout: 120000 }
     );
     return response.data;
   }
@@ -99,7 +100,8 @@ class APIClient {
   async submitAnswer(data: UserAnswerRequest): Promise<AssistantQuestionResponse> {
     const response = await this.client.post<AssistantQuestionResponse>(
       '/api/interview/answer',
-      data
+      data,
+      { timeout: 120000 }
     );
     return response.data;
   }
