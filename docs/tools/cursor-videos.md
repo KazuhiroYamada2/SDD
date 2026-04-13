@@ -12,6 +12,14 @@
 
 以下の動画では、Cursorの使い方や仕様駆動開発に関する実践的な内容を解説しています。Cursor入門シリーズ全18回で、基本から応用まで体系的に学ぶことができます。
 
+### 〖特別編〗レビューへの回答・補足解説動画
+
+[https://youtu.be/DilSKvi4aQw](https://youtu.be/DilSKvi4aQw)
+
+**説明**: 本リポジトリや書籍へのレビューでいただいた指摘に対する回答と補足をまとめた動画です。
+
+---
+
 ### 〖Cursor入門1〗AIと一緒にシステム開発「Cursor（カーソル）」始めよう！
 
 [![動画サムネイル](https://img.youtube.com/vi/0U9PPY1tGU8/0.jpg)](https://www.youtube.com/watch?v=0U9PPY1tGU8)
