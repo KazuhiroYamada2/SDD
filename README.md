@@ -247,6 +247,9 @@ We operate the YouTube channel **"ソフトウェアの作り方チャンネル 
 
 This channel shares information about Cursor and Spec-Driven Development. We explain practical usage and the latest information in video format, so please take a look.
 
+We have also published a video summarizing responses and supplements to feedback received in reviews. Please check it out as well.  
+https://youtu.be/DilSKvi4aQw
+
 **Channel URL**: https://www.youtube.com/@tech1018/
 
 **Cursor Video List**: [docs/tools/cursor-videos.md](docs/tools/cursor-videos.md) provides a list of Cursor-related videos.
