@@ -4,7 +4,7 @@
 
 ## 前提条件
 
-- Python 3.9以上がインストールされている
+- Python 3.10以上がインストールされている
 - [uv](https://docs.astral.sh/uv/) がインストールされている
 - LLM API キー、または OpenAI 互換エンドポイント（Claude / OpenAI 公式 / OpenRouter / AWS Bedrock のいずれか）を持っている。ローカル LLM（Ollama / LM Studio / llama.cpp）を使う場合は API キー不要
 

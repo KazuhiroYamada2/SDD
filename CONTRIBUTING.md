@@ -57,11 +57,31 @@ git clone https://github.com/your-username/SDD.git
 cd SDD
 ```
 
-No additional dependencies are required. This repository consists solely of Markdown files.
+No additional dependencies are required for contributing to documentation and sample files.
+
+If you are contributing to **`spec-ai-writer/`**, additional setup is required:
+
+```bash
+cd spec-ai-writer
+uv sync --extra dev   # Python dependencies (requires Python 3.10+)
+cd frontend && npm install  # TypeScript/React dependencies
+```
 
 ## Running Tests
 
-Since this repository consists solely of Markdown files, there is no source code test policy. Please verify changed documents using an **AI agent** as a substitute for testing.
+For documentation and sample files, there is no source code test policy. Please verify changed documents using an **AI agent** as a substitute for testing.
+
+For **`spec-ai-writer/`** source code changes, run the test suite:
+
+```bash
+# Python
+cd spec-ai-writer
+pytest
+
+# Frontend (TypeScript/React)
+cd spec-ai-writer/frontend
+npm test
+```
 
 **Verification steps:**
 
