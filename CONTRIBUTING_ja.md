@@ -57,11 +57,31 @@ git clone https://github.com/あなたのユーザー名/SDD.git
 cd SDD
 ```
 
-追加の依存関係は不要です。このリポジトリは Markdown ファイルのみで構成されています。
+ドキュメント・サンプルファイルへのコントリビューションには追加の依存関係は不要です。
+
+**`spec-ai-writer/`** へのコントリビューションには追加のセットアップが必要です：
+
+```bash
+cd spec-ai-writer
+uv sync --extra dev   # Python 依存関係（Python 3.10 以上が必要）
+cd frontend && npm install  # TypeScript/React 依存関係
+```
 
 ## テストの実行方法
 
-本リポジトリは Markdown ファイルのみで構成されているため、ソースコードのテスト方針はありません。変更したドキュメントを **AIエージェントで検証** することをテストとして実施してください。
+ドキュメント・サンプルファイルの変更については、ソースコードのテスト方針はありません。変更したドキュメントを **AIエージェントで検証** することをテストとして実施してください。
+
+**`spec-ai-writer/`** のソースコードを変更した場合は、テストスイートを実行してください：
+
+```bash
+# Python
+cd spec-ai-writer
+pytest
+
+# フロントエンド（TypeScript/React）
+cd spec-ai-writer/frontend
+npm test
+```
 
 **検証手順：**
 

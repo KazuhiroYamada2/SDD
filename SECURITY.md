@@ -42,7 +42,7 @@ Please provide the following information:
 
 ## Security Considerations
 
-Since this repository consists solely of Markdown documents and sample files, the attack surface is limited. However, please be aware of the following:
+This repository contains Markdown documents and sample files, as well as executable Python and TypeScript code in `spec-ai-writer/`. Please be aware of the following:
 
 - **File contents**: Sample files are for illustrative purposes only and do not contain actual credentials, API keys, or personal information
 - **Links**: External links in documents point to public resources, but please verify URLs before clicking

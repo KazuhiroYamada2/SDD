@@ -32,10 +32,10 @@ DEFAULT_LLM_PROVIDER=claude
 
 | モデル | モデルID |
 |--------|---------|
-| Claude Sonnet 4.6 | `claude-sonnet-4-6-20260217` |
+| Claude Sonnet 4.6 | `claude-sonnet-4-6` |
 | Claude Haiku 4.5 | `claude-haiku-4-5-20251001` |
 
-料金は [Anthropic API 料金ページ](https://platform.claude.com/docs/en/about-claude/pricing) を確認してください。
+モデルIDは[Anthropic API モデルページ](https://platform.claude.com/docs/en/about-claude/models/overview)を、料金は [Anthropic API 料金ページ](https://platform.claude.com/docs/en/about-claude/pricing) を確認してください。
 
 ### トラブルシューティング
 
