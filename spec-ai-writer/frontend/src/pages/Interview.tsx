@@ -72,8 +72,12 @@ export default function Interview() {
         response.chat_history.forEach((msg) => addMessage(msg));
         setInterviewActive(false);
       } else {
-        // Normal start: show initial question and enable input
         setInterviewActive(true);
+        // Mid-phase resume: restore prior Q&A history before showing the next question
+        if (response.chat_history && response.chat_history.length > 0) {
+          response.chat_history.forEach((msg) => addMessage(msg));
+        }
+        // Show the current question (initial or last question for resume)
         addMessage({
           role: 'assistant',
           content: response.initial_message,

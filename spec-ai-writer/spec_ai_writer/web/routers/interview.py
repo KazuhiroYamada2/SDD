@@ -34,13 +34,22 @@ router = APIRouter()
 
 
 def _reconstruct_chat_history(context: ContextManager) -> list:
-    """Reconstruct full chat history from completed interview data in interview.json."""
+    """Reconstruct chat history from interview.json.
+
+    Works for both mid-phase resume and all-phases-complete cases.
+    For completed phases, a phase-completion system message is appended.
+    For the first incomplete phase that has Q&A, those pairs are appended
+    without a completion message, then iteration stops.
+    When all phases are complete, a final all-complete system message is appended.
+    """
     messages = []
+    all_complete = all(context.is_phase_complete(i) for i in range(1, 8))
+
     for phase_num in range(1, 8):
         phase_data = context.get_phase_context(phase_num)
         qa_pairs = phase_data.get("qa_pairs", [])
         if not qa_pairs:
-            continue
+            break
 
         for qa in qa_pairs:
             messages.append(HistoryMessage(
@@ -54,18 +63,23 @@ def _reconstruct_chat_history(context: ContextManager) -> list:
                 timestamp=qa.get("timestamp", ""),
             ))
 
-        last_ts = qa_pairs[-1].get("timestamp", "")
+        if context.is_phase_complete(phase_num):
+            last_ts = qa_pairs[-1].get("timestamp", "")
+            messages.append(HistoryMessage(
+                role="system",
+                content=f"フェーズ {phase_num} が完了しました。",
+                timestamp=last_ts,
+            ))
+        else:
+            # Incomplete phase: show Q&A so far, then stop
+            break
+
+    if all_complete:
         messages.append(HistoryMessage(
             role="system",
-            content=f"フェーズ {phase_num} が完了しました。",
-            timestamp=last_ts,
+            content="全てのフェーズが完了しました。仕様書が生成されました。",
+            timestamp="",
         ))
-
-    messages.append(HistoryMessage(
-        role="system",
-        content="全てのフェーズが完了しました。仕様書が生成されました。",
-        timestamp="",
-    ))
     return messages
 
 settings = get_settings()
@@ -117,10 +131,29 @@ async def start_interview(request: InterviewStartRequest):
             context_manager=context
         )
 
-        # Get initial question
         phase_info = phase_manager.get_phase_info(phase_num)
-        initial_question = engine._generate_initial_question(phase_num)
+        phase_data = context.get_phase_context(phase_num)
+        existing_qa = phase_data.get("qa_pairs", [])
 
+        if existing_qa:
+            # Mid-phase resume: restore history and continue from the last question
+            chat_history = _reconstruct_chat_history(context)
+            last_question = existing_qa[-1]["question"]
+            logger.info(
+                f"Resuming interview for {request.project_id}, phase {phase_num}, "
+                f"qa_count={len(existing_qa)}"
+            )
+            return InterviewStartResponse(
+                project_id=request.project_id,
+                display_name=context.display_name,
+                phase_num=phase_num,
+                phase_name=phase_info.name,
+                initial_message=last_question,
+                chat_history=chat_history,
+            )
+
+        # No prior Q&A for this phase — generate the initial question as usual
+        initial_question = engine._generate_initial_question(phase_num)
         logger.info(f"Started interview for {request.project_id}, phase {phase_num}")
 
         return InterviewStartResponse(
@@ -128,7 +161,7 @@ async def start_interview(request: InterviewStartRequest):
             display_name=context.display_name,
             phase_num=phase_num,
             phase_name=phase_info.name,
-            initial_message=initial_question
+            initial_message=initial_question,
         )
 
     except FileNotFoundError:
