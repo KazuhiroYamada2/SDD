@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.3] - Unreleased
+## [1.0.3] - 2026-04-14
 
 ### Added
 
@@ -80,6 +80,7 @@ Initial release. Published as the practice repository for *Spec-Driven Developme
 
 | Version | Key Features |
 |---------|-------------|
+| 1.0.3   | OpenRouter & Local LLM support, Web UI settings, version alignment (Issue #59, #60) |
 | 1.0.2   | CSP fix, .env.example fix (Issue #56) |
 | 1.0.1   | GitHub publication rule compliance: README improvements, doc split into English/Japanese |
 | 1.0.0   | Initial release: 7-process samples, practical guides, spec-ai-writer, publication documents |
