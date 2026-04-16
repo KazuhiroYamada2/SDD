@@ -214,6 +214,33 @@ class ContextManager:
         if project_dir.exists():
             shutil.rmtree(project_dir)
 
+    def set_pending_question(self, phase: int, question: str) -> None:
+        """
+        Persist the next question that is waiting for the user's answer.
+
+        Call this immediately after generating a question so it survives navigation.
+
+        Args:
+            phase: Phase number (1-7)
+            question: The question text to persist
+        """
+        phase_key = str(phase)
+        if phase_key not in self.context["phases"]:
+            self.context["phases"][phase_key] = {
+                "qa_pairs": [],
+                "structured_data": None,
+                "completed": False,
+                "pending_question": None,
+            }
+        self.context["phases"][phase_key]["pending_question"] = question
+        self.context["updated_at"] = datetime.now().isoformat()
+        self.save_to_disk()
+
+    def get_pending_question(self, phase: int) -> Optional[str]:
+        """Return the pending (unanswered) question for a phase, or None."""
+        phase_key = str(phase)
+        return self.context["phases"].get(phase_key, {}).get("pending_question")
+
     def add_qa_pair(self, phase: int, question: str, answer: str) -> None:
         """
         Add a question-answer pair to the specified phase.
@@ -229,7 +256,8 @@ class ContextManager:
             self.context["phases"][phase_key] = {
                 "qa_pairs": [],
                 "structured_data": None,
-                "completed": False
+                "completed": False,
+                "pending_question": None,
             }
 
         self.context["phases"][phase_key]["qa_pairs"].append({
@@ -237,6 +265,8 @@ class ContextManager:
             "answer": answer,
             "timestamp": datetime.now().isoformat()
         })
+        # The question has now been answered — clear the pending slot
+        self.context["phases"][phase_key]["pending_question"] = None
 
         self.context["updated_at"] = datetime.now().isoformat()
         self.save_to_disk()

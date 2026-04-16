@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **spec-ai-writer / Interview resume from mid-phase**: When a user navigated away from the interview screen mid-phase and returned, the interview restarted from the first question of that phase and all chat history was lost. Root cause: the pending (unanswered) question was never persisted, so only already-answered Q&A pairs were stored. Fixed by adding a `pending_question` field to `interview.json` that is written immediately after each question is generated and cleared when the user answers. On resume, the stored pending question is returned and the full Q&A history (including completed phases) is restored on screen (Issue #67).
+
+---
+
 ## [1.0.3] - 2026-04-14
 
 ### Added
