@@ -241,12 +241,6 @@ class ContextManager:
         phase_key = str(phase)
         return self.context["phases"].get(phase_key, {}).get("pending_question")
 
-    def clear_pending_question(self, phase: int) -> None:
-        """Clear the pending question once the user has answered it."""
-        phase_key = str(phase)
-        if phase_key in self.context["phases"]:
-            self.context["phases"][phase_key]["pending_question"] = None
-
     def add_qa_pair(self, phase: int, question: str, answer: str) -> None:
         """
         Add a question-answer pair to the specified phase.
