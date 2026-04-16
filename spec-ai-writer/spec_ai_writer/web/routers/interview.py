@@ -134,11 +134,16 @@ async def start_interview(request: InterviewStartRequest):
         phase_info = phase_manager.get_phase_info(phase_num)
         phase_data = context.get_phase_context(phase_num)
         existing_qa = phase_data.get("qa_pairs", [])
+        pending_question = context.get_pending_question(phase_num)
 
-        if existing_qa:
-            # Mid-phase resume: restore history and continue from the last question
+        if existing_qa or pending_question:
+            # Mid-phase resume: restore history and show the pending (unanswered) question
             chat_history = _reconstruct_chat_history(context)
-            last_question = existing_qa[-1]["question"]
+            resume_question = pending_question or engine._generate_follow_up_question(
+                phase_num, context
+            )
+            if not pending_question:
+                context.set_pending_question(phase_num, resume_question)
             logger.info(
                 f"Resuming interview for {request.project_id}, phase {phase_num}, "
                 f"qa_count={len(existing_qa)}"
@@ -148,12 +153,13 @@ async def start_interview(request: InterviewStartRequest):
                 display_name=context.display_name,
                 phase_num=phase_num,
                 phase_name=phase_info.name,
-                initial_message=last_question,
+                initial_message=resume_question,
                 chat_history=chat_history,
             )
 
-        # No prior Q&A for this phase — generate the initial question as usual
+        # No prior Q&A for this phase — generate the initial question and persist it
         initial_question = engine._generate_initial_question(phase_num)
+        context.set_pending_question(phase_num, initial_question)
         logger.info(f"Started interview for {request.project_id}, phase {phase_num}")
 
         return InterviewStartResponse(
@@ -248,6 +254,7 @@ async def submit_answer(request: UserAnswerRequest):
 
             if current_phase < 7:
                 next_question = engine._generate_initial_question(current_phase + 1)
+                context.set_pending_question(current_phase + 1, next_question)
                 return AssistantQuestionResponse(
                     question=next_question,
                     phase_complete=True,
@@ -262,8 +269,9 @@ async def submit_answer(request: UserAnswerRequest):
                     qa_count=len(qa_pairs)
                 )
         else:
-            # Generate next question
+            # Generate next question and persist it so resume works correctly
             next_question = engine._generate_follow_up_question(current_phase, context)
+            context.set_pending_question(current_phase, next_question)
 
             return AssistantQuestionResponse(
                 question=next_question,
