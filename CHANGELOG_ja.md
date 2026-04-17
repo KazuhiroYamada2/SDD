@@ -11,6 +11,10 @@
 
 ## [Unreleased]
 
+---
+
+## [1.0.4] - 2026-04-17
+
 ### 追加
 
 - **spec-ai-writer / `--log-level` グローバルオプション**: CLI グループに `--log-level [debug|info|warning|error]`（デフォルト: `warning`）を追加。エラー時のスタックトレースは `--log-level=debug` 指定時のみ表示されるようになり、ファイルパスや API キーの断片が意図せず端末に出力されることを防ぎます。`start`・`resume`・`status`・`_generate_specs` の例外ハンドラをすべて同じパターンに統一しました（Issue #48）。
@@ -92,6 +96,7 @@
 
 | バージョン | 主な機能 |
 |------------|----------|
+| 1.0.4      | `--log-level` CLIオプション、インタビュー途中再開修正（Issue #48, #67） |
 | 1.0.3      | OpenRouter・ローカルLLM対応、Web UI設定ページ、バージョン統一（Issue #59, #60） |
 | 1.0.2      | CSP修正、.env.example修正（Issue #56） |
 | 1.0.1      | GitHub公開ルール対応：README改善、ドキュメントの日英2ファイル化 |

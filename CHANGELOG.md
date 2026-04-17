@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.0.4] - 2026-04-17
+
 ### Added
 
 - **spec-ai-writer / `--log-level` global option**: Added `--log-level [debug|info|warning|error]` (default: `warning`) to the CLI group. Stack traces are now shown only when `--log-level=debug` is specified, preventing accidental exposure of file paths or API key fragments on error. Exception handlers across all commands (`start`, `resume`, `status`, `_generate_specs`) have been unified to follow the same pattern (Issue #48).
@@ -92,6 +96,7 @@ Initial release. Published as the practice repository for *Spec-Driven Developme
 
 | Version | Key Features |
 |---------|-------------|
+| 1.0.4   | `--log-level` CLI option, interview resume fix (Issue #48, #67) |
 | 1.0.3   | OpenRouter & Local LLM support, Web UI settings, version alignment (Issue #59, #60) |
 | 1.0.2   | CSP fix, .env.example fix (Issue #56) |
 | 1.0.1   | GitHub publication rule compliance: README improvements, doc split into English/Japanese |

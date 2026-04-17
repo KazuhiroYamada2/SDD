@@ -1335,7 +1335,7 @@ wheels = [
 
 [[package]]
 name = "spec-ai-writer"
-version = "1.0.3"
+version = "1.0.4"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
