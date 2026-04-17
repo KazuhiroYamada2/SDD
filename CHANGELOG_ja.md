@@ -19,6 +19,10 @@
 
 - **spec-ai-writer / `--log-level` グローバルオプション**: CLI グループに `--log-level [debug|info|warning|error]`（デフォルト: `warning`）を追加。エラー時のスタックトレースは `--log-level=debug` 指定時のみ表示されるようになり、ファイルパスや API キーの断片が意図せず端末に出力されることを防ぎます。`start`・`resume`・`status`・`_generate_specs` の例外ハンドラをすべて同じパターンに統一しました（Issue #48）。
 
+### 変更
+
+- **spec-ai-writer / 依存ライブラリのセキュリティアップデート**: Dependabotから報告された10件のセキュリティアラート（vite・axios・follow-redirects・black・pytest・python-multipart・Pygments）に対応するため、全PythonおよびフロントエンドパッケージをDependabotアラートの修正バージョンへ更新。未使用パッケージ `python-multipart` と `rich` を `pyproject.toml` から削除（Issue #72）。
+
 ### 修正
 
 - **spec-ai-writer / インタビュー途中再開と履歴復元**: インタビュー画面から別画面へ遷移して戻ると、工程の先頭からやり直しになり画面上のチャット履歴がすべて消える不具合を修正。根本原因は、LLM が生成した未回答の質問が `interview.json` に保存されておらず離脱時に失われていたこと。`interview.json` に `pending_question` フィールドを追加し、質問生成直後に保存・回答時に自動クリアする設計に変更。再訪時は保存済みの質問から再開でき、完了済み工程を含むすべての Q&A 履歴が画面に復元されるようになりました (Issue #67)。
