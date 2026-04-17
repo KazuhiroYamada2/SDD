@@ -24,7 +24,7 @@ from spec_ai_writer.llm.factory import create_default_client
     type=click.Choice(["debug", "info", "warning", "error"]),
     default="warning",
     show_default=True,
-    help="ログ出力レベル（debug 時はスタックトレースも表示）",
+    help="ログ出力レベル",
 )
 @click.pass_context
 def cli(ctx, log_level):
