@@ -9,6 +9,14 @@
 
 ---
 
+## [Unreleased]
+
+### 追加
+
+- **spec-ai-writer / `--log-level` グローバルオプション**: CLI グループに `--log-level [debug|info|warning|error]`（デフォルト: `warning`）を追加。エラー時のスタックトレースは `--log-level=debug` 指定時のみ表示されるようになり、ファイルパスや API キーの断片が意図せず端末に出力されることを防ぎます。`start`・`resume`・`status`・`_generate_specs` の例外ハンドラをすべて同じパターンに統一しました（Issue #48）。
+
+---
+
 ## [1.0.3] - 2026-04-14
 
 ### 追加
