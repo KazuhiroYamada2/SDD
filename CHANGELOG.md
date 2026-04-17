@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **spec-ai-writer / Dependency security updates**: Updated all Python and frontend dependencies to the latest compatible versions to address 10 Dependabot security alerts (vite, axios, follow-redirects, black, pytest, python-multipart, Pygments). Removed unused packages `python-multipart` and `rich` from `pyproject.toml` (Issue #72).
+- **spec-ai-writer / Dependency security updates**: Updated all Python and frontend dependencies to the latest compatible versions to address 9 Dependabot security alerts (vite, axios, follow-redirects, black, pytest, Pygments). Removed unused packages `python-multipart` (Dependabot alert #39) and `rich` from `pyproject.toml` (Issue #72).
 
 ### Fixed
 

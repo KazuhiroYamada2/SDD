@@ -21,7 +21,7 @@
 
 ### 変更
 
-- **spec-ai-writer / 依存ライブラリのセキュリティアップデート**: Dependabotから報告された10件のセキュリティアラート（vite・axios・follow-redirects・black・pytest・python-multipart・Pygments）に対応するため、全PythonおよびフロントエンドパッケージをDependabotアラートの修正バージョンへ更新。未使用パッケージ `python-multipart` と `rich` を `pyproject.toml` から削除（Issue #72）。
+- **spec-ai-writer / 依存ライブラリのセキュリティアップデート**: Dependabotから報告された9件のセキュリティアラート（vite・axios・follow-redirects・black・pytest・Pygments）に対応するため、全PythonおよびフロントエンドパッケージをDependabotアラートの修正バージョンへ更新。未使用パッケージ `python-multipart`（Dependabotアラート #39）と `rich` を `pyproject.toml` から削除（Issue #72）。
 
 ### 修正
 
