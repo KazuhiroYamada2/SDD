@@ -1,6 +1,8 @@
 """Command-line interface for Spec AIライター."""
 
+import logging
 import sys
+import traceback
 from importlib.metadata import version
 from pathlib import Path
 
@@ -17,19 +19,31 @@ from spec_ai_writer.llm.factory import create_default_client
 
 @click.group()
 @click.version_option(version=version("spec-ai-writer"))
-def cli():
+@click.option(
+    "--log-level",
+    type=click.Choice(["debug", "info", "warning", "error"]),
+    default="warning",
+    show_default=True,
+    help="ログ出力レベル",
+)
+@click.pass_context
+def cli(ctx, log_level):
     """Spec AIライター - AI対話型仕様駆動開発支援ツール
 
     仕様駆動開発のためのインタビューを実施し、
     仕様書を自動生成するAI支援ツールです。
     """
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj["log_level"] = log_level
+    logging.basicConfig(level=getattr(logging, log_level.upper()))
 
 
 @cli.command()
 @click.option("--provider", type=click.Choice(["claude", "openai", "bedrock"]), help="LLM provider")
-def start(provider: str):
+@click.pass_context
+def start(ctx, provider: str):
     """新しいプロジェクトのインタビューを開始"""
+    log_level = ctx.obj["log_level"]
     try:
         settings = get_settings()
 
@@ -71,22 +85,24 @@ def start(provider: str):
         engine.start_interview()
 
         # Generate specs for completed phases
-        _generate_specs(context_mgr, phase_mgr, settings)
+        _generate_specs(context_mgr, phase_mgr, settings, log_level)
 
     except KeyboardInterrupt:
         click.echo("\n\nインタビューを中断しました。")
         click.echo(f"'spec resume {context_mgr.project_id}' で再開できます。")
     except Exception as e:
         click.echo(f"\nエラーが発生しました: {e}", err=True)
-        import traceback
-        traceback.print_exc()
+        if log_level == "debug":
+            traceback.print_exc()
         sys.exit(1)
 
 
 @cli.command()
 @click.argument("project_id")
-def resume(project_id: str):
+@click.pass_context
+def resume(ctx, project_id: str):
     """中断したインタビューを再開"""
+    log_level = ctx.obj["log_level"]
     try:
         settings = get_settings()
 
@@ -123,12 +139,14 @@ def resume(project_id: str):
         engine.resume_interview()
 
         # Generate specs for completed phases
-        _generate_specs(context_mgr, phase_mgr, settings)
+        _generate_specs(context_mgr, phase_mgr, settings, log_level)
 
     except KeyboardInterrupt:
         click.echo("\n\nインタビューを中断しました。")
     except Exception as e:
         click.echo(f"\nエラーが発生しました: {e}", err=True)
+        if log_level == "debug":
+            traceback.print_exc()
         sys.exit(1)
 
 
@@ -153,8 +171,10 @@ def list_projects():
 
 @cli.command()
 @click.argument("project_id")
-def status(project_id: str):
+@click.pass_context
+def status(ctx, project_id: str):
     """プロジェクトの進捗状況を表示"""
+    log_level = ctx.obj["log_level"]
     try:
         settings = get_settings()
 
@@ -180,10 +200,12 @@ def status(project_id: str):
 
     except Exception as e:
         click.echo(f"\nエラーが発生しました: {e}", err=True)
+        if log_level == "debug":
+            traceback.print_exc()
         sys.exit(1)
 
 
-def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settings):
+def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settings, log_level: str = "warning"):
     """Generate Markdown specs for all completed phases."""
     specs_dir = context_mgr.get_specs_dir()
     generator = MarkdownGenerator(specs_dir)
@@ -223,7 +245,9 @@ def _generate_specs(context_mgr: ContextManager, phase_mgr: PhaseManager, settin
                 )
 
         except Exception as e:
-            click.echo(f"フェーズ{phase_num}の生成中にエラー: {e}")
+            click.echo(f"フェーズ{phase_num}の生成中にエラー: {e}", err=True)
+            if log_level == "debug":
+                traceback.print_exc()
 
     click.echo(f"\n出力ディレクトリ: {specs_dir}")
 

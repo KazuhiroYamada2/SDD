@@ -228,6 +228,18 @@ spec resume <project_id>
 | `spec list` | プロジェクト一覧表示（ID・表示名・進捗） |
 | `spec status <project_id>` | プロジェクトの進捗状況表示 |
 
+### グローバルオプション
+
+すべてのコマンドに共通するオプションです。コマンド名の**前**に指定します。
+
+| オプション | 選択肢 | デフォルト | 説明 |
+|-----------|--------|-----------|------|
+| `--log-level` | `debug` / `info` / `warning` / `error` | `warning` | ログ出力レベル。`debug` 時はスタックトレースも表示 |
+
+```bash
+spec --log-level=debug start
+```
+
 ## プロジェクト構造
 
 ```
