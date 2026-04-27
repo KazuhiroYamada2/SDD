@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **spec-ai-writer / Dependency security updates**: Updated all Python and frontend dependencies to the latest compatible versions to address 2 Dependabot security alerts (GitPython). Updated GitPython minimum version to 3.1.47 to fix command injection via Git options bypass (GHSA-rpm5-65cw-6hj4) and argument injection via multi_options shlex.split transformation (GHSA-x2qx-6953-8485).
+
 ---
 
 ## [1.0.4] - 2026-04-17
