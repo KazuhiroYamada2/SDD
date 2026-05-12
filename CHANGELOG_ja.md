@@ -13,7 +13,7 @@
 
 ### 変更
 
-- **spec-ai-writer / 依存ライブラリのセキュリティアップデート**: Dependabotから報告された2件のセキュリティアラート（GitPython）に対応するため、全PythonおよびフロントエンドパッケージをDependabotアラートの修正バージョンへ更新。GitPythonを3.1.47以上に引き上げ、Gitオプションバイパスによるコマンドインジェクション（GHSA-rpm5-65cw-6hj4）およびmulti_optionsのshlex.split変換前バリデーションによる引数インジェクション（GHSA-x2qx-6953-8485）を修正。
+- **spec-ai-writer / 依存ライブラリのセキュリティアップデート**: 全 Python およびフロントエンドパッケージを最新化。
 
 ---
 
