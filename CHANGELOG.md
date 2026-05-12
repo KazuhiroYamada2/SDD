@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **spec-ai-writer / Dependency security updates**: Updated all Python and frontend packages to the latest compatible versions. 
+- **spec-ai-writer / Dependency security updates**: Updated all Python and frontend packages to the latest compatible versions.
 
 ---
 
