@@ -163,6 +163,19 @@ grep '"version"' spec-ai-writer/frontend/package.json | head -1
 
 両行のバージョンが一致していれば OK です。ずれを見つけた場合は、後回しにせずその場で同一コミットに含めて修正してください（後から小さな修正コミットを積むと `git blame` が読みにくくなります）。
 
+### バージョンを上げるタイミング
+
+リポジトリに意味のある変更（新機能・バグ修正・ドキュメントの大きな追加や変更など）があったときにバージョンを上げます。依存ライブラリの更新のみ（Dependabot によるセキュリティパッチなど）ではバージョンを上げません。その場合は `[Unreleased]` に記録しておき、次に意味のある変更をリリースする際にまとめて含めてください。
+
+### タグを打つ手順
+
+バージョン更新コミットが `main` にマージされたら、そのコミットにタグを打ってリモートへ反映します。
+
+```bash
+git tag -a v1.0.5 -m "Release v1.0.5"
+git push origin v1.0.5
+```
+
 ## 問い合わせ先
 
 - **GitHub Issues**: [https://github.com/elvezjp/SDD/issues](https://github.com/elvezjp/SDD/issues)

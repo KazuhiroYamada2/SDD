@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.0.5] - 2026-06-01
+
 ### Changed
 
 - **spec-ai-writer / Dependency security updates**: Updated all Python and frontend packages to the latest compatible versions.
