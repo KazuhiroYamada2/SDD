@@ -163,6 +163,19 @@ grep '"version"' spec-ai-writer/frontend/package.json | head -1
 
 Both lines should show the same version. If any drift is found, fix it in the same commit rather than deferring — out-of-band fixes make `git blame` harder to read.
 
+### When to bump the version
+
+Bump the version when there is a meaningful change to the repository — new features, bug fixes, or significant documentation additions. Dependency-only updates (e.g. routine security patches from Dependabot) do **not** trigger a version bump on their own; record them in `[Unreleased]` and include them in the next release that has a meaningful change.
+
+### Tagging a release
+
+After the version-bump commit is merged into `main`, tag it and push:
+
+```bash
+git tag -a v1.0.5 -m "Release v1.0.5"
+git push origin v1.0.5
+```
+
 ## Contact
 
 - **GitHub Issues**: [https://github.com/elvezjp/SDD/issues](https://github.com/elvezjp/SDD/issues)
