@@ -108,6 +108,7 @@ Initial release. Published as the practice repository for *Spec-Driven Developme
 
 | Version | Key Features |
 |---------|-------------|
+| 1.0.5   | Security dependency updates (idna 3.15); tag operation rules added to CONTRIBUTING |
 | 1.0.4   | `--log-level` CLI option, interview resume fix (Issue #48, #67) |
 | 1.0.3   | OpenRouter & Local LLM support, Web UI settings, version alignment (Issue #59, #60) |
 | 1.0.2   | CSP fix, .env.example fix (Issue #56) |
