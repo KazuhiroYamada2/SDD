@@ -263,7 +263,7 @@ async def submit_answer(request: UserAnswerRequest):
                 )
             else:
                 return AssistantQuestionResponse(
-                    question="おめでとうございます！全7つの工程のインタビューが完了しました。",
+                    question="おめでとうございます！「7 つの工程」のインタビューがすべて完了しました。",
                     phase_complete=True,
                     phase_num=7,
                     qa_count=len(qa_pairs)
