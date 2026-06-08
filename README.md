@@ -35,7 +35,7 @@ This repository lets you practice writing specifications with Cursor while readi
 ## Use Cases
 
 - **Book Practice**: Follow along with *Spec-Driven Development: A Practical Introduction* and explore the 7-process sample files hands-on
-- **SDD Adoption Reference**: Use this repository as a structural template when introducing Spec-Driven Development to your team or organization
+- **Spec-Driven Development Adoption Reference**: Use this repository as a structural template when introducing Spec-Driven Development to your team or organization
 - **Learning How to Write Specifications**: Refer to concrete examples of each process deliverable (project charters, specifications, design plans, etc.)
 
 ---

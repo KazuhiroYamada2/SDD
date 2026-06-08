@@ -100,7 +100,7 @@ export default function Dashboard() {
             プロジェクト一覧
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            SDD仕様書を作成・管理します
+            仕様駆動開発ドキュメントを作成・管理します
           </p>
         </div>
         <button
