@@ -60,7 +60,7 @@ export default function ProjectDetail() {
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                 <div
-                  className="bg-primary-600 h-3 rounded-full"
+                  className="bg-primary-500 h-3 rounded-full"
                   style={{ width: `${status.overall_progress * 100}%` }}
                 />
               </div>

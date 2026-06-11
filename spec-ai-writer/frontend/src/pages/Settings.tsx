@@ -255,7 +255,7 @@ export default function Settings() {
                     setProvider(p);
                     markDirty();
                   }}
-                  className="h-4 w-4 text-primary-600"
+                  className="h-4 w-4 text-primary-500"
                 />
                 <span className="text-gray-900 dark:text-white">
                   {p === 'claude' && 'Claude (Anthropic API)'}

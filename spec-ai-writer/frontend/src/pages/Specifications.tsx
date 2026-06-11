@@ -233,7 +233,7 @@ export default function Specifications() {
                           return (
                             <button
                               onClick={() => setSelectedPhase(phaseNum)}
-                              className="text-primary-600 hover:text-primary-800 underline cursor-pointer bg-transparent border-none p-0 font-[inherit] text-[inherit]"
+                              className="text-primary-500 hover:text-primary-700 underline cursor-pointer bg-transparent border-none p-0 font-[inherit] text-[inherit]"
                             >
                               {children}
                             </button>

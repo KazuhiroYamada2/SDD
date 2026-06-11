@@ -265,7 +265,7 @@ export default function Interview() {
       {/* Starting */}
       {isStarting && (
         <div className="card text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-500" />
           <p className="mt-4 text-gray-500">インタビューを開始しています...</p>
         </div>
       )}
@@ -289,7 +289,7 @@ export default function Interview() {
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     message.role === 'user'
-                      ? 'bg-primary-600 text-white'
+                      ? 'bg-primary-500 text-white'
                       : message.role === 'system'
                         ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-200'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
