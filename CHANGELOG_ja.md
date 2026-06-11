@@ -11,6 +11,24 @@
 
 ## [Unreleased]
 
+### 追加
+
+- **spec-ai-writer / インタビュー入力フォームの改善**: テキストエリアを複数行対応にし、`Shift+Enter` で改行・`Enter` で送信できるようにしました。長い回答を入力しやすくなります（Issue #84 T1–T3）。
+- **spec-ai-writer / インタビュー中断ボタン**: 回答中に「中断」ボタンを押すと現在のフェーズを途中で切り上げてトップへ戻れるようになりました（Issue #84 T1–T3）。
+
+### 変更
+
+- **spec-ai-writer / ブランドカラー統一**: UI 全体のカラーテーマをエルブズのブランドカラー（`#3A5CA8`）に統一しました（Issue #84 T7）。
+- **spec-ai-writer / プロジェクト説明フィールドを削除**: プロジェクト作成フォームから「説明」フィールドを削除し、入力項目をプロジェクト名のみに絞りました（Issue #84 T6）。
+
+### 内部変更（ユーザー影響なし）
+
+- **spec-ai-writer / パッケージ構成の整理**: `config/` および `templates/` ディレクトリを `spec_ai_writer/` パッケージ内に移動し、トップレベルの散在を解消しました（Issue #84 T5）。
+- **spec-ai-writer / 未使用コードの削除**: 未使用の定数・メソッド・到達不能なコンポーネントを削除しました（Issue #84 T4）。
+- **spec-ai-writer / プロンプトファイルの統合**: フェーズごとに分散していた 7 つのプロンプトファイル（`config/prompts/phase_0[1-7]_prompts.py`）を `config/prompts.py` の辞書 1 つに統合しました。
+- **spec-ai-writer / `project.json` の廃止**: プロジェクトメタデータを `interview.json` に一元化し、`project.json` を廃止しました。
+- **spec-ai-writer / `utils/` ディレクトリの削除**: 中身が空だった `spec_ai_writer/utils/` を削除しました。
+
 ---
 
 ## [1.0.5] - 2026-06-01
