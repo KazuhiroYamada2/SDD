@@ -97,11 +97,11 @@ class APIClient {
     return response.data;
   }
 
-  async submitAnswer(data: UserAnswerRequest): Promise<AssistantQuestionResponse> {
+  async submitAnswer(data: UserAnswerRequest, signal?: AbortSignal): Promise<AssistantQuestionResponse> {
     const response = await this.client.post<AssistantQuestionResponse>(
       '/api/interview/answer',
       data,
-      { timeout: 120000 }
+      { timeout: 120000, signal }
     );
     return response.data;
   }
