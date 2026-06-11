@@ -98,18 +98,6 @@ class ContextManager:
         project_dir.mkdir(parents=True, exist_ok=True)
         instance.get_specs_dir().mkdir(parents=True, exist_ok=True)
 
-        # Save project.json metadata
-        now = datetime.now().isoformat()
-        project_metadata = {
-            "project_id": project_id,
-            "display_name": display_name,
-            "created_at": now,
-            "updated_at": now
-        }
-        project_json_path = project_dir / "project.json"
-        with open(project_json_path, "w", encoding="utf-8") as f:
-            json.dump(project_metadata, f, ensure_ascii=False, indent=2)
-
         # Save initial interview state
         instance.save_to_disk()
 
@@ -131,19 +119,12 @@ class ContextManager:
             FileNotFoundError: If the project directory doesn't exist
         """
         project_dir = Path(data_dir) / project_id
-        project_json_path = project_dir / "project.json"
+        interview_json_path = project_dir / "interview.json"
 
-        if not project_dir.exists():
-            raise FileNotFoundError(f"Project directory not found: {project_dir}")
+        if not interview_json_path.exists():
+            raise FileNotFoundError(f"Project not found: {project_dir}")
 
-        # Load project metadata
-        display_name = ""
-        if project_json_path.exists():
-            with open(project_json_path, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
-                display_name = metadata.get("display_name", "")
-
-        instance = cls(project_id=project_id, display_name=display_name, data_dir=data_dir)
+        instance = cls(project_id=project_id, data_dir=data_dir)
         instance.load_from_disk()
 
         return instance
@@ -168,28 +149,20 @@ class ContextManager:
             if not item.is_dir():
                 continue
 
-            project_json = item / "project.json"
-            if not project_json.exists():
+            interview_json = item / "interview.json"
+            if not interview_json.exists():
                 continue
 
             try:
-                with open(project_json, "r", encoding="utf-8") as f:
-                    metadata = json.load(f)
-
-                # Also load interview state to get current phase
-                interview_json = item / "interview.json"
-                current_phase = 1
-                if interview_json.exists():
-                    with open(interview_json, "r", encoding="utf-8") as f:
-                        interview_data = json.load(f)
-                        current_phase = interview_data.get("current_phase", 1)
+                with open(interview_json, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
                 projects.append({
-                    "project_id": metadata.get("project_id", item.name),
-                    "display_name": metadata.get("display_name", ""),
-                    "created_at": metadata.get("created_at", ""),
-                    "updated_at": metadata.get("updated_at", ""),
-                    "current_phase": current_phase
+                    "project_id": data.get("project_id", item.name),
+                    "display_name": data.get("display_name", ""),
+                    "created_at": data.get("created_at", ""),
+                    "updated_at": data.get("updated_at", ""),
+                    "current_phase": data.get("current_phase", 1)
                 })
             except Exception:
                 continue
@@ -419,18 +392,6 @@ class ContextManager:
         file_path = project_dir / "interview.json"
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(self.context, f, ensure_ascii=False, indent=2)
-
-        # Also update project.json updated_at
-        project_json_path = project_dir / "project.json"
-        if project_json_path.exists():
-            try:
-                with open(project_json_path, "r", encoding="utf-8") as f:
-                    metadata = json.load(f)
-                metadata["updated_at"] = datetime.now().isoformat()
-                with open(project_json_path, "w", encoding="utf-8") as f:
-                    json.dump(metadata, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
 
     def load_from_disk(self) -> None:
         """Load context from disk if it exists."""

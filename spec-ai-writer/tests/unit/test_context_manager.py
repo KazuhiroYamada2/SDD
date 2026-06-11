@@ -177,7 +177,6 @@ class TestContextManager:
         assert manager.display_name == "new-project"
         assert manager.get_project_dir().exists()
         assert manager.get_specs_dir().exists()
-        assert (manager.get_project_dir() / "project.json").exists()
         assert (manager.get_project_dir() / "interview.json").exists()
 
     def test_list_projects(self, temp_dir):

@@ -319,19 +319,12 @@ async def update_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), updat
     try:
         context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
 
-        # Read current project.json
-        project_json_path = context.get_project_dir() / "project.json"
-        with open(project_json_path, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-
         # Apply updates
         if update.display_name is not None:
-            metadata["display_name"] = update.display_name
-        metadata["updated_at"] = datetime.now().isoformat()
-
-        # Save updated project.json
-        with open(project_json_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
+            context.context["display_name"] = update.display_name
+            context._display_name = update.display_name
+        context.context["updated_at"] = datetime.now().isoformat()
+        context.save_to_disk()
 
         # Reload context to reflect changes
         context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
