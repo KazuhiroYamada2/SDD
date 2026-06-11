@@ -12,7 +12,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Path, status
 from fastapi.responses import FileResponse, PlainTextResponse
 
-from config.settings import get_settings
+from spec_ai_writer.config.settings import get_settings
 from spec_ai_writer.core.phase_manager import PhaseManager
 from ..models import (
     SpecificationResponse,

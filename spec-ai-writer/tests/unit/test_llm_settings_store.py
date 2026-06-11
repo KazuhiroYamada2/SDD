@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from config.llm_settings_store import (
+from spec_ai_writer.config.llm_settings_store import (
     get_llm_settings_path,
     load_llm_settings_overlay,
     save_llm_settings_overlay,

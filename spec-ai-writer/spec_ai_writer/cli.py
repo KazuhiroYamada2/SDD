@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from config.settings import get_settings
+from spec_ai_writer.config.settings import get_settings
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.interview_engine import InterviewEngine
 from spec_ai_writer.core.phase_manager import PhaseManager

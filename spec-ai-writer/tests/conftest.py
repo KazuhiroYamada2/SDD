@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from spec_ai_writer.web.app import app
 from spec_ai_writer.llm.base import BaseLLMClient
 from spec_ai_writer.core.context_manager import ContextManager
-from config.settings import Settings
+from spec_ai_writer.config.settings import Settings
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def mock_llm_client() -> Mock:
 @pytest.fixture
 def test_client(tmp_path, monkeypatch) -> TestClient:
     """FastAPI test client with isolated data directory."""
-    from config.settings import get_settings, reload_settings
+    from spec_ai_writer.config.settings import get_settings, reload_settings
     # Use a temp directory for data_dir during API tests
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     reload_settings()

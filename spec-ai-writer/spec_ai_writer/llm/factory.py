@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from config.settings import Settings
+from spec_ai_writer.config.settings import Settings
 
 from .base import BaseLLMClient
 from .claude_client import ClaudeClient
@@ -32,7 +32,7 @@ class LLMFactory:
             ImportError: If required provider library is not installed
         """
         if settings is None:
-            from config.settings import get_settings
+            from spec_ai_writer.config.settings import get_settings
             settings = get_settings()
 
         if provider is None:
@@ -146,7 +146,7 @@ def create_default_client() -> BaseLLMClient:
     Raises:
         ValueError: If configuration is invalid
     """
-    from config.settings import get_settings
+    from spec_ai_writer.config.settings import get_settings
 
     settings = get_settings()
     is_valid, errors = settings.validate_llm_config()

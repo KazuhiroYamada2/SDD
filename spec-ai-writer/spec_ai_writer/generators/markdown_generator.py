@@ -27,9 +27,8 @@ class MarkdownGenerator:
 
         # Setup Jinja2 environment
         if templates_dir is None:
-            # Default to templates directory in project root
-            project_root = Path(__file__).parent.parent.parent
-            templates_dir = project_root / "templates"
+            # Default to spec_ai_writer/templates/
+            templates_dir = Path(__file__).parent.parent / "templates"
 
         self.templates_dir = Path(templates_dir)
         if not self.templates_dir.is_dir():
