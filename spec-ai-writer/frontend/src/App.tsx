@@ -4,7 +4,6 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Interview from './pages/Interview';
 import Specifications from './pages/Specifications';
-import ProjectDetail from './pages/ProjectDetail';
 import Settings from './pages/Settings';
 
 // Create a client
@@ -26,8 +25,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="project/:projectId" element={<ProjectDetail />} />
-            <Route path="interview/:projectId" element={<Interview />} />
+<Route path="interview/:projectId" element={<Interview />} />
             <Route path="specs/:projectId" element={<Specifications />} />
             <Route path="settings" element={<Settings />} />
           </Route>

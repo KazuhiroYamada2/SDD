@@ -351,11 +351,6 @@ class InterviewEngine:
         # Continue from current phase
         self.start_interview()
 
-    def save_progress(self) -> None:
-        """Save current progress to disk."""
-        self.context_mgr.save_to_disk()
-        print("進捗を保存しました。")
-
     # ========== Web API用メソッド ==========
 
     def _generate_initial_question(self, phase_num: int) -> str:

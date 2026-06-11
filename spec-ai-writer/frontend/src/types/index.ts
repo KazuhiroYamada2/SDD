@@ -102,12 +102,6 @@ export interface SpecificationListResponse {
   specifications: SpecificationListItem[];
 }
 
-export interface ErrorResponse {
-  error: string;
-  detail?: string;
-  status_code: number;
-}
-
 // ---------- LLM Settings ----------
 
 export type LLMProvider = 'claude' | 'openai' | 'bedrock';

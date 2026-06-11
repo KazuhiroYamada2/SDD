@@ -234,28 +234,3 @@ Do NOT modify this file unless you are explicitly instructed.
 
         return content
 
-    def create_cross_reference(
-        self,
-        current_phase: int,
-        previous_files: Dict[int, str]
-    ) -> str:
-        """
-        Create cross-reference links to previous phase files.
-
-        Args:
-            current_phase: Current phase number
-            previous_files: Dict mapping phase numbers to filenames
-
-        Returns:
-            Markdown text with cross-references
-        """
-        if not previous_files:
-            return ""
-
-        refs = "\n## 関連ドキュメント\n\n"
-        for phase_num in sorted(previous_files.keys()):
-            if phase_num < current_phase:
-                filename = previous_files[phase_num]
-                refs += f"- [フェーズ{phase_num}](./{filename})\n"
-
-        return refs

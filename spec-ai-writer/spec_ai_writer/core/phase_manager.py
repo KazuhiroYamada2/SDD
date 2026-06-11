@@ -1,7 +1,7 @@
 """Phase manager for orchestrating the 7 phases of SDD."""
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -215,54 +215,6 @@ class PhaseManager:
                 missing.append(field)
 
         return len(missing) == 0, missing
-
-    def get_next_phase(self, current_phase: int) -> Optional[int]:
-        """
-        Get the next phase number.
-
-        Args:
-            current_phase: Current phase number
-
-        Returns:
-            Next phase number, or None if this is the last phase
-        """
-        if current_phase < 7:
-            return current_phase + 1
-        return None
-
-    def is_last_phase(self, phase_num: int) -> bool:
-        """
-        Check if this is the last phase.
-
-        Args:
-            phase_num: Phase number
-
-        Returns:
-            True if this is phase 7
-        """
-        return phase_num == 7
-
-    def get_all_phases(self) -> List[PhaseInfo]:
-        """
-        Get information about all phases.
-
-        Returns:
-            List of all PhaseInfo objects
-        """
-        return [self.phases[i] for i in range(1, 8)]
-
-    def get_phase_filename(self, phase_num: int) -> str:
-        """
-        Get the output filename for a phase.
-
-        Args:
-            phase_num: Phase number (1-7)
-
-        Returns:
-            Filename for the phase spec
-        """
-        phase = self.get_phase_info(phase_num)
-        return phase.filename
 
     def _format_field_name(self, field: str) -> str:
         """
