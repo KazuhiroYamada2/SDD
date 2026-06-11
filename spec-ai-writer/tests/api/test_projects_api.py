@@ -34,7 +34,6 @@ class TestProjectsAPI:
         data = response.json()
         assert "project_id" in data
         assert data["display_name"] == sample_project_data["display_name"]
-        assert data["description"] == sample_project_data["description"]
         assert data["current_phase"] == 1
         assert "created_at" in data
         assert "phase_status" in data
@@ -140,7 +139,7 @@ class TestProjectsWorkflow:
         # 1. Create project
         create_response = test_client.post(
             "/api/projects/",
-            json={"display_name": "workflow-test", "description": "Test workflow"}
+            json={"display_name": "workflow-test"}
         )
         assert create_response.status_code == 201
         project_id = create_response.json()["project_id"]

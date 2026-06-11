@@ -31,7 +31,6 @@ class ContextManager:
         """
         self._project_id = project_id
         self._display_name = display_name
-        self._description = ""
         self._data_dir = data_dir
 
         # Context structure:
@@ -69,11 +68,6 @@ class ContextManager:
         """Get the display name."""
         return self._display_name
 
-    @property
-    def description(self) -> str:
-        """Get the project description."""
-        return self._description
-
     def get_project_dir(self) -> Path:
         """Get the project directory path."""
         return Path(self._data_dir) / self._project_id
@@ -83,7 +77,7 @@ class ContextManager:
         return self.get_project_dir() / "specs"
 
     @classmethod
-    def create_project(cls, display_name: str, data_dir: str = "./data", description: str = "") -> "ContextManager":
+    def create_project(cls, display_name: str, data_dir: str = "./data") -> "ContextManager":
         """
         Create a new project with auto-generated ID.
 
@@ -92,14 +86,12 @@ class ContextManager:
         Args:
             display_name: Human-readable project name
             data_dir: Root data directory
-            description: Project description
 
         Returns:
             A new ContextManager instance
         """
         project_id = generate_project_id()
         instance = cls(project_id=project_id, display_name=display_name, data_dir=data_dir)
-        instance._description = description
 
         # Create directory structure
         project_dir = instance.get_project_dir()
@@ -111,7 +103,6 @@ class ContextManager:
         project_metadata = {
             "project_id": project_id,
             "display_name": display_name,
-            "description": description,
             "created_at": now,
             "updated_at": now
         }
@@ -147,15 +138,12 @@ class ContextManager:
 
         # Load project metadata
         display_name = ""
-        description = ""
         if project_json_path.exists():
             with open(project_json_path, "r", encoding="utf-8") as f:
                 metadata = json.load(f)
                 display_name = metadata.get("display_name", "")
-                description = metadata.get("description", "")
 
         instance = cls(project_id=project_id, display_name=display_name, data_dir=data_dir)
-        instance._description = description
         instance.load_from_disk()
 
         return instance

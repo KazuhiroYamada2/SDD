@@ -117,5 +117,4 @@ def sample_project_data() -> dict:
     """Sample project data for API testing."""
     return {
         "display_name": "test-project",
-        "description": "テストプロジェクトの説明"
     }

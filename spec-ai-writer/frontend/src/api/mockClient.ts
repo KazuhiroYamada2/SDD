@@ -34,7 +34,6 @@ class MockAPIClient {
     {
       project_id: 'demo_001',
       display_name: 'demo-project',
-      description: 'デモプロジェクト',
       current_phase: 3,
       phase_status: {
         1: 'completed',
@@ -52,7 +51,6 @@ class MockAPIClient {
     {
       project_id: 'sample_002',
       display_name: 'sample-webapp',
-      description: 'サンプルWebアプリケーション',
       current_phase: 7,
       phase_status: {
         1: 'completed',
@@ -128,7 +126,6 @@ class MockAPIClient {
     const newProject: Project = {
       project_id: generateMockId(),
       display_name: data.display_name,
-      description: data.description,
       current_phase: 1,
       phase_status: {
         1: 'not_started',
