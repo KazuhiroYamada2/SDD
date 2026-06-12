@@ -30,7 +30,7 @@ class Settings(BaseSettings):
         ),
     )
     openai_model: str = Field(
-        default="gpt-4-turbo-preview",
+        default="gpt-5-mini",
         description=(
             "Model name for the OpenAI provider. When using OpenRouter or a "
             "local server, set this to that provider's model ID."

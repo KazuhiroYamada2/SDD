@@ -280,7 +280,7 @@ async def submit_answer(http_request: Request, request: UserAnswerRequest):
         qa_pairs = phase_context.get("qa_pairs", [])
 
         # Check if phase is complete
-        phase_complete = engine._is_phase_complete(current_phase, context)
+        phase_complete = await engine._is_phase_complete(current_phase, context)
 
         if phase_complete:
             # Generate spec and move to next phase

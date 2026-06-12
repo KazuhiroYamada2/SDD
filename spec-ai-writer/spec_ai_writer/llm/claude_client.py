@@ -18,7 +18,7 @@ class ClaudeClient(BaseLLMClient):
     def __init__(
         self,
         api_key: str,
-        model: str = "claude-3-5-sonnet-20241022",
+        model: str = "claude-haiku-4-5-20251001",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         timeout: float = 30.0
