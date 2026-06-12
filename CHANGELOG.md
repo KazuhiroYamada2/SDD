@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal (no user-facing impact)
 
+- **spec-ai-writer / Async LLM clients**: Converted all LLM clients (`ClaudeClient`, `OpenAIClient`, `BedrockClient`) from synchronous to `async/await`. The uvicorn event loop is no longer blocked during LLM calls, so requests such as fetching the project list respond immediately while the AI is generating. When the browser disconnects (e.g. the user presses the stop button), the in-flight LLM HTTP request is cancelled, stopping unnecessary resource consumption on all providers. Replaced `boto3` with `aiobotocore` for Bedrock to enable true async cancellation (Issue #85).
 - **spec-ai-writer / Package restructure**: Moved `config/` and `templates/` directories inside the `spec_ai_writer/` package to eliminate top-level clutter (Issue #84 T5).
 - **spec-ai-writer / Dead code removal**: Deleted unused constants, methods, and unreachable components (Issue #84 T4).
 - **spec-ai-writer / Prompt file consolidation**: Merged seven per-phase prompt files (`config/prompts/phase_0[1-7]_prompts.py`) into a single `config/prompts.py` dictionary.

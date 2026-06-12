@@ -119,7 +119,7 @@ class TestContextManager:
         phase_context = new_manager.get_phase_context(1)
         assert len(phase_context["qa_pairs"]) == len(sample_qa_pairs)
 
-    def test_extract_structured_data(self, temp_dir, mock_llm_client):
+    async def test_extract_structured_data(self, temp_dir, mock_llm_client):
         """Test extracting structured data from conversation."""
         data_dir = str(temp_dir / "data" / "extract")
         manager = ContextManager("extractproj", display_name="extract-test", data_dir=data_dir)
@@ -136,7 +136,7 @@ class TestContextManager:
             "purposes": "目的"
         }
 
-        data = manager.extract_structured_data(1, mock_llm_client, schema)
+        data = await manager.extract_structured_data(1, mock_llm_client, schema)
 
         # Verify LLM was called
         assert mock_llm_client.extract_structured_data.called

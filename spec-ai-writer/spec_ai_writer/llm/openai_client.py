@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 import httpx
 
 try:
-    from openai import OpenAI, AuthenticationError, APIConnectionError, APITimeoutError
+    from openai import AsyncOpenAI, AuthenticationError, APIConnectionError, APITimeoutError
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -77,7 +77,7 @@ class OpenAIClient(BaseLLMClient):
             client_kwargs = {"api_key": api_key, "timeout": httpx.Timeout(self.timeout)}
             if base_url:
                 client_kwargs["base_url"] = base_url
-            self.client = OpenAI(**client_kwargs)
+            self.client = AsyncOpenAI(**client_kwargs)
             logger.info(
                 f"OpenAI client initialized with model: {model}"
                 + (f", base_url: {base_url}" if base_url else "")
@@ -86,7 +86,7 @@ class OpenAIClient(BaseLLMClient):
             logger.error(f"Failed to initialize OpenAI client: {e}")
             raise ValueError(f"Failed to initialize OpenAI client: {e}")
 
-    def chat(
+    async def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
@@ -109,7 +109,7 @@ class OpenAIClient(BaseLLMClient):
             RuntimeError: If API call fails
         """
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature if temperature is not None else self.temperature,

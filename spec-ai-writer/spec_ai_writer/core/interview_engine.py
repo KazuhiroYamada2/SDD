@@ -39,7 +39,7 @@ class InterviewEngine:
         self.phase_mgr = phase_manager
         self.context_mgr = context_manager
 
-    def start_interview(self) -> None:
+    async def start_interview(self) -> None:
         """Start the interview from the current phase."""
         current_phase = self.context_mgr.get_current_phase()
 
@@ -51,7 +51,7 @@ class InterviewEngine:
 
         # Conduct interviews for each phase from current to phase 7
         for phase_num in range(current_phase, 8):
-            if not self._conduct_phase_interview(phase_num):
+            if not await self._conduct_phase_interview(phase_num):
                 # User requested to stop
                 print("\nインタビューを中断しました。")
                 print(f"次回は 'spec resume {self.context_mgr.project_id}' で再開できます。")
@@ -61,7 +61,7 @@ class InterviewEngine:
         print("すべてのフェーズが完了しました！おめでとうございます！")
         print("="*60 + "\n")
 
-    def _conduct_phase_interview(self, phase_num: int) -> bool:
+    async def _conduct_phase_interview(self, phase_num: int) -> bool:
         """
         Conduct interview for a specific phase.
 
@@ -93,7 +93,7 @@ class InterviewEngine:
         while qa_count < max_questions:
             # Generate next question
             context = self._build_context_for_question(phase_num)
-            question = self._generate_next_question(system_prompt, context)
+            question = await self._generate_next_question(system_prompt, context)
 
             if not question or question.strip() == "":
                 break
@@ -131,18 +131,18 @@ class InterviewEngine:
 
             # Check if we have enough information
             if qa_count >= 3:  # After at least 3 Q&A pairs (per SPEC.md 3.3)
-                if self._check_phase_completion(phase_num):
+                if await self._check_phase_completion(phase_num):
                     break
 
         # Extract structured data and generate spec
         print("\n情報を整理しています...")
-        self._generate_and_save_spec(phase_num)
+        await self._generate_and_save_spec(phase_num)
 
         print(f"\nフェーズ {phase_num} が完了しました！")
 
         return True
 
-    def _generate_next_question(
+    async def _generate_next_question(
         self,
         system_prompt: str,
         context: Dict[str, Any]
@@ -158,7 +158,7 @@ class InterviewEngine:
             Generated question
         """
         try:
-            question = self.llm.generate_question(system_prompt, context)
+            question = await self.llm.generate_question(system_prompt, context)
             return question.strip()
         except LLMAuthenticationError as e:
             logger.error(f"LLM認証エラー: {e}")
@@ -201,7 +201,7 @@ class InterviewEngine:
             "previous_phases": previous_phases
         }
 
-    def _check_phase_completion(self, phase_num: int) -> bool:
+    async def _check_phase_completion(self, phase_num: int) -> bool:
         """
         Check if phase has enough information to complete.
 
@@ -218,7 +218,7 @@ class InterviewEngine:
 
         try:
             schema = self.phase_mgr.get_schema_for_phase(phase_num)
-            structured_data = self.llm.extract_structured_data(conversation, schema)
+            structured_data = await self.llm.extract_structured_data(conversation, schema)
 
             # Check if extraction returned empty result
             if not structured_data:
@@ -240,7 +240,7 @@ class InterviewEngine:
             logger.warning(f"フェーズ完了判定中にエラー: {e}")
             return False
 
-    def _extract_and_save_structured_data(self, phase_num: int) -> bool:
+    async def _extract_and_save_structured_data(self, phase_num: int) -> bool:
         """
         Extract structured data from conversation and save it.
 
@@ -252,7 +252,7 @@ class InterviewEngine:
         """
         try:
             schema = self.phase_mgr.get_schema_for_phase(phase_num)
-            structured_data = self.context_mgr.extract_structured_data(
+            structured_data = await self.context_mgr.extract_structured_data(
                 phase_num,
                 self.llm,
                 schema
@@ -263,7 +263,7 @@ class InterviewEngine:
             if non_null_count == 0:
                 logger.warning(f"フェーズ{phase_num}: 構造化データの抽出に失敗しました。リトライします...")
                 # 1回リトライ
-                structured_data = self.context_mgr.extract_structured_data(
+                structured_data = await self.context_mgr.extract_structured_data(
                     phase_num,
                     self.llm,
                     schema
@@ -310,7 +310,7 @@ class InterviewEngine:
 ユーザーに質問をして、必要な情報を収集してください。
 一度に1つの質問をし、ユーザーの回答に基づいて適切なフォローアップをしてください。"""
 
-    def resume_interview(self) -> None:
+    async def resume_interview(self) -> None:
         """Resume a previously interrupted interview."""
         current_phase = self.context_mgr.get_current_phase()
 
@@ -328,11 +328,11 @@ class InterviewEngine:
             print(f"これまでに {len(qa_pairs)} 個の質問に答えています。\n")
 
         # Continue from current phase
-        self.start_interview()
+        await self.start_interview()
 
     # ========== Web API用メソッド ==========
 
-    def _generate_initial_question(self, phase_num: int) -> str:
+    async def _generate_initial_question(self, phase_num: int) -> str:
         """
         Generate the initial question for a phase.
 
@@ -353,7 +353,7 @@ class InterviewEngine:
         }
 
         try:
-            question = self.llm.generate_question(system_prompt, context)
+            question = await self.llm.generate_question(system_prompt, context)
             return question.strip() if question else phase_info.description
         except LLMAuthenticationError as e:
             logger.error(f"LLM認証エラー: {e}")
@@ -365,7 +365,7 @@ class InterviewEngine:
             logger.warning(f"初回質問の生成に失敗、フォールバックを使用: {e}")
             return f"フェーズ{phase_num}「{phase_info.name}」を開始します。\n\n{phase_info.description}\n\nまず、プロジェクトの概要を教えてください。"
 
-    def _generate_follow_up_question(
+    async def _generate_follow_up_question(
         self,
         phase_num: int,
         context_manager: ContextManager
@@ -384,7 +384,7 @@ class InterviewEngine:
         context = self._build_context_for_question(phase_num)
 
         try:
-            question = self.llm.generate_question(system_prompt, context)
+            question = await self.llm.generate_question(system_prompt, context)
             return question.strip() if question else ""
         except LLMAuthenticationError:
             raise
@@ -394,7 +394,7 @@ class InterviewEngine:
             logger.warning(f"フォローアップ質問の生成に失敗: {e}")
             return "もう少し詳しく教えていただけますか？"
 
-    def _is_phase_complete(
+    async def _is_phase_complete(
         self,
         phase_num: int,
         context_manager: ContextManager
@@ -417,9 +417,9 @@ class InterviewEngine:
             return False
 
         # Use the existing completion check logic
-        return self._check_phase_completion(phase_num)
+        return await self._check_phase_completion(phase_num)
 
-    def _generate_and_save_spec(
+    async def _generate_and_save_spec(
         self,
         phase_num: int
     ) -> None:
@@ -430,7 +430,7 @@ class InterviewEngine:
             phase_num: Phase number
         """
         # Extract structured data first
-        self._extract_and_save_structured_data(phase_num)
+        await self._extract_and_save_structured_data(phase_num)
 
         # Mark phase as complete
         self.context_mgr.mark_phase_complete(phase_num)

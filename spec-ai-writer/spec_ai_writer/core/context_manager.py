@@ -426,7 +426,7 @@ class ContextManager:
             self.context["updated_at"] = datetime.now().isoformat()
             self.save_to_disk()
 
-    def extract_structured_data(
+    async def extract_structured_data(
         self,
         phase_num: int,
         llm_client: Any,
@@ -448,7 +448,7 @@ class ContextManager:
         if not conversation:
             return {}
 
-        structured_data = llm_client.extract_structured_data(conversation, schema)
+        structured_data = await llm_client.extract_structured_data(conversation, schema)
         self.set_structured_data(phase_num, structured_data)
 
         return structured_data

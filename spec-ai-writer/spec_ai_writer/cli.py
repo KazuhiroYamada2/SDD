@@ -1,5 +1,6 @@
 """Command-line interface for Spec AIライター."""
 
+import asyncio
 import logging
 import sys
 import traceback
@@ -82,7 +83,7 @@ def start(ctx, provider: str):
         engine = InterviewEngine(llm_client, phase_mgr, context_mgr)
 
         # Start interview
-        engine.start_interview()
+        asyncio.run(engine.start_interview())
 
         # Generate specs for completed phases
         _generate_specs(context_mgr, phase_mgr, settings, log_level)
@@ -136,7 +137,7 @@ def resume(ctx, project_id: str):
         engine = InterviewEngine(llm_client, phase_mgr, context_mgr)
 
         # Resume interview
-        engine.resume_interview()
+        asyncio.run(engine.resume_interview())
 
         # Generate specs for completed phases
         _generate_specs(context_mgr, phase_mgr, settings, log_level)
