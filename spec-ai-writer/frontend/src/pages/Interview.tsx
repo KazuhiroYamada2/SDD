@@ -73,22 +73,43 @@ export default function Interview() {
       setDisplayName(response.display_name);
       setCurrentPhase(response.phase_num, response.phase_name);
 
-      if (response.all_complete && response.chat_history) {
-        // All phases complete: restore full chat history and disable input
+      if (response.chat_history && response.chat_history.length > 0) {
         response.chat_history.forEach((msg) => addMessage(msg));
+      }
+
+      if (response.all_complete) {
         setInterviewActive(false);
-      } else {
-        setInterviewActive(true);
-        // Mid-phase resume: restore prior Q&A history before showing the next question
-        if (response.chat_history && response.chat_history.length > 0) {
-          response.chat_history.forEach((msg) => addMessage(msg));
-        }
-        // Show the current question (initial or last question for resume)
+        return;
+      }
+
+      setInterviewActive(true);
+      if (response.initial_message) {
         addMessage({
           role: 'assistant',
           content: response.initial_message,
           timestamp: new Date().toISOString(),
         });
+      } else {
+        // New phase: show chat area first, then auto-call POST /answer to generate the first question
+        setIsStarting(false);
+        setWaitingForResponse(true);
+        try {
+          const questionResponse = await apiClient.submitAnswer(
+            { project_id: projectId },
+            controller.signal
+          );
+          addMessage({
+            role: 'assistant',
+            content: questionResponse.question,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (questionErr) {
+          if (!axios.isCancel(questionErr)) {
+            setError('最初の質問の生成に失敗しました。再度お試しください。');
+          }
+        } finally {
+          setWaitingForResponse(false);
+        }
       }
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -141,14 +162,8 @@ export default function Interview() {
     abortControllerRef.current = controller;
 
     try {
-      // Find the last assistant message to use as the question being answered
-      const lastAssistantMessage = [...messages]
-        .reverse()
-        .find((m) => m.role === 'assistant');
-      const currentQuestion = lastAssistantMessage?.content ?? '';
-
       const response = await apiClient.submitAnswer(
-        { project_id: projectId, question: currentQuestion, answer: userAnswer },
+        { project_id: projectId, answer: userAnswer },
         controller.signal
       );
 
@@ -169,23 +184,18 @@ export default function Interview() {
             timestamp: new Date().toISOString(),
           });
           setInterviewActive(false);
-        } else {
-          // Add the next question (response from next phase start)
-          addMessage({
-            role: 'assistant',
-            content: response.question,
-            timestamp: new Date().toISOString(),
-          });
-          setCurrentPhase(response.phase_num + 1, '');
+          return;
         }
-      } else {
-        // Add the next question
-        addMessage({
-          role: 'assistant',
-          content: response.question,
-          timestamp: new Date().toISOString(),
-        });
+
+        setCurrentPhase(response.phase_num + 1, '');
       }
+
+      // Add the next question
+      addMessage({
+        role: 'assistant',
+        content: response.question,
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
       if (axios.isCancel(err)) {
         addMessage({

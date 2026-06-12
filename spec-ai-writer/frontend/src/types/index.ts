@@ -68,8 +68,7 @@ export interface InterviewStartResponse {
 
 export interface UserAnswerRequest {
   project_id: string;
-  question: string;
-  answer: string;
+  answer?: string;
 }
 
 export interface AssistantQuestionResponse {

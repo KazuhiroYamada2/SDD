@@ -231,6 +231,10 @@ class InterviewEngine:
                 structured_data
             )
 
+            if is_valid:
+                # 完了判定と同時に保存することで _extract_and_save_structured_data の再抽出を省く
+                self.context_mgr.set_structured_data(phase_num, structured_data)
+
             return is_valid
         except LLMAuthenticationError:
             raise  # 認証エラーは上位に伝播
@@ -251,6 +255,10 @@ class InterviewEngine:
             True if extraction succeeded with non-empty data, False otherwise
         """
         try:
+            # _check_phase_completion が完了判定時に保存済みの場合はスキップ
+            if self.context_mgr.get_structured_data(phase_num):
+                return True
+
             schema = self.phase_mgr.get_schema_for_phase(phase_num)
             structured_data = await self.context_mgr.extract_structured_data(
                 phase_num,

@@ -102,8 +102,7 @@ class InterviewStartResponse(BaseModel):
 class UserAnswerRequest(BaseModel):
     """Request model for user answer."""
     project_id: str
-    question: str = Field(..., max_length=2000)
-    answer: str = Field(..., max_length=3000)
+    answer: Optional[str] = Field(None, max_length=3000)
 
     @field_validator('project_id')
     @classmethod
