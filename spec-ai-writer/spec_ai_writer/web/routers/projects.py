@@ -12,7 +12,7 @@ from typing import List
 from fastapi import APIRouter, Body, HTTPException, Path, status
 from fastapi.responses import JSONResponse
 
-from config.settings import get_settings
+from spec_ai_writer.config.settings import get_settings
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.phase_manager import PhaseManager
 from ..models import (
@@ -46,7 +46,6 @@ async def create_project(project: ProjectCreate):
         context = ContextManager.create_project(
             display_name=project.display_name,
             data_dir=settings.data_dir,
-            description=project.description or ""
         )
 
         logger.info(f"Created new project: {context.project_id} ({project.display_name})")
@@ -54,7 +53,6 @@ async def create_project(project: ProjectCreate):
         return ProjectResponse(
             project_id=context.project_id,
             display_name=project.display_name,
-            description=project.description,
             current_phase=1,
             phase_status={i: PhaseStatus.NOT_STARTED for i in range(1, 8)},
             created_at=datetime.now(),
@@ -130,7 +128,6 @@ async def list_projects():
                 projects.append(ProjectResponse(
                     project_id=project_id,
                     display_name=proj_meta.get("display_name", ""),
-                    description=proj_meta.get("description", ""),
                     current_phase=current_phase,
                     phase_status=phase_status,
                     created_at=created_at,
@@ -194,7 +191,6 @@ async def get_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
         return ProjectResponse(
             project_id=project_id,
             display_name=context.display_name,
-            description=context.description,
             current_phase=current_phase,
             phase_status=phase_status,
             created_at=datetime.fromisoformat(context.context.get("created_at", datetime.now().isoformat())),
@@ -318,26 +314,17 @@ async def delete_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$')):
 @router.patch("/{project_id}", response_model=ProjectResponse)
 async def update_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), update: ProjectUpdateRequest = Body(...)):
     """
-    Update project metadata (display_name and/or description).
+    Update project metadata (display_name).
     """
     try:
         context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
 
-        # Read current project.json
-        project_json_path = context.get_project_dir() / "project.json"
-        with open(project_json_path, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-
         # Apply updates
         if update.display_name is not None:
-            metadata["display_name"] = update.display_name
-        if update.description is not None:
-            metadata["description"] = update.description
-        metadata["updated_at"] = datetime.now().isoformat()
-
-        # Save updated project.json
-        with open(project_json_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
+            context.context["display_name"] = update.display_name
+            context._display_name = update.display_name
+        context.context["updated_at"] = datetime.now().isoformat()
+        context.save_to_disk()
 
         # Reload context to reflect changes
         context = ContextManager.load_project(project_id, data_dir=settings.data_dir)
@@ -371,7 +358,6 @@ async def update_project(project_id: str = Path(pattern=r'^[a-f0-9]{8}$'), updat
         return ProjectResponse(
             project_id=project_id,
             display_name=context.display_name,
-            description=context.description,
             current_phase=current_phase,
             phase_status=phase_status,
             created_at=datetime.fromisoformat(context.context.get("created_at", datetime.now().isoformat())),

@@ -53,7 +53,7 @@ dev = [
 spec = "spec_ai_writer.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["spec_ai_writer", "config"]
+packages = ["spec_ai_writer"]
 
 [tool.black]
 line-length = 100

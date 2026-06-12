@@ -37,7 +37,6 @@ class ChatMessage(BaseModel):
 class ProjectCreate(BaseModel):
     """Request model for creating a new project."""
     display_name: str = Field(..., min_length=1, max_length=100, description="Project display name")
-    description: Optional[str] = Field(None, max_length=500, description="Project description")
     llm_provider: Optional[str] = Field(None, description="LLM provider (claude, openai, bedrock)")
 
 
@@ -45,7 +44,6 @@ class ProjectResponse(BaseModel):
     """Response model for project information."""
     project_id: str
     display_name: str
-    description: Optional[str]
     current_phase: int
     phase_status: Dict[int, PhaseStatus]
     created_at: datetime
@@ -163,7 +161,6 @@ class ProjectStatusResponse(BaseModel):
 class ProjectUpdateRequest(BaseModel):
     """Request model for updating a project."""
     display_name: Optional[str] = None
-    description: Optional[str] = None
 
 
 class PhaseResetRequest(BaseModel):

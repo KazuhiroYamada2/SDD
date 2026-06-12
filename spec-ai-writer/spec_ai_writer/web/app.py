@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from config.settings import get_settings
+from spec_ai_writer.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 

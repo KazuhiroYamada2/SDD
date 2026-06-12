@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from spec_ai_writer.config.prompts import PHASE_SYSTEM_PROMPTS
 from spec_ai_writer.core.context_manager import ContextManager
 from spec_ai_writer.core.phase_manager import PhaseManager
 from spec_ai_writer.llm.base import BaseLLMClient
@@ -298,32 +299,10 @@ class InterviewEngine:
         Returns:
             System prompt string
         """
-        # Import the appropriate prompt for each phase
-        if phase_num == 1:
-            from config.prompts.phase_01_prompts import PHASE_01_SYSTEM_PROMPT
-            return PHASE_01_SYSTEM_PROMPT
-        elif phase_num == 2:
-            from config.prompts.phase_02_prompts import PHASE_02_SYSTEM_PROMPT
-            return PHASE_02_SYSTEM_PROMPT
-        elif phase_num == 3:
-            from config.prompts.phase_03_prompts import PHASE_03_SYSTEM_PROMPT
-            return PHASE_03_SYSTEM_PROMPT
-        elif phase_num == 4:
-            from config.prompts.phase_04_prompts import PHASE_04_SYSTEM_PROMPT
-            return PHASE_04_SYSTEM_PROMPT
-        elif phase_num == 5:
-            from config.prompts.phase_05_prompts import PHASE_05_SYSTEM_PROMPT
-            return PHASE_05_SYSTEM_PROMPT
-        elif phase_num == 6:
-            from config.prompts.phase_06_prompts import PHASE_06_SYSTEM_PROMPT
-            return PHASE_06_SYSTEM_PROMPT
-        elif phase_num == 7:
-            from config.prompts.phase_07_prompts import PHASE_07_SYSTEM_PROMPT
-            return PHASE_07_SYSTEM_PROMPT
-        else:
-            # Fallback for invalid phase numbers
-            phase_info = self.phase_mgr.get_phase_info(phase_num)
-            return f"""あなたは仕様駆動開発の専門家です。
+        if phase_num in PHASE_SYSTEM_PROMPTS:
+            return PHASE_SYSTEM_PROMPTS[phase_num]
+        phase_info = self.phase_mgr.get_phase_info(phase_num)
+        return f"""あなたは仕様駆動開発の専門家です。
 現在、フェーズ {phase_num}: {phase_info.name} を担当しています。
 
 {phase_info.description}
@@ -350,11 +329,6 @@ class InterviewEngine:
 
         # Continue from current phase
         self.start_interview()
-
-    def save_progress(self) -> None:
-        """Save current progress to disk."""
-        self.context_mgr.save_to_disk()
-        print("進捗を保存しました。")
 
     # ========== Web API用メソッド ==========
 
@@ -481,7 +455,7 @@ class InterviewEngine:
             print(f"仕様書 {phase_info.filename} を生成しました。")
 
             # Handle git init on first spec generation and auto-commit
-            from config.settings import get_settings
+            from spec_ai_writer.config.settings import get_settings
             settings = get_settings()
             if settings.auto_git_commit:
                 git_mgr = GitManager(str(specs_dir))

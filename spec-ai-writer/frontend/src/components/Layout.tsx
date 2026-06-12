@@ -16,7 +16,7 @@ export default function Layout() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <Link to="/" className="flex items-center space-x-3">
-                <FileText className="h-8 w-8 text-primary-600" />
+                <FileText className="h-8 w-8 text-primary-500" />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                     Spec AIライター
@@ -33,7 +33,7 @@ export default function Layout() {
                   className={clsx(
                     'flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                     isActive('/dashboard')
-                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                      ? 'bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-100'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   )}
                 >
@@ -45,7 +45,7 @@ export default function Layout() {
                   className={clsx(
                     'flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                     isActive('/settings')
-                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                      ? 'bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-100'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   )}
                 >

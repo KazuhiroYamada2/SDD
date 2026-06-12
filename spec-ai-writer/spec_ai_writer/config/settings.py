@@ -140,7 +140,7 @@ def _apply_llm_overlay(settings: "Settings") -> None:
     """
     # Imported lazily to avoid a circular import: llm_settings_store depends
     # on the settings module for its data_dir lookup.
-    from config.llm_settings_store import load_llm_settings_overlay
+    from spec_ai_writer.config.llm_settings_store import load_llm_settings_overlay
 
     overlay = load_llm_settings_overlay()
     if not overlay:

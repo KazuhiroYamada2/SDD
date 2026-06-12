@@ -244,10 +244,14 @@ spec --log-level=debug start
 
 ```
 spec-ai-writer/
-├── config/
-│   ├── settings.py              # 設定管理
-│   └── prompts/                 # 各フェーズのシステムプロンプト
 ├── spec_ai_writer/
+│   ├── config/
+│   │   ├── settings.py              # 設定管理
+│   │   └── prompts/                 # 各フェーズのシステムプロンプト
+│   ├── templates/                   # Jinja2テンプレート
+│   │   ├── 01-principle-definition.md.jinja2
+│   │   ├── 02-planning-requirement.md.jinja2
+│   │   └── ...
 │   ├── core/
 │   │   ├── interview_engine.py  # インタビュー制御の中核
 │   │   ├── phase_manager.py     # 「7 つの工程」の進行管理
@@ -262,10 +266,6 @@ spec-ai-writer/
 │   │   └── markdown_generator.py # Markdown生成
 │   └── git/
 │       └── git_manager.py       # Git操作
-├── templates/                   # Jinja2テンプレート
-│   ├── 01-principle-definition.md.jinja2
-│   ├── 02-planning-requirement.md.jinja2
-│   └── ...
 └── data/                        # プロジェクトデータ（DATA_DIR）
     └── {project_id}/
         ├── project.json         # メタ情報（ID、表示名、作成日時、更新日時）
@@ -292,8 +292,8 @@ pytest
 ### コードフォーマット
 
 ```bash
-black spec_ai_writer/ config/
-flake8 spec_ai_writer/ config/
+black spec_ai_writer/
+flake8 spec_ai_writer/
 ```
 
 ### 型チェック

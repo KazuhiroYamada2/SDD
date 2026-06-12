@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **spec-ai-writer / Interview input improvements**: The text area now supports multiple lines — `Shift+Enter` inserts a newline and `Enter` submits, making it easier to write longer answers (Issue #84 T1–T3).
+- **spec-ai-writer / Interview stop button**: A "Stop" button lets users end the current phase mid-interview and return to the top page (Issue #84 T1–T3).
+
+### Changed
+
+- **spec-ai-writer / Brand color unification**: Unified the UI color theme to the Elvez brand color (`#3A5CA8`) throughout the application (Issue #84 T7).
+- **spec-ai-writer / Removed project description field**: Removed the "description" field from the project creation form, leaving only the project name as required input (Issue #84 T6).
+
+### Internal (no user-facing impact)
+
+- **spec-ai-writer / Package restructure**: Moved `config/` and `templates/` directories inside the `spec_ai_writer/` package to eliminate top-level clutter (Issue #84 T5).
+- **spec-ai-writer / Dead code removal**: Deleted unused constants, methods, and unreachable components (Issue #84 T4).
+- **spec-ai-writer / Prompt file consolidation**: Merged seven per-phase prompt files (`config/prompts/phase_0[1-7]_prompts.py`) into a single `config/prompts.py` dictionary.
+- **spec-ai-writer / Retired `project.json`**: Consolidated project metadata into `interview.json`, eliminating the separate `project.json` file.
+- **spec-ai-writer / Removed empty `utils/` directory**: Deleted the empty `spec_ai_writer/utils/` directory.
+
 ---
 
 ## [1.0.5] - 2026-06-01

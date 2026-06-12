@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Square } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useInterviewStore } from '@/store/useInterviewStore';
@@ -32,6 +32,8 @@ export default function Interview() {
   const [isStarting, setIsStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     messages,
@@ -108,9 +110,7 @@ export default function Interview() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const submitMessage = async () => {
     if (!input.trim() || !projectId || isWaitingForResponse) return;
 
     const userAnswer = input.trim();
@@ -124,8 +124,14 @@ export default function Interview() {
 
     addMessage(userMessage);
     setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setWaitingForResponse(true);
     setError(null);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       // Find the last assistant message to use as the question being answered
@@ -134,11 +140,10 @@ export default function Interview() {
         .find((m) => m.role === 'assistant');
       const currentQuestion = lastAssistantMessage?.content ?? '';
 
-      const response = await apiClient.submitAnswer({
-        project_id: projectId,
-        question: currentQuestion,
-        answer: userAnswer,
-      });
+      const response = await apiClient.submitAnswer(
+        { project_id: projectId, question: currentQuestion, answer: userAnswer },
+        controller.signal
+      );
 
       // Check if phase is complete
       if (response.phase_complete) {
@@ -175,6 +180,14 @@ export default function Interview() {
         });
       }
     } catch (err) {
+      if (axios.isCancel(err)) {
+        addMessage({
+          role: 'system',
+          content: '送信を中断しました。',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
       console.error('Failed to submit answer:', err);
       const content =
         axios.isAxiosError(err) &&
@@ -189,7 +202,24 @@ export default function Interview() {
         timestamp: new Date().toISOString(),
       });
     } finally {
+      abortControllerRef.current = null;
       setWaitingForResponse(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitMessage();
+  };
+
+  const handleAbort = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      submitMessage();
     }
   };
 
@@ -235,7 +265,7 @@ export default function Interview() {
       {/* Starting */}
       {isStarting && (
         <div className="card text-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-500" />
           <p className="mt-4 text-gray-500">インタビューを開始しています...</p>
         </div>
       )}
@@ -259,7 +289,7 @@ export default function Interview() {
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     message.role === 'user'
-                      ? 'bg-primary-600 text-white'
+                      ? 'bg-primary-500 text-white'
                       : message.role === 'system'
                         ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-200'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
@@ -304,27 +334,43 @@ export default function Interview() {
 
           {/* Input Form */}
           <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <input
-                type="text"
+            <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+              <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  const el = e.target;
+                  el.style.height = 'auto';
+                  el.style.height = el.scrollHeight + 'px';
+                }}
+                onKeyDown={handleKeyDown}
                 placeholder="回答を入力してください..."
-                className="input flex-1"
+                className="input flex-1 resize-none overflow-hidden"
+                rows={1}
                 disabled={isWaitingForResponse || !isInterviewActive}
               />
-              <button
-                type="submit"
-                className="btn btn-primary px-6 flex items-center gap-2"
-                disabled={!input.trim() || isWaitingForResponse || !isInterviewActive}
-              >
+              <div className="flex flex-col gap-2">
                 {isWaitingForResponse ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <button
+                    type="button"
+                    onClick={handleAbort}
+                    className="btn btn-secondary px-4 flex items-center gap-2"
+                  >
+                    <Square className="h-5 w-5" />
+                    中断
+                  </button>
                 ) : (
-                  <Send className="h-5 w-5" />
+                  <button
+                    type="submit"
+                    className="btn btn-primary px-4 flex items-center gap-2"
+                    disabled={!input.trim() || !isInterviewActive}
+                  >
+                    <Send className="h-5 w-5" />
+                    送信
+                  </button>
                 )}
-                送信
-              </button>
+              </div>
             </form>
           </div>
         </div>

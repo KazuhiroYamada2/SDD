@@ -28,11 +28,11 @@ from typing import Any, Dict, Literal, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from config.llm_settings_store import (
+from spec_ai_writer.config.llm_settings_store import (
     load_llm_settings_overlay,
     save_llm_settings_overlay,
 )
-from config.settings import get_settings, reload_settings
+from spec_ai_writer.config.settings import get_settings, reload_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

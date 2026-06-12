@@ -10,7 +10,6 @@ import type { ProjectCreate } from '@/types';
 export default function Dashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDescription, setNewProjectDescription] = useState('');
   const queryClient = useQueryClient();
 
   // Fetch projects
@@ -30,7 +29,6 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsCreateModalOpen(false);
       setNewProjectName('');
-      setNewProjectDescription('');
     },
   });
 
@@ -47,7 +45,6 @@ export default function Dashboard() {
     if (newProjectName.trim()) {
       createMutation.mutate({
         display_name: newProjectName.trim(),
-        description: newProjectDescription.trim() || undefined,
       });
     }
   };
@@ -145,11 +142,6 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {project.display_name}
                   </h3>
-                  {project.description && (
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {project.description}
-                    </p>
-                  )}
                 </div>
                 {getPhaseStatusBadge(project.current_phase)}
               </div>
@@ -165,7 +157,7 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-primary-500 h-2 rounded-full transition-all duration-300"
                     style={{
                       width: `${
                         (Object.values(project.phase_status).filter(
@@ -245,19 +237,6 @@ export default function Dashboard() {
                   placeholder="例: my-webapp"
                   required
                   maxLength={100}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  説明 (任意)
-                </label>
-                <textarea
-                  value={newProjectDescription}
-                  onChange={(e) => setNewProjectDescription(e.target.value)}
-                  className="input"
-                  placeholder="プロジェクトの説明を入力..."
-                  rows={3}
-                  maxLength={500}
                 />
               </div>
               <div className="flex gap-2 justify-end">

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from config.llm_settings_store import save_llm_settings_overlay
-from config.settings import get_settings, reload_settings
+from spec_ai_writer.config.llm_settings_store import save_llm_settings_overlay
+from spec_ai_writer.config.settings import get_settings, reload_settings
 
 
 @pytest.mark.unit

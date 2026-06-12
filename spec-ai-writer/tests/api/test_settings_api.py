@@ -9,8 +9,8 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from config.llm_settings_store import get_llm_settings_path
-from config.settings import reload_settings
+from spec_ai_writer.config.llm_settings_store import get_llm_settings_path
+from spec_ai_writer.config.settings import reload_settings
 from spec_ai_writer.web.app import app
 
 

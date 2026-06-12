@@ -112,33 +112,3 @@ __pycache__/
 
 🤖 Generated with Spec AIライター
 """
-
-    def get_status(self) -> str:
-        """
-        Get Git status.
-
-        Returns:
-            Status string
-        """
-        if not self.repo:
-            return "Not a Git repository"
-
-        try:
-            return self.repo.git.status()
-        except Exception as e:
-            return f"Error getting status: {e}"
-
-    def is_clean(self) -> bool:
-        """
-        Check if working directory is clean.
-
-        Returns:
-            True if no uncommitted changes
-        """
-        if not self.repo:
-            return True
-
-        try:
-            return not self.repo.is_dirty()
-        except Exception:
-            return True

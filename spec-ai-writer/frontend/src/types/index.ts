@@ -17,7 +17,6 @@ export interface ChatMessage {
 export interface Project {
   project_id: string;
   display_name: string;
-  description?: string;
   current_phase: number;
   phase_status: Record<number, PhaseStatus>;
   created_at: string;
@@ -27,7 +26,6 @@ export interface Project {
 
 export interface ProjectCreate {
   display_name: string;
-  description?: string;
   llm_provider?: string;
 }
 
@@ -102,12 +100,6 @@ export interface SpecificationListItem {
 export interface SpecificationListResponse {
   project_id: string;
   specifications: SpecificationListItem[];
-}
-
-export interface ErrorResponse {
-  error: string;
-  detail?: string;
-  status_code: number;
 }
 
 // ---------- LLM Settings ----------
