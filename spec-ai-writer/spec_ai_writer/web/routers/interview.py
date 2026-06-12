@@ -4,9 +4,10 @@ Interview API Router
 Endpoints for conducting interviews via REST.
 """
 
-import asyncio
 import logging
 from typing import Dict, Optional
+
+import anyio
 
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -86,24 +87,37 @@ def _reconstruct_chat_history(context: ContextManager) -> list:
 async def _run_with_disconnect_guard(request: Request, coro):
     """LLM コルーチンとクライアント切断監視を競争させ、切断時にLLMタスクをキャンセルする。
     切断が検知された場合は None を返す。"""
-    llm_task = asyncio.create_task(coro)
+    result = None
+    disconnected = False
 
-    async def _watch():
-        while not await request.is_disconnected():
-            await asyncio.sleep(0.3)
+    async def _llm_work(scope: anyio.CancelScope) -> None:
+        nonlocal result
+        result = await coro
+        scope.cancel()
 
-    disconnect_task = asyncio.create_task(_watch())
+    async def _watch(scope: anyio.CancelScope) -> None:
+        nonlocal disconnected
+        # Starlette 1.0.x の is_disconnected() は即座キャンセルで切断を検知できないため、
+        # リクエストボディ消費後に _receive() を直接 await して http.disconnect を待つ。
+        try:
+            while True:
+                message = await request._receive()
+                if message.get("type") == "http.disconnect":
+                    break
+        except Exception:
+            pass
+        disconnected = True
+        scope.cancel()
 
-    done, pending = await asyncio.wait(
-        [llm_task, disconnect_task],
-        return_when=asyncio.FIRST_COMPLETED,
-    )
-    for task in pending:
-        task.cancel()
+    with anyio.CancelScope() as scope:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(_llm_work, scope)
+            tg.start_soon(_watch, scope)
 
-    if disconnect_task in done:
+    if disconnected:
+        logger.warning("Disconnect LLM Request")
         return None
-    return llm_task.result()
+    return result
 
 
 settings = get_settings()
@@ -280,12 +294,22 @@ async def submit_answer(http_request: Request, request: UserAnswerRequest):
         qa_pairs = phase_context.get("qa_pairs", [])
 
         # Check if phase is complete
-        phase_complete = await engine._is_phase_complete(current_phase, context)
+        phase_complete = await _run_with_disconnect_guard(
+            http_request, engine._is_phase_complete(current_phase, context)
+        )
+        if phase_complete is None:
+            raise HTTPException(status_code=499, detail="Client disconnected")
 
         if phase_complete:
             # Generate spec and move to next phase
             try:
-                await engine._generate_and_save_spec(current_phase)
+                spec_result = await _run_with_disconnect_guard(
+                    http_request, engine._generate_and_save_spec(current_phase)
+                )
+                if spec_result is None:
+                    raise HTTPException(status_code=499, detail="Client disconnected")
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.warning(f"Failed to generate spec: {e}")
 

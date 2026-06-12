@@ -61,10 +61,14 @@ export default function Interview() {
     setError(null);
     setProjectId(projectId);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const response = await apiClient.startInterview({
-        project_id: projectId,
-      });
+      const response = await apiClient.startInterview(
+        { project_id: projectId },
+        controller.signal
+      );
 
       setDisplayName(response.display_name);
       setCurrentPhase(response.phase_num, response.phase_name);
@@ -87,9 +91,11 @@ export default function Interview() {
         });
       }
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error('Failed to start interview:', err);
       setError('インタビューの開始に失敗しました。バックエンドサーバーの接続を確認してください。');
     } finally {
+      abortControllerRef.current = null;
       setIsStarting(false);
     }
   }, [projectId, setProjectId, setCurrentPhase, setInterviewActive, addMessage]);
@@ -101,6 +107,7 @@ export default function Interview() {
 
     // Cleanup
     return () => {
+      abortControllerRef.current?.abort();
       setInterviewActive(false);
     };
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps

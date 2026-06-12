@@ -88,11 +88,11 @@ class APIClient {
   }
 
   // Interview API
-  async startInterview(data: InterviewStartRequest): Promise<InterviewStartResponse> {
+  async startInterview(data: InterviewStartRequest, signal?: AbortSignal): Promise<InterviewStartResponse> {
     const response = await this.client.post<InterviewStartResponse>(
       '/api/interview/start',
       data,
-      { timeout: 120000 }
+      { timeout: 120000, signal }
     );
     return response.data;
   }

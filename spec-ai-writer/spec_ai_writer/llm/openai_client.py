@@ -72,6 +72,10 @@ class OpenAIClient(BaseLLMClient):
         super().__init__(api_key, model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
         self.base_url = base_url
+        # Caches whether this model accepts max_tokens / temperature.
+        # Set to False after the first 400 that indicates the param is unsupported.
+        self._use_max_tokens = True
+        self._use_temperature = True
 
         try:
             client_kwargs = {"api_key": api_key, "timeout": httpx.Timeout(self.timeout)}
@@ -109,12 +113,35 @@ class OpenAIClient(BaseLLMClient):
             RuntimeError: If API call fails
         """
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature if temperature is not None else self.temperature,
-                max_tokens=max_tokens or self.max_tokens,
-            )
+            effective_max_tokens = max_tokens or self.max_tokens
+            effective_temperature = temperature if temperature is not None else self.temperature
+
+            # Retry loop: strip unsupported params on the first 400 that names them.
+            # _use_max_tokens / _use_temperature are cached on the instance so
+            # subsequent calls skip the failing param without extra round-trips.
+            while True:
+                api_kwargs: dict = {"model": self.model, "messages": messages}
+                if self._use_max_tokens:
+                    api_kwargs["max_tokens"] = effective_max_tokens
+                else:
+                    api_kwargs["max_completion_tokens"] = effective_max_tokens
+                if self._use_temperature:
+                    api_kwargs["temperature"] = effective_temperature
+
+                try:
+                    response = await self.client.chat.completions.create(**api_kwargs)
+                    break
+                except Exception as e:
+                    msg = str(e)
+                    adjusted = False
+                    if "max_tokens" in msg and "max_completion_tokens" in msg and self._use_max_tokens:
+                        self._use_max_tokens = False
+                        adjusted = True
+                    if "temperature" in msg and "does not support" in msg and self._use_temperature:
+                        self._use_temperature = False
+                        adjusted = True
+                    if not adjusted:
+                        raise
 
             if not response.choices:
                 logger.warning("Empty response from OpenAI API")
