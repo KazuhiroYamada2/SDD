@@ -119,11 +119,12 @@ export default function Interview() {
       abortControllerRef.current = null;
       setIsStarting(false);
     }
-  }, [projectId, setProjectId, setCurrentPhase, setInterviewActive, addMessage]);
+  }, [projectId, setProjectId, setCurrentPhase, setInterviewActive, addMessage, reset, setDisplayName, setWaitingForResponse]);
 
   useEffect(() => {
     if (!projectId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     startInterview();
 
     // Cleanup

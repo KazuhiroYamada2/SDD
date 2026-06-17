@@ -1,11 +1,7 @@
-"""
-OpenAI LLM Client Implementation
-
-Provides integration with OpenAI API (GPT-4, GPT-3.5-turbo).
-"""
+"""OpenAI-compatible LLM client."""
 
 import logging
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -22,151 +18,113 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIClient(BaseLLMClient):
-    """
-    OpenAI client for GPT models.
+    """Client for OpenAI and OpenAI-compatible endpoints.
 
-    Supports GPT-4, GPT-4-turbo, and GPT-3.5-turbo models.
+    Supports OpenAI, OpenRouter, Ollama, LM Studio, Moonshot Kimi, and any
+    other provider that implements the OpenAI chat completions API.
     """
 
     def __init__(
         self,
         api_key: str,
-        model: str = "gpt-4-turbo-preview",
+        model: str = "gpt-4o",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         timeout: float = 30.0,
         base_url: Optional[str] = None,
+        extra_body: Optional[dict] = None,
+        max_tokens_param: str = "max_tokens",
+        temperature_supported: bool = True,
+        fixed_temperature: Optional[float] = None,
     ):
         """
-        Initialize OpenAI client.
-
         Args:
-            api_key: OpenAI API key (or compatible provider key).
-                For local OpenAI-compatible servers that do not require
-                authentication, pass a dummy non-empty string (e.g. "dummy").
-            model: Model name (gpt-4, gpt-4-turbo-preview, gpt-3.5-turbo,
-                or an OpenRouter/local model ID).
-            temperature: Sampling temperature (0.0-2.0)
-            max_tokens: Maximum tokens to generate
-            timeout: Timeout in seconds for API calls
-            base_url: Optional base URL for OpenAI-compatible endpoints.
-                Examples:
-                - None: Official OpenAI API (default)
-                - "https://openrouter.ai/api/v1": OpenRouter
-                - "http://localhost:11434/v1": Ollama
-                - "http://localhost:1234/v1": LM Studio
-
-        Raises:
-            ImportError: If openai package is not installed
-            ValueError: If API key is invalid
+            api_key: API key. For local servers that don't require auth, pass
+                any non-empty string (e.g. "dummy").
+            model: Model ID.
+            temperature: Sampling temperature (0.0–2.0).
+            max_tokens: Maximum tokens to generate.
+            timeout: Request timeout in seconds.
+            base_url: Override the default API endpoint. None = OpenAI official.
+            extra_body: Provider-specific fields passed verbatim in the request
+                body (e.g. {"thinking": {"type": "disabled"}} for Kimi).
+            max_tokens_param: Parameter name for token limit. Use
+                "max_completion_tokens" for o1/o3 series models.
+            temperature_supported: Set False for models that reject the
+                temperature parameter (o1/o3 series).
         """
         if not OPENAI_AVAILABLE:
             raise ImportError(
-                "openai package is required for OpenAI integration. "
-                "Install it with: pip install openai"
+                "openai package is required. Install with: pip install openai"
             )
-
         if not api_key:
             raise ValueError("OpenAI API key is required")
 
         super().__init__(api_key, model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
         self.base_url = base_url
-        # Caches whether this model accepts max_tokens / temperature.
-        # Set to False after the first 400 that indicates the param is unsupported.
-        self._use_max_tokens = True
-        self._use_temperature = True
+        self.extra_body = extra_body or {}
+        self.max_tokens_param = max_tokens_param
+        self.temperature_supported = temperature_supported
+        self.fixed_temperature = fixed_temperature
 
-        try:
-            client_kwargs = {"api_key": api_key, "timeout": httpx.Timeout(self.timeout)}
-            if base_url:
-                client_kwargs["base_url"] = base_url
-            self.client = AsyncOpenAI(**client_kwargs)
-            logger.info(
-                f"OpenAI client initialized with model: {model}"
-                + (f", base_url: {base_url}" if base_url else "")
-            )
-        except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {e}")
-            raise ValueError(f"Failed to initialize OpenAI client: {e}")
+        client_kwargs: dict = {"api_key": api_key, "timeout": httpx.Timeout(self.timeout)}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        self.client = AsyncOpenAI(**client_kwargs)
+        logger.info(
+            "OpenAI client initialized: model=%s%s",
+            model,
+            f", base_url={base_url}" if base_url else "",
+        )
 
     async def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
     ) -> str:
-        """
-        Send chat messages to OpenAI and get response.
-
-        OpenAI API supports system messages natively, so messages are passed as-is.
-
-        Args:
-            messages: List of message dicts with 'role' and 'content' keys
-            temperature: Override default temperature
-            max_tokens: Override default max_tokens
-
-        Returns:
-            Assistant's response text
-
-        Raises:
-            RuntimeError: If API call fails
-        """
-        try:
-            effective_max_tokens = max_tokens or self.max_tokens
+        effective_max_tokens = max_tokens or self.max_tokens
+        if self.fixed_temperature is not None:
+            effective_temperature = self.fixed_temperature
+        else:
             effective_temperature = temperature if temperature is not None else self.temperature
 
-            # Retry loop: strip unsupported params on the first 400 that names them.
-            # _use_max_tokens / _use_temperature are cached on the instance so
-            # subsequent calls skip the failing param without extra round-trips.
-            while True:
-                api_kwargs: dict = {"model": self.model, "messages": messages}
-                if self._use_max_tokens:
-                    api_kwargs["max_tokens"] = effective_max_tokens
-                else:
-                    api_kwargs["max_completion_tokens"] = effective_max_tokens
-                if self._use_temperature:
-                    api_kwargs["temperature"] = effective_temperature
+        api_kwargs: dict = {
+            "model": self.model,
+            "messages": messages,
+            self.max_tokens_param: effective_max_tokens,
+        }
+        if self.temperature_supported:
+            api_kwargs["temperature"] = effective_temperature
+        if self.extra_body:
+            api_kwargs["extra_body"] = self.extra_body
 
-                try:
-                    response = await self.client.chat.completions.create(**api_kwargs)
-                    break
-                except Exception as e:
-                    msg = str(e)
-                    adjusted = False
-                    if "max_tokens" in msg and "max_completion_tokens" in msg and self._use_max_tokens:
-                        self._use_max_tokens = False
-                        adjusted = True
-                    if "temperature" in msg and "does not support" in msg and self._use_temperature:
-                        self._use_temperature = False
-                        adjusted = True
-                    if not adjusted:
-                        raise
-
-            if not response.choices:
-                logger.warning("Empty response from OpenAI API")
-                return ""
-
-            result = response.choices[0].message.content or ""
-            logger.debug(f"OpenAI response received: {len(result)} characters")
-
-            return result
-
+        try:
+            response = await self.client.chat.completions.create(**api_kwargs)
         except AuthenticationError as e:
-            logger.error(f"OpenAI authentication failed: {e}")
+            logger.error("OpenAI authentication failed: %s", e)
             raise LLMAuthenticationError(
-                "OpenAI APIキーが無効です。.env ファイルの OPENAI_API_KEY を確認してください。"
+                "OpenAI APIキーが無効です。設定画面の API キーを確認してください。"
             ) from e
         except (APIConnectionError, APITimeoutError) as e:
-            logger.error(f"OpenAI connection error: {e}")
+            logger.error("OpenAI connection error: %s", e)
             raise LLMConnectionError(
-                f"OpenAI APIに接続できません。ネットワーク接続を確認してください: {e}"
+                f"OpenAI API に接続できません。ネットワーク接続を確認してください: {e}"
             ) from e
         except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
+            logger.error("OpenAI API call failed: %s", e)
             raise LLMResponseError(f"OpenAI API call failed: {e}") from e
 
+        if not response.choices:
+            logger.warning("Empty response from OpenAI API")
+            return ""
 
-# Commonly used models
+        result = response.choices[0].message.content or ""
+        logger.debug("OpenAI response: %d characters", len(result))
+        return result
+
+
+# Commonly used model IDs (kept for backwards compatibility with tests)
 GPT4_TURBO = "gpt-4-turbo-preview"
 GPT35_TURBO = "gpt-3.5-turbo"

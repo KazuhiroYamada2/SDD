@@ -99,17 +99,28 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
 
 ### 6. マルチLLMプロバイダー対応
 
-- 以下の3つのLLMプロバイダーに対応する
-  - **AWS Bedrock**：推奨（Claude Haiku 4.5）
-  - **Claude（Anthropic API）**：代替
-  - **OpenAI API**：代替
-- `.env` の `DEFAULT_LLM_PROVIDER` で切り替える
+- 以下の7つのLLMプロバイダーに対応する
+
+  | プロバイダー | 種別 | 用途 |
+  |---|---|---|
+  | **Moonshot Kimi** | クラウド | 第一優先（OpenAI 互換） |
+  | **Claude (Anthropic API)** | クラウド | 代替 |
+  | **OpenAI** | クラウド | 代替 |
+  | **OpenRouter** | クラウド | 代替（多モデル対応） |
+  | **Ollama** | ローカル | ローカル LLM |
+  | **LM Studio** | ローカル | ローカル LLM |
+  | **AWS Bedrock** | クラウド | 代替 |
+
+- Web UI の Settings 画面でプロバイダーを切り替える。プロバイダーごとに独立したスロットを保持し、切り替えても他プロバイダーの設定は失われない
+- 設定の読み込み優先順位: `data/settings.json`（UI が書き込む）> 環境変数 / `.env` > pydantic デフォルト値
 - 共通の `BaseLLMClient` インターフェースでプロバイダー差異を吸収する
 - 各プロバイダーの実装詳細：
   - **Claude**: `anthropic.AsyncAnthropic`（httpx ベース、非同期・キャンセル対応）
-  - **OpenAI / OpenRouter / ローカル LLM**: `openai.AsyncOpenAI`（httpx ベース、非同期・キャンセル対応）
+  - **OpenAI / OpenRouter / Ollama / LM Studio / Kimi**: `openai.AsyncOpenAI`（httpx ベース、非同期・キャンセル対応。`base_url` でエンドポイントを切り替え）
   - **Bedrock**: `aiobotocore`（aiohttp ベース、非同期・キャンセル対応。`boto3` は使用しない）
+- プロバイダー固有のパラメータ（Kimi の `thinking` フィールド、o1 系の `max_completion_tokens` など）は `llm/provider_registry.py` に宣言的に定義する。クライアントコードに条件分岐を書かない
 - プロバイダー固有のエラーを共通例外クラス（`LLMAuthenticationError`, `LLMConnectionError`, `LLMResponseError`）に変換し、呼び出し元でプロバイダーに依存しないエラー処理を行う
+- Settings API エンドポイント: `GET /api/settings`・`PUT /api/settings`（レスポンスに各フィールドの出所 `source: "json" | "env" | "default"` を含む）
 
 ### 7. Git自動コミット機能
 
@@ -163,7 +174,7 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
 
 ### セキュリティ
 
-- LLM APIキーは `.env` ファイルで管理し、リポジトリにはコミットしない
+- LLM APIキーは `.env` ファイルまたは `data/settings.json` に平文で保存する。いずれもリポジトリにはコミットしない（`.gitignore` で除外）。`settings.json` は 0o600 で書き込む
 - AWS認証情報は環境変数またはIAMロールで管理する
 - サーバーは `127.0.0.1`（localhost のみ）でリッスンし、LAN 上の他ホストからのアクセスを遮断する
 
@@ -185,6 +196,7 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
 - **2026-03-31**: プロダクションビルド対応（Issue #33）。`APP_ENV` 環境変数による動作切り替え（`production`: バックエンドが `frontend/dist` を直接サーブ、`development`: Vite開発サーバー使用）を追加
 - **2026-06-11**: インタビュー入力フォームの複数行テキストエリア対応・AI応答中断ボタン・カラーテーマのブランドカラー統一を追加（Issue #84）
 - **2026-06-12**: LLMクライアントを非同期化（`async/await`）、Bedrock を `boto3` から `aiobotocore` に移行、クライアント切断時のLLMリクエスト中断を実装（Issue #85）
+- **2026-06-17**: LLMプロバイダーを7種類に拡張（Kimi・OpenRouter・Ollama・LM Studio 追加）。プロバイダー別独立スロット・source 追跡・Settings API エンドポイント統一（Issue #88）
 
 ---
 

@@ -17,8 +17,8 @@ import type {
   AssistantQuestionResponse,
   SpecificationResponse,
   SpecificationListResponse,
-  LLMSettingsResponse,
-  LLMSettingsUpdateRequest,
+  SettingsResponse,
+  SettingsUpdateRequest,
 } from '@/types';
 import { mockApiClient } from './mockClient';
 
@@ -147,19 +147,14 @@ class APIClient {
     return response.data;
   }
 
-  // LLM Settings API
-  async getLLMSettings(): Promise<LLMSettingsResponse> {
-    const response = await this.client.get<LLMSettingsResponse>('/api/settings/llm');
+  // Settings API
+  async getSettings(): Promise<SettingsResponse> {
+    const response = await this.client.get<SettingsResponse>('/api/settings/');
     return response.data;
   }
 
-  async updateLLMSettings(
-    data: LLMSettingsUpdateRequest
-  ): Promise<LLMSettingsResponse> {
-    const response = await this.client.put<LLMSettingsResponse>(
-      '/api/settings/llm',
-      data
-    );
+  async updateSettings(data: SettingsUpdateRequest): Promise<SettingsResponse> {
+    const response = await this.client.put<SettingsResponse>('/api/settings/', data);
     return response.data;
   }
 }

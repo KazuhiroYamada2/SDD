@@ -1,172 +1,528 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
-import apiClient from '@/api/client';
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, Info, AlertCircle, CheckCircle2, Leaf } from "lucide-react";
+import apiClient from "@/api/client";
 import type {
   LLMProvider,
-  LLMSettingsResponse,
-  LLMSettingsUpdateRequest,
-} from '@/types';
+  ProviderUpdate,
+  SettingsResponse,
+  SettingsUpdateRequest,
+  SettingsSource,
+} from "@/types";
 
-/**
- * Presets for OpenAI-compatible endpoints. Selecting a preset pre-fills the
- * base_url field so the user does not have to remember the exact URL.
- */
-type PresetKey = 'openai_official' | 'openrouter' | 'ollama' | 'lm_studio' | 'custom';
+// ---------------------------------------------------------------------------
+// Provider metadata (UI labels and field visibility)
+// ---------------------------------------------------------------------------
 
-interface Preset {
+interface ProviderMeta {
   label: string;
-  base_url: string;
-  hint: string;
-  example_model: string;
+  hasApiKey: boolean;
+  hasBaseUrl: boolean;
+  hasBedrock: boolean;
 }
 
-const OPENAI_PRESETS: Record<PresetKey, Preset> = {
-  openai_official: {
-    label: 'OpenAI (公式)',
-    base_url: '',
-    hint: 'OpenAI の公式 API を使用します。OPENAI_API_KEY が必須です。',
-    example_model: 'gpt-4-turbo-preview',
+const PROVIDER_META: Record<LLMProvider, ProviderMeta> = {
+  claude: {
+    label: "Anthropic",
+    hasApiKey: true,
+    hasBaseUrl: false,
+    hasBedrock: false,
+  },
+  openai: {
+    label: "OpenAI",
+    hasApiKey: true,
+    hasBaseUrl: false,
+    hasBedrock: false,
   },
   openrouter: {
-    label: 'OpenRouter',
-    base_url: 'https://openrouter.ai/api/v1',
-    hint: 'OpenRouter の API を使用します。OpenRouter の API キーとモデル ID (例: anthropic/claude-3.5-sonnet) が必要です。',
-    example_model: 'anthropic/claude-3.5-sonnet',
+    label: "OpenRouter",
+    hasApiKey: true,
+    hasBaseUrl: false,
+    hasBedrock: false,
   },
   ollama: {
-    label: 'Ollama (ローカル)',
-    base_url: 'http://localhost:11434/v1',
-    hint: 'ローカルで動作する Ollama に接続します。API キーは不要なので空欄で OK です。',
-    example_model: 'llama3.1:8b',
+    label: "Ollama (ローカル)",
+    hasApiKey: false,
+    hasBaseUrl: true,
+    hasBedrock: false,
   },
-  lm_studio: {
-    label: 'LM Studio (ローカル)',
-    base_url: 'http://localhost:1234/v1',
-    hint: 'ローカルで動作する LM Studio に接続します。API キーは不要なので空欄で OK です。',
-    example_model: 'local-model',
+  lmstudio: {
+    label: "LM Studio (ローカル)",
+    hasApiKey: false,
+    hasBaseUrl: true,
+    hasBedrock: false,
   },
-  custom: {
-    label: 'カスタム (その他 OpenAI 互換)',
-    base_url: '',
-    hint: 'llama.cpp の OpenAI 互換モードなど、任意の互換エンドポイントを手動で指定できます。',
-    example_model: '',
+  kimi: {
+    label: "Moonshot",
+    hasApiKey: true,
+    hasBaseUrl: false,
+    hasBedrock: false,
+  },
+  bedrock: {
+    label: "AWS Bedrock",
+    hasApiKey: false,
+    hasBaseUrl: false,
+    hasBedrock: true,
   },
 };
 
-function detectPreset(baseUrl: string): PresetKey {
-  if (!baseUrl) return 'openai_official';
-  if (baseUrl.includes('openrouter.ai')) return 'openrouter';
-  if (baseUrl.includes('11434')) return 'ollama';
-  if (baseUrl.includes('1234')) return 'lm_studio';
-  return 'custom';
+const PROVIDER_ORDER: LLMProvider[] = [
+  "claude",
+  "openai",
+  "openrouter",
+  "kimi",
+  "ollama",
+  "lmstudio",
+  "bedrock",
+];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function EnvBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+      title="環境変数から読み込まれています。保存すると JSON に書き込まれ、環境変数の変更が反映されなくなります。"
+    >
+      <Leaf className="h-3 w-3" />
+      ENV
+    </span>
+  );
 }
 
-export default function Settings() {
+// ---------------------------------------------------------------------------
+// Per-provider slot state
+// ---------------------------------------------------------------------------
+
+interface SlotState {
+  model: string; // "" = user hasn't typed anything (use env/default)
+  apiKey: string; // "" = no change
+  baseUrl: string; // "" = use registry default
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsRegion: string;
+}
+
+function emptySlot(): SlotState {
+  return {
+    model: "",
+    apiKey: "",
+    baseUrl: "",
+    awsAccessKeyId: "",
+    awsSecretAccessKey: "",
+    awsRegion: "",
+  };
+}
+
+function buildInitialSlots(
+  data: SettingsResponse,
+): Record<LLMProvider, SlotState> {
+  const slots = Object.fromEntries(
+    PROVIDER_ORDER.map((p) => [p, emptySlot()]),
+  ) as Record<LLMProvider, SlotState>;
+
+  for (const p of PROVIDER_ORDER) {
+    const prov = data.providers[p];
+    if (!prov) continue;
+    const slot = { ...emptySlot() };
+    if (data.sources[`${p}.model`] === "json") slot.model = prov.model;
+    if (data.sources[`${p}.base_url`] === "json")
+      slot.baseUrl = prov.base_url ?? "";
+    if (data.sources[`${p}.aws_region`] === "json")
+      slot.awsRegion = prov.aws_region ?? "";
+    slots[p] = slot;
+  }
+  return slots;
+}
+
+// ---------------------------------------------------------------------------
+// Inner form component — initializes state from props, avoids set-state-in-effect
+// ---------------------------------------------------------------------------
+
+function SettingsForm({ initialData }: { initialData: SettingsResponse }) {
   const queryClient = useQueryClient();
 
-  const { data: initialSettings, isLoading, error } = useQuery({
-    queryKey: ['llm-settings'],
-    queryFn: () => apiClient.getLLMSettings(),
-  });
-
-  // Form state
-  const [provider, setProvider] = useState<LLMProvider>('claude');
-  const [preset, setPreset] = useState<PresetKey>('openai_official');
-  const [openaiBaseUrl, setOpenaiBaseUrl] = useState('');
-  const [openaiModel, setOpenaiModel] = useState('');
-  const [openaiApiKey, setOpenaiApiKey] = useState('');
-  const [anthropicApiKey, setAnthropicApiKey] = useState('');
-  const [bedrockModelId, setBedrockModelId] = useState('');
-  const [awsRegion, setAwsRegion] = useState('');
-  const [awsAccessKeyId, setAwsAccessKeyId] = useState('');
-  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState('');
-  const [temperature, setTemperature] = useState<number>(0.7);
-
+  // All state is initialized synchronously from props — no useEffect needed
+  const [activeProvider, setActiveProvider] = useState<LLMProvider>(
+    () => initialData.active_provider,
+  );
+  const [temperature, setTemperature] = useState<number>(
+    () => initialData.temperature,
+  );
+  const [slots, setSlots] = useState<Record<LLMProvider, SlotState>>(() =>
+    buildInitialSlots(initialData),
+  );
   const [dirty, setDirty] = useState(false);
-  const [saveNotice, setSaveNotice] = useState<
-    | { kind: 'success'; message: string }
-    | { kind: 'error'; message: string }
-    | null
-  >(null);
+  const [saveNotice, setSaveNotice] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
 
-  // Populate form state from server response on load.
-  useEffect(() => {
-    if (!initialSettings) return;
-    setProvider(initialSettings.provider);
-    setOpenaiBaseUrl(initialSettings.openai_base_url);
-    setOpenaiModel(initialSettings.openai_model);
-    setPreset(detectPreset(initialSettings.openai_base_url));
-    setBedrockModelId(initialSettings.bedrock_model_id);
-    setAwsRegion(initialSettings.aws_region);
-    setTemperature(initialSettings.temperature);
-    // Keys stay blank — they are masked and should only be sent when the
-    // user explicitly enters a new value.
-    setOpenaiApiKey('');
-    setAnthropicApiKey('');
-    setAwsAccessKeyId('');
-    setAwsSecretAccessKey('');
-    setDirty(false);
-  }, [initialSettings]);
+  // Tracks the latest server state for displaying masked keys and source badges.
+  // Updated in onSuccess callback (not in useEffect).
+  const [displayData, setDisplayData] = useState<SettingsResponse>(initialData);
 
   const mutation = useMutation({
-    mutationFn: (data: LLMSettingsUpdateRequest) => apiClient.updateLLMSettings(data),
-    onSuccess: (data: LLMSettingsResponse) => {
-      queryClient.setQueryData(['llm-settings'], data);
+    mutationFn: (data: SettingsUpdateRequest) => apiClient.updateSettings(data),
+    onSuccess: (data: SettingsResponse) => {
+      queryClient.setQueryData(["settings"], data);
+      setDisplayData(data);
       setDirty(false);
       setSaveNotice({
-        kind: 'success',
-        message: '設定を保存し、即座に反映しました。',
+        kind: "success",
+        message: "設定を保存し、即座に反映しました。",
       });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const anyErr = err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
       const detail =
-        err?.response?.data?.detail ?? err?.message ?? '不明なエラー';
-      setSaveNotice({ kind: 'error', message: `保存に失敗しました: ${detail}` });
+        anyErr?.response?.data?.detail ?? anyErr?.message ?? "不明なエラー";
+      setSaveNotice({
+        kind: "error",
+        message: `保存に失敗しました: ${detail}`,
+      });
     },
   });
 
-  const handlePresetChange = (key: PresetKey) => {
-    setPreset(key);
-    const p = OPENAI_PRESETS[key];
-    // Only overwrite base_url when the preset defines one (the "custom"
-    // preset preserves whatever the user already typed).
-    if (key !== 'custom') {
-      setOpenaiBaseUrl(p.base_url);
-    }
-    if (!openaiModel && p.example_model) {
-      setOpenaiModel(p.example_model);
-    }
+  const markDirty = () => {
     setDirty(true);
+    if (saveNotice?.kind === "success") setSaveNotice(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const updateSlot = (provider: LLMProvider, patch: Partial<SlotState>) => {
+    setSlots((prev) => ({
+      ...prev,
+      [provider]: { ...prev[provider], ...patch },
+    }));
+    markDirty();
+  };
+
+  const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setSaveNotice(null);
 
-    const payload: LLMSettingsUpdateRequest = {
-      provider,
-      openai_base_url: openaiBaseUrl,
-      openai_model: openaiModel,
-      bedrock_model_id: bedrockModelId,
-      aws_region: awsRegion,
+    // Build per-provider updates — only include the active provider's slot
+    const slot = slots[activeProvider];
+    const providerUpdate: ProviderUpdate = {};
+
+    // model/base_url/aws_region: always send (even empty = delete from JSON → revert to default)
+    providerUpdate.model = slot.model;
+    if (slot.apiKey) providerUpdate.api_key = slot.apiKey;
+    if (
+      slot.baseUrl !== undefined &&
+      PROVIDER_META[activeProvider].hasBaseUrl
+    ) {
+      providerUpdate.base_url = slot.baseUrl;
+    }
+    if (activeProvider === "bedrock") {
+      if (slot.awsAccessKeyId)
+        providerUpdate.aws_access_key_id = slot.awsAccessKeyId;
+      if (slot.awsSecretAccessKey)
+        providerUpdate.aws_secret_access_key = slot.awsSecretAccessKey;
+      providerUpdate.aws_region = slot.awsRegion;
+    }
+
+    const payload: SettingsUpdateRequest = {
+      active_provider: activeProvider,
       temperature,
+      providers: { [activeProvider]: providerUpdate },
     };
-    // Only send API key fields when the user typed something new.
-    if (openaiApiKey) payload.openai_api_key = openaiApiKey;
-    if (anthropicApiKey) payload.anthropic_api_key = anthropicApiKey;
-    if (awsAccessKeyId) payload.aws_access_key_id = awsAccessKeyId;
-    if (awsSecretAccessKey) payload.aws_secret_access_key = awsSecretAccessKey;
 
     mutation.mutate(payload);
   };
 
-  const markDirty = () => {
-    setDirty(true);
-    if (saveNotice?.kind === 'success') setSaveNotice(null);
-  };
+  const prov = displayData.providers[activeProvider];
+  const slot = slots[activeProvider];
+  const meta = PROVIDER_META[activeProvider];
+  const src = (key: string): SettingsSource =>
+    displayData.sources[key] ?? "default";
 
-  const currentPresetHint = useMemo(() => OPENAI_PRESETS[preset].hint, [preset]);
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          LLM 設定
+        </h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          使用するプロバイダと認証情報を設定します。保存すると即座に反映されます（再起動不要）。
+        </p>
+      </div>
+
+      {/* Security warning */}
+      <div className="card bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+        <div className="flex items-start gap-3 text-sm text-yellow-800 dark:text-yellow-200">
+          <Info className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">API キーは平文で保存されます</p>
+            <p className="mt-1">
+              設定は{" "}
+              <code className="px-1 bg-yellow-100 dark:bg-yellow-900 rounded">
+                data/settings.json
+              </code>{" "}
+              に保存されます。共有マシンでの使用は避けてください。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {saveNotice && (
+        <div
+          className={
+            saveNotice.kind === "success"
+              ? "card bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+              : "card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          }
+        >
+          <div
+            className={
+              saveNotice.kind === "success"
+                ? "flex items-center gap-3 text-green-700 dark:text-green-300"
+                : "flex items-center gap-3 text-red-700 dark:text-red-300"
+            }
+          >
+            {saveNotice.kind === "success" ? (
+              <CheckCircle2 className="h-5 w-5" />
+            ) : (
+              <AlertCircle className="h-5 w-5" />
+            )}
+            <span>{saveNotice.message}</span>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Provider selector */}
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            プロバイダ
+          </h3>
+          <div className="space-y-2">
+            {PROVIDER_ORDER.map((p) => (
+              <label key={p} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="provider"
+                  value={p}
+                  checked={activeProvider === p}
+                  onChange={() => {
+                    setActiveProvider(p);
+                    markDirty();
+                  }}
+                  className="h-4 w-4 text-primary-500"
+                />
+                <span className="text-gray-900 dark:text-white">
+                  {PROVIDER_META[p].label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Active provider settings */}
+        <div className="card space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {meta.label} の設定
+          </h3>
+
+          {/* Model */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              モデル ID
+              {src(`${activeProvider}.model`) === "env" && <EnvBadge />}
+            </label>
+            <input
+              type="text"
+              value={slot.model}
+              onChange={(e) =>
+                updateSlot(activeProvider, { model: e.target.value })
+              }
+              placeholder={prov?.model ?? ""}
+              className="input w-full font-mono text-sm"
+            />
+          </div>
+
+          {/* API Key */}
+          {meta.hasApiKey && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                API キー
+                {src(`${activeProvider}.api_key`) === "env" && <EnvBadge />}
+              </label>
+              <input
+                type="password"
+                value={slot.apiKey}
+                onChange={(e) =>
+                  updateSlot(activeProvider, { apiKey: e.target.value })
+                }
+                placeholder={
+                  prov?.api_key_masked
+                    ? `${prov.api_key_masked}（変更する場合のみ入力）`
+                    : "新しい API キーを入力"
+                }
+                className="input w-full"
+                autoComplete="off"
+              />
+            </div>
+          )}
+
+          {/* Base URL (Ollama / LM Studio) */}
+          {meta.hasBaseUrl && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Base URL
+                {src(`${activeProvider}.base_url`) === "env" && <EnvBadge />}
+              </label>
+              <input
+                type="text"
+                value={slot.baseUrl}
+                onChange={(e) =>
+                  updateSlot(activeProvider, { baseUrl: e.target.value })
+                }
+                placeholder={
+                  src(`${activeProvider}.base_url`) === "env" && prov?.base_url
+                    ? `${prov.base_url}`
+                    : (prov?.base_url ?? "")
+                }
+                className="input w-full font-mono text-sm"
+              />
+            </div>
+          )}
+
+          {/* Bedrock fields */}
+          {meta.hasBedrock && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  リージョン
+                  {src("bedrock.aws_region") === "env" && <EnvBadge />}
+                </label>
+                <input
+                  type="text"
+                  value={slot.awsRegion}
+                  onChange={(e) =>
+                    updateSlot("bedrock", { awsRegion: e.target.value })
+                  }
+                  placeholder={
+                    src("bedrock.aws_region") === "env" && prov?.aws_region
+                      ? `${prov.aws_region}`
+                      : "ap-northeast-1"
+                  }
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  AWS Access Key ID
+                  {src("bedrock.aws_access_key_id") === "env" && <EnvBadge />}
+                </label>
+                <input
+                  type="password"
+                  value={slot.awsAccessKeyId}
+                  onChange={(e) =>
+                    updateSlot("bedrock", { awsAccessKeyId: e.target.value })
+                  }
+                  placeholder={
+                    prov?.aws_access_key_id_masked
+                      ? `${prov.aws_access_key_id_masked}（変更する場合のみ入力）`
+                      : "AKIA..."
+                  }
+                  className="input w-full"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  AWS Secret Access Key
+                  {src("bedrock.aws_secret_access_key") === "env" && (
+                    <EnvBadge />
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={slot.awsSecretAccessKey}
+                  onChange={(e) =>
+                    updateSlot("bedrock", {
+                      awsSecretAccessKey: e.target.value,
+                    })
+                  }
+                  placeholder={
+                    prov?.aws_secret_access_key_masked
+                      ? `${prov.aws_secret_access_key_masked}（変更する場合のみ入力）`
+                      : ""
+                  }
+                  className="input w-full"
+                  autoComplete="off"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Temperature */}
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            生成パラメータ
+            {src("temperature") === "env" && <EnvBadge />}
+          </h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Temperature:{" "}
+              <span className="font-mono">{temperature.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={temperature}
+              onChange={(e) => {
+                setTemperature(parseFloat(e.target.value));
+                markDirty();
+              }}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        {/* Save */}
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={!dirty || mutation.isPending}
+            className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="h-4 w-4" />
+            {mutation.isPending ? "保存中..." : "保存"}
+          </button>
+          {dirty && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              未保存の変更があります
+            </span>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Outer component — handles loading/error before delegating to SettingsForm
+// ---------------------------------------------------------------------------
+
+export default function Settings() {
+  const {
+    data: serverData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => apiClient.getSettings(),
+  });
 
   if (isLoading) {
     return (
@@ -187,319 +543,7 @@ export default function Settings() {
     );
   }
 
-  return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          LLM 設定
-        </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          使用する LLM プロバイダと認証情報を設定します。保存すると即座に反映されます (再起動不要)。
-        </p>
-      </div>
+  if (!serverData) return null;
 
-      {/* Security warning */}
-      <div className="card bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
-        <div className="flex items-start gap-3 text-sm text-yellow-800 dark:text-yellow-200">
-          <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">API キーは平文で保存されます</p>
-            <p className="mt-1">
-              設定は <code className="px-1 bg-yellow-100 dark:bg-yellow-900 rounded">data/llm_settings.json</code> に保存されます。
-              共有マシンでの使用は避けてください。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {saveNotice && (
-        <div
-          className={
-            saveNotice.kind === 'success'
-              ? 'card bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-              : 'card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-          }
-        >
-          <div
-            className={
-              saveNotice.kind === 'success'
-                ? 'flex items-center gap-3 text-green-700 dark:text-green-300'
-                : 'flex items-center gap-3 text-red-700 dark:text-red-300'
-            }
-          >
-            {saveNotice.kind === 'success' ? (
-              <CheckCircle2 className="h-5 w-5" />
-            ) : (
-              <AlertCircle className="h-5 w-5" />
-            )}
-            <span>{saveNotice.message}</span>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Provider selector */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            プロバイダ
-          </h3>
-          <div className="space-y-2">
-            {(['claude', 'openai', 'bedrock'] as const).map((p) => (
-              <label key={p} className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="provider"
-                  value={p}
-                  checked={provider === p}
-                  onChange={() => {
-                    setProvider(p);
-                    markDirty();
-                  }}
-                  className="h-4 w-4 text-primary-500"
-                />
-                <span className="text-gray-900 dark:text-white">
-                  {p === 'claude' && 'Claude (Anthropic API)'}
-                  {p === 'openai' && 'OpenAI / OpenRouter / ローカル LLM'}
-                  {p === 'bedrock' && 'AWS Bedrock'}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Claude section */}
-        {provider === 'claude' && (
-          <div className="card space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Claude (Anthropic API)
-            </h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                API キー
-              </label>
-              <input
-                type="password"
-                value={anthropicApiKey}
-                onChange={(e) => {
-                  setAnthropicApiKey(e.target.value);
-                  markDirty();
-                }}
-                placeholder={
-                  initialSettings?.anthropic_api_key_masked
-                    ? `現在: ${initialSettings.anthropic_api_key_masked} (変更する場合のみ入力)`
-                    : 'sk-ant-...'
-                }
-                className="input w-full"
-                autoComplete="off"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* OpenAI / OpenRouter / Local LLM section */}
-        {provider === 'openai' && (
-          <div className="card space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              OpenAI 互換エンドポイント
-            </h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                プリセット
-              </label>
-              <select
-                value={preset}
-                onChange={(e) => handlePresetChange(e.target.value as PresetKey)}
-                className="input w-full"
-              >
-                {Object.entries(OPENAI_PRESETS).map(([key, p]) => (
-                  <option key={key} value={key}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {currentPresetHint}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Base URL
-              </label>
-              <input
-                type="text"
-                value={openaiBaseUrl}
-                onChange={(e) => {
-                  setOpenaiBaseUrl(e.target.value);
-                  markDirty();
-                }}
-                placeholder="空欄で OpenAI 公式 API"
-                className="input w-full font-mono text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                モデル ID
-              </label>
-              <input
-                type="text"
-                value={openaiModel}
-                onChange={(e) => {
-                  setOpenaiModel(e.target.value);
-                  markDirty();
-                }}
-                placeholder={OPENAI_PRESETS[preset].example_model || 'gpt-4-turbo-preview'}
-                className="input w-full font-mono text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                API キー
-                {preset === 'ollama' || preset === 'lm_studio' ? (
-                  <span className="ml-2 text-xs text-gray-500">(ローカル LLM では通常不要)</span>
-                ) : null}
-              </label>
-              <input
-                type="password"
-                value={openaiApiKey}
-                onChange={(e) => {
-                  setOpenaiApiKey(e.target.value);
-                  markDirty();
-                }}
-                placeholder={
-                  initialSettings?.openai_api_key_masked
-                    ? `現在: ${initialSettings.openai_api_key_masked} (変更する場合のみ入力)`
-                    : 'sk-... / sk-or-v1-...'
-                }
-                className="input w-full"
-                autoComplete="off"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Bedrock section */}
-        {provider === 'bedrock' && (
-          <div className="card space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              AWS Bedrock
-            </h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                モデル ID
-              </label>
-              <input
-                type="text"
-                value={bedrockModelId}
-                onChange={(e) => {
-                  setBedrockModelId(e.target.value);
-                  markDirty();
-                }}
-                className="input w-full font-mono text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                リージョン
-              </label>
-              <input
-                type="text"
-                value={awsRegion}
-                onChange={(e) => {
-                  setAwsRegion(e.target.value);
-                  markDirty();
-                }}
-                placeholder="ap-northeast-1"
-                className="input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                AWS Access Key ID
-              </label>
-              <input
-                type="password"
-                value={awsAccessKeyId}
-                onChange={(e) => {
-                  setAwsAccessKeyId(e.target.value);
-                  markDirty();
-                }}
-                placeholder={
-                  initialSettings?.aws_access_key_id_masked
-                    ? `現在: ${initialSettings.aws_access_key_id_masked} (変更する場合のみ入力)`
-                    : 'AKIA...'
-                }
-                className="input w-full"
-                autoComplete="off"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                AWS Secret Access Key
-              </label>
-              <input
-                type="password"
-                value={awsSecretAccessKey}
-                onChange={(e) => {
-                  setAwsSecretAccessKey(e.target.value);
-                  markDirty();
-                }}
-                placeholder={
-                  initialSettings?.aws_secret_access_key_masked
-                    ? `現在: ${initialSettings.aws_secret_access_key_masked} (変更する場合のみ入力)`
-                    : ''
-                }
-                className="input w-full"
-                autoComplete="off"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Common: temperature */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            生成パラメータ
-          </h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Temperature: <span className="font-mono">{temperature.toFixed(2)}</span>
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.05}
-              value={temperature}
-              onChange={(e) => {
-                setTemperature(parseFloat(e.target.value));
-                markDirty();
-              }}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Save button */}
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={!dirty || mutation.isPending}
-            className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="h-4 w-4" />
-            {mutation.isPending ? '保存中...' : '保存'}
-          </button>
-          {dirty && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              未保存の変更があります
-            </span>
-          )}
-        </div>
-      </form>
-    </div>
-  );
+  return <SettingsForm initialData={serverData} />;
 }

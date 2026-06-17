@@ -1,83 +1,81 @@
-"""
-LLM Settings API Router
+"""Settings API router.
 
-Endpoints for reading and updating the LLM provider configuration from the
-Web UI. Values written via ``PUT /api/settings/llm`` are persisted to
-``data/llm_settings.json`` and overlaid on top of environment variables.
-``reload_settings()`` is called after each successful write so subsequent
-interview / specification requests pick up the new configuration without a
-server restart.
+GET /api/settings   – Return current settings with per-field source info.
+PUT /api/settings   – Partial update; persists to data/settings.json and hot-reloads.
 
-Security
---------
-API keys are returned in **masked** form from ``GET``. ``PUT`` accepts an
-``api_key`` field that is treated as follows:
+Per-provider slots are stored independently in the JSON file, so switching
+between providers never overwrites another provider's configuration.
 
-- Omitted / ``None`` / empty string → keep the existing value unchanged.
-- Any other value → store as the new key.
-
-This avoids the common bug where re-submitting the masked value from the UI
-silently overwrites the real key.
+Secret fields (api_key, aws_*) are returned masked and are ignored on PUT
+when the value is empty, so re-submitting the masked placeholder cannot
+accidentally erase the stored key.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from spec_ai_writer.config.llm_settings_store import (
-    load_llm_settings_overlay,
-    save_llm_settings_overlay,
+from spec_ai_writer.config.settings import (
+    SettingsSource,
+    get_settings,
+    get_settings_sources,
+    reload_settings,
 )
-from spec_ai_writer.config.settings import get_settings, reload_settings
+from spec_ai_writer.config.settings_file import load_settings, save_settings
+from spec_ai_writer.llm.provider_registry import PROVIDERS
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
 # ---------------------------------------------------------------------------
-# Schemas
+# Response schemas
 # ---------------------------------------------------------------------------
 
+_PROVIDER_NAMES = Literal[
+    "claude", "openai", "openrouter", "ollama", "lmstudio", "kimi", "bedrock"
+]
 
-Provider = Literal["claude", "openai", "bedrock"]
 
-
-class LLMSettingsResponse(BaseModel):
-    """Current LLM settings returned to the UI. API keys are masked."""
-
-    provider: Provider
-    openai_base_url: str = ""
-    openai_model: str = ""
-    openai_api_key_masked: str = ""
-    anthropic_api_key_masked: str = ""
-    bedrock_model_id: str = ""
-    aws_region: str = ""
+class ProviderSettingsResponse(BaseModel):
+    model: str = ""
+    api_key_masked: str = ""
+    base_url: str = ""
+    # Bedrock-only
     aws_access_key_id_masked: str = ""
     aws_secret_access_key_masked: str = ""
-    temperature: float = 0.7
+    aws_region: str = ""
 
 
-class LLMSettingsUpdateRequest(BaseModel):
-    """Request payload for PUT /api/settings/llm.
+class SettingsResponse(BaseModel):
+    active_provider: str
+    temperature: float
+    providers: dict[str, ProviderSettingsResponse]
+    # Flat source map: "temperature" / "kimi.model" / "claude.api_key" → source
+    sources: dict[str, SettingsSource]
 
-    All fields are optional so the UI can send partial updates. API key
-    fields are ignored when empty (see module docstring).
-    """
 
-    provider: Optional[Provider] = None
-    openai_base_url: Optional[str] = None
-    openai_model: Optional[str] = None
-    openai_api_key: Optional[str] = Field(default=None, repr=False)
-    anthropic_api_key: Optional[str] = Field(default=None, repr=False)
-    bedrock_model_id: Optional[str] = None
-    aws_region: Optional[str] = None
+# ---------------------------------------------------------------------------
+# Request schemas
+# ---------------------------------------------------------------------------
+
+
+class ProviderUpdate(BaseModel):
+    model: Optional[str] = None
+    api_key: Optional[str] = Field(default=None, repr=False)
+    base_url: Optional[str] = None
     aws_access_key_id: Optional[str] = Field(default=None, repr=False)
     aws_secret_access_key: Optional[str] = Field(default=None, repr=False)
+    aws_region: Optional[str] = None
+
+
+class SettingsUpdateRequest(BaseModel):
+    active_provider: Optional[_PROVIDER_NAMES] = None  # type: ignore[valid-type]
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+    providers: Optional[dict[str, ProviderUpdate]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +83,7 @@ class LLMSettingsUpdateRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _mask_secret(value: str) -> str:
-    """Return a masked representation of a secret for display.
-
-    Examples:
-        ""                → ""
-        "short"           → "****"
-        "sk-ant-xxxxxxxx" → "sk-a****xxxx"
-    """
+def _mask(value: str) -> str:
     if not value:
         return ""
     if len(value) <= 8:
@@ -100,69 +91,133 @@ def _mask_secret(value: str) -> str:
     return f"{value[:4]}****{value[-4:]}"
 
 
-def _build_response(settings) -> LLMSettingsResponse:
-    provider = settings.default_llm_provider
-    if provider not in ("claude", "openai", "bedrock"):
-        # Keep the response shape stable even if an invalid value is on disk.
-        provider = "claude"
+def _build_response() -> SettingsResponse:
+    s = get_settings()
+    srcs = get_settings_sources()
 
-    return LLMSettingsResponse(
-        provider=provider,  # type: ignore[arg-type]
-        openai_base_url=settings.openai_base_url or "",
-        openai_model=settings.openai_model or "",
-        openai_api_key_masked=_mask_secret(settings.openai_api_key or ""),
-        anthropic_api_key_masked=_mask_secret(settings.anthropic_api_key or ""),
-        bedrock_model_id=settings.bedrock_model_id or "",
-        aws_region=settings.aws_region or "",
-        aws_access_key_id_masked=_mask_secret(settings.aws_access_key_id or ""),
-        aws_secret_access_key_masked=_mask_secret(settings.aws_secret_access_key or ""),
-        temperature=settings.temperature,
+    def _src(flat_key: str, dot_key: str) -> SettingsSource:
+        return srcs.get(flat_key, "default")
+
+    providers: dict[str, ProviderSettingsResponse] = {}
+    source_map: dict[str, SettingsSource] = {
+        "active_provider": srcs.get("default_llm_provider", "default"),
+        "temperature":     srcs.get("temperature", "default"),
+    }
+
+    for name in PROVIDERS:
+        if name == "claude":
+            providers[name] = ProviderSettingsResponse(
+                model=s.claude_model,
+                api_key_masked=_mask(s.anthropic_api_key),
+            )
+            source_map["claude.model"]   = srcs.get("claude_model", "default")
+            source_map["claude.api_key"] = srcs.get("anthropic_api_key", "default")
+
+        elif name == "openai":
+            providers[name] = ProviderSettingsResponse(
+                model=s.openai_model,
+                api_key_masked=_mask(s.openai_api_key),
+            )
+            source_map["openai.model"]   = srcs.get("openai_model", "default")
+            source_map["openai.api_key"] = srcs.get("openai_api_key", "default")
+
+        elif name == "openrouter":
+            providers[name] = ProviderSettingsResponse(
+                model=s.openrouter_model,
+                api_key_masked=_mask(s.openrouter_api_key),
+            )
+            source_map["openrouter.model"]   = srcs.get("openrouter_model", "default")
+            source_map["openrouter.api_key"] = srcs.get("openrouter_api_key", "default")
+
+        elif name == "ollama":
+            providers[name] = ProviderSettingsResponse(
+                model=s.ollama_model,
+                base_url=s.ollama_base_url,
+            )
+            source_map["ollama.model"]    = srcs.get("ollama_model", "default")
+            source_map["ollama.base_url"] = srcs.get("ollama_base_url", "default")
+
+        elif name == "lmstudio":
+            providers[name] = ProviderSettingsResponse(
+                model=s.lmstudio_model,
+                base_url=s.lmstudio_base_url,
+            )
+            source_map["lmstudio.model"]    = srcs.get("lmstudio_model", "default")
+            source_map["lmstudio.base_url"] = srcs.get("lmstudio_base_url", "default")
+
+        elif name == "kimi":
+            providers[name] = ProviderSettingsResponse(
+                model=s.kimi_model,
+                api_key_masked=_mask(s.kimi_api_key),
+            )
+            source_map["kimi.model"]   = srcs.get("kimi_model", "default")
+            source_map["kimi.api_key"] = srcs.get("kimi_api_key", "default")
+
+        elif name == "bedrock":
+            providers[name] = ProviderSettingsResponse(
+                model=s.bedrock_model_id,
+                aws_access_key_id_masked=_mask(s.aws_access_key_id),
+                aws_secret_access_key_masked=_mask(s.aws_secret_access_key),
+                aws_region=s.aws_region,
+            )
+            source_map["bedrock.model"]                  = srcs.get("bedrock_model_id", "default")
+            source_map["bedrock.aws_access_key_id"]      = srcs.get("aws_access_key_id", "default")
+            source_map["bedrock.aws_secret_access_key"]  = srcs.get("aws_secret_access_key", "default")
+            source_map["bedrock.aws_region"]             = srcs.get("aws_region", "default")
+
+    return SettingsResponse(
+        active_provider=s.default_llm_provider,
+        temperature=s.temperature,
+        providers=providers,
+        sources=source_map,
     )
 
 
-# Fields that map 1:1 from the update request to the overlay dict, excluding
-# secret fields which need the keep-existing semantics.
-_NON_SECRET_UPDATE_FIELDS: tuple[str, ...] = (
-    "openai_base_url",
-    "openai_model",
-    "bedrock_model_id",
-    "aws_region",
-    "temperature",
-)
+def _merge_settings(existing: dict[str, Any], req: SettingsUpdateRequest) -> dict[str, Any]:
+    """Deep-merge a partial update request into the existing JSON settings dict."""
+    merged: dict[str, Any] = dict(existing)
 
-_SECRET_UPDATE_FIELDS: tuple[tuple[str, str], ...] = (
-    # (request field, overlay field)
-    ("openai_api_key", "openai_api_key"),
-    ("anthropic_api_key", "anthropic_api_key"),
-    ("aws_access_key_id", "aws_access_key_id"),
-    ("aws_secret_access_key", "aws_secret_access_key"),
-)
+    if req.active_provider is not None:
+        merged["active_provider"] = req.active_provider
+    if req.temperature is not None:
+        merged["temperature"] = req.temperature
 
+    if req.providers:
+        merged_providers: dict[str, Any] = dict(merged.get("providers", {}))
 
-def _merge_overlay(
-    existing: Dict[str, Any], payload: LLMSettingsUpdateRequest
-) -> Dict[str, Any]:
-    """Merge the update request into the existing overlay dict.
+        for provider_name, pu in req.providers.items():
+            existing_slot: dict[str, Any] = dict(merged_providers.get(provider_name, {}))
 
-    - ``provider`` is mapped to ``default_llm_provider`` in the overlay.
-    - Non-secret fields overwrite when provided (even empty strings, so the
-      user can clear a base_url).
-    - Secret fields are ignored when omitted or empty, otherwise stored.
-    """
-    merged = dict(existing)
+            # Non-secret fields: empty string removes the key so Settings default takes over.
+            if pu.model is not None:
+                if pu.model:
+                    existing_slot["model"] = pu.model
+                else:
+                    existing_slot.pop("model", None)
 
-    if payload.provider is not None:
-        merged["default_llm_provider"] = payload.provider
+            if pu.base_url is not None:
+                if pu.base_url:
+                    existing_slot["base_url"] = pu.base_url
+                else:
+                    existing_slot.pop("base_url", None)
 
-    for field in _NON_SECRET_UPDATE_FIELDS:
-        value = getattr(payload, field)
-        if value is not None:
-            merged[field] = value
+            if pu.aws_region is not None:
+                if pu.aws_region:
+                    existing_slot["aws_region"] = pu.aws_region
+                else:
+                    existing_slot.pop("aws_region", None)
 
-    for req_field, overlay_field in _SECRET_UPDATE_FIELDS:
-        value = getattr(payload, req_field)
-        if value:  # ignore None and empty string
-            merged[overlay_field] = value
+            # Secret fields: empty string = "no change" (avoid accidental erasure).
+            if pu.api_key:
+                existing_slot["api_key"] = pu.api_key
+            if pu.aws_access_key_id:
+                existing_slot["aws_access_key_id"] = pu.aws_access_key_id
+            if pu.aws_secret_access_key:
+                existing_slot["aws_secret_access_key"] = pu.aws_secret_access_key
+
+            merged_providers[provider_name] = existing_slot
+
+        merged["providers"] = merged_providers
 
     return merged
 
@@ -172,37 +227,31 @@ def _merge_overlay(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/llm", response_model=LLMSettingsResponse)
-async def get_llm_settings() -> LLMSettingsResponse:
-    """Return the currently active LLM settings with secrets masked."""
-    settings = get_settings()
-    return _build_response(settings)
+@router.get("/", response_model=SettingsResponse)
+async def get_llm_settings() -> SettingsResponse:
+    """Return current settings with secrets masked and source info per field."""
+    return _build_response()
 
 
-@router.put("/llm", response_model=LLMSettingsResponse)
-async def update_llm_settings(
-    payload: LLMSettingsUpdateRequest,
-) -> LLMSettingsResponse:
-    """Update LLM settings, persist to the JSON store, and hot-reload."""
+@router.put("/", response_model=SettingsResponse)
+async def update_llm_settings(payload: SettingsUpdateRequest) -> SettingsResponse:
+    """Partially update settings, persist to settings.json, and hot-reload."""
     try:
-        existing = load_llm_settings_overlay()
-        merged = _merge_overlay(existing, payload)
-        save_llm_settings_overlay(merged)
+        existing = load_settings()
+        merged = _merge_settings(existing, payload)
+        save_settings(merged)
     except Exception as e:
-        logger.exception("Failed to save LLM settings overlay")
+        logger.exception("Failed to save settings")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save LLM settings: {e}",
+            detail=f"Failed to save settings: {e}",
         ) from e
 
-    # Re-apply overlay on top of env and mutate the shared settings instance
-    # in place so module-level references in other routers see the change.
-    settings = reload_settings()
+    reload_settings()
 
-    # Validate the resulting configuration; surface errors but keep the new
-    # values on disk so the user can fix them from the same screen.
-    is_valid, errors = settings.validate_llm_config()
+    s = get_settings()
+    is_valid, errors = s.validate_llm_config()
     if not is_valid:
-        logger.warning("LLM settings saved but failed validation: %s", errors)
+        logger.warning("Settings saved but failed validation: %s", errors)
 
-    return _build_response(settings)
+    return _build_response()
