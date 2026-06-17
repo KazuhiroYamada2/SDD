@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Optional
 
 import httpx
-from anthropic import Anthropic, AuthenticationError, APIConnectionError, APITimeoutError
+from anthropic import AsyncAnthropic, AuthenticationError, APIConnectionError, APITimeoutError
 
 from .base import BaseLLMClient
 from .exceptions import LLMAuthenticationError, LLMConnectionError, LLMResponseError
@@ -18,7 +18,7 @@ class ClaudeClient(BaseLLMClient):
     def __init__(
         self,
         api_key: str,
-        model: str = "claude-3-5-sonnet-20241022",
+        model: str = "claude-haiku-4-5-20251001",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         timeout: float = 30.0
@@ -35,9 +35,9 @@ class ClaudeClient(BaseLLMClient):
         """
         super().__init__(api_key, model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
-        self.client = Anthropic(api_key=api_key, timeout=httpx.Timeout(self.timeout))
+        self.client = AsyncAnthropic(api_key=api_key, timeout=httpx.Timeout(self.timeout))
 
-    def chat(
+    async def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
@@ -86,7 +86,7 @@ class ClaudeClient(BaseLLMClient):
             if system_message:
                 api_kwargs["system"] = system_message
 
-            response = self.client.messages.create(**api_kwargs)
+            response = await self.client.messages.create(**api_kwargs)
             return response.content[0].text
         except AuthenticationError as e:
             logger.error(f"Claude authentication failed: {e}")

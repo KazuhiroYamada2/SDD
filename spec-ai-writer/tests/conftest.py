@@ -7,7 +7,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from typing import Generator
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
 
@@ -44,9 +44,9 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def mock_llm_client() -> Mock:
+def mock_llm_client() -> AsyncMock:
     """Mock LLM client for testing."""
-    mock_client = Mock(spec=BaseLLMClient)
+    mock_client = AsyncMock(spec=BaseLLMClient)
 
     # Mock chat responses
     mock_client.chat.return_value = "これはテスト用の質問です。プロジェクトの目的は何ですか？"

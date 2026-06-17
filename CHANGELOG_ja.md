@@ -23,6 +23,7 @@
 
 ### 内部変更（ユーザー影響なし）
 
+- **spec-ai-writer / LLM クライアントの非同期化**: `ClaudeClient`・`OpenAIClient`・`BedrockClient` の全クライアントを同期から `async/await` に移行。LLM の応答待ち中も uvicorn のイベントループがブロックされなくなり、プロジェクト一覧の取得など他のリクエストが待たされなくなります。ブラウザが切断した場合（中断ボタン押下など）、処理中の LLM HTTP リクエストをキャンセルし、全プロバイダーでリソースの無駄な消費を停止します。Bedrock は真の非同期キャンセルを実現するため `boto3` から `aiobotocore` に移行しました（Issue #85）。
 - **spec-ai-writer / パッケージ構成の整理**: `config/` および `templates/` ディレクトリを `spec_ai_writer/` パッケージ内に移動し、トップレベルの散在を解消しました（Issue #84 T5）。
 - **spec-ai-writer / 未使用コードの削除**: 未使用の定数・メソッド・到達不能なコンポーネントを削除しました（Issue #84 T4）。
 - **spec-ai-writer / プロンプトファイルの統合**: フェーズごとに分散していた 7 つのプロンプトファイル（`config/prompts/phase_0[1-7]_prompts.py`）を `config/prompts.py` の辞書 1 つに統合しました。

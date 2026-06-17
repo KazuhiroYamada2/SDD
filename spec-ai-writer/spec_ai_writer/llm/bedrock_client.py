@@ -10,12 +10,12 @@ import logging
 from typing import List, Dict, Any, Optional
 
 try:
-    import boto3
+    import aiobotocore.session
     from botocore.config import Config as BotoConfig
     from botocore.exceptions import BotoCoreError, ClientError
-    BOTO3_AVAILABLE = True
+    AIOBOTOCORE_AVAILABLE = True
 except ImportError:
-    BOTO3_AVAILABLE = False
+    AIOBOTOCORE_AVAILABLE = False
 
 from .base import BaseLLMClient
 from .exceptions import LLMAuthenticationError, LLMConnectionError, LLMResponseError
@@ -54,33 +54,32 @@ class BedrockClient(BaseLLMClient):
             timeout: Timeout in seconds for API calls
 
         Raises:
-            ImportError: If boto3 is not installed
-            ValueError: If credentials are invalid
+            ImportError: If aiobotocore is not installed
         """
-        if not BOTO3_AVAILABLE:
+        if not AIOBOTOCORE_AVAILABLE:
             raise ImportError(
-                "boto3 is required for Bedrock integration. "
-                "Install it with: pip install boto3"
+                "aiobotocore is required for Bedrock integration. "
+                "Install it with: pip install aiobotocore"
             )
 
         # Note: Bedrock doesn't use api_key, so we pass empty string
         super().__init__("", model, temperature, timeout=timeout)
         self.max_tokens = max_tokens
 
-        # Create Bedrock Runtime client with timeout configuration
-        session_kwargs = {"region_name": region}
+        # Store client kwargs; the actual HTTP client is created per chat() call
+        self._session = aiobotocore.session.get_session()
+        self._client_kwargs: Dict[str, Any] = {
+            "region_name": region,
+            "config": BotoConfig(
+                read_timeout=int(self.timeout),
+                connect_timeout=int(self.timeout),
+            ),
+        }
         if aws_access_key_id and aws_secret_access_key:
-            session_kwargs["aws_access_key_id"] = aws_access_key_id
-            session_kwargs["aws_secret_access_key"] = aws_secret_access_key
+            self._client_kwargs["aws_access_key_id"] = aws_access_key_id
+            self._client_kwargs["aws_secret_access_key"] = aws_secret_access_key
 
-        try:
-            session = boto3.Session(**session_kwargs)
-            boto_config = BotoConfig(read_timeout=int(self.timeout), connect_timeout=int(self.timeout))
-            self.client = session.client("bedrock-runtime", config=boto_config)
-            logger.info(f"Bedrock client initialized with model: {model}, region: {region}")
-        except Exception as e:
-            logger.error(f"Failed to initialize Bedrock client: {e}")
-            raise ValueError(f"Failed to initialize Bedrock client: {e}")
+        logger.info(f"Bedrock client initialized with model: {model}, region: {region}")
 
     def _convert_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         """
@@ -102,7 +101,7 @@ class BedrockClient(BaseLLMClient):
             for msg in messages
         ]
 
-    def chat(
+    async def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
@@ -148,16 +147,19 @@ class BedrockClient(BaseLLMClient):
             request_body["system"] = system_message
 
         try:
-            # Invoke model via Bedrock Runtime API
-            response = self.client.invoke_model(
-                modelId=self.model,
-                body=json.dumps(request_body),
-                contentType="application/json",
-                accept="application/json"
-            )
+            async with self._session.create_client(
+                "bedrock-runtime", **self._client_kwargs
+            ) as client:
+                # Invoke model via Bedrock Runtime API
+                response = await client.invoke_model(
+                    modelId=self.model,
+                    body=json.dumps(request_body),
+                    contentType="application/json",
+                    accept="application/json"
+                )
 
-            # Parse response
-            response_body = json.loads(response["body"].read())
+                # Parse response (body is an async stream in aiobotocore)
+                response_body = json.loads(await response["body"].read())
 
             # Extract text from response
             # Bedrock Claude API returns content as a list of content blocks

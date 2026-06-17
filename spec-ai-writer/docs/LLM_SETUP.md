@@ -30,10 +30,12 @@ DEFAULT_LLM_PROVIDER=claude
 
 ### モデルの例
 
+デフォルトモデル: `claude-haiku-4-5-20251001`
+
 | モデル | モデルID |
 |--------|---------|
+| Claude Haiku 4.5（デフォルト） | `claude-haiku-4-5-20251001` |
 | Claude Sonnet 4.6 | `claude-sonnet-4-6` |
-| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` |
 
 モデルIDは[Anthropic API モデルページ](https://platform.claude.com/docs/en/about-claude/models/overview)を、料金は [Anthropic API 料金ページ](https://platform.claude.com/docs/en/about-claude/pricing) を確認してください。
 
@@ -71,8 +73,11 @@ DEFAULT_LLM_PROVIDER=openai
 
 ### モデルの例
 
+デフォルトモデル: `gpt-5-mini`
+
 | モデル | モデルID |
 |--------|---------|
+| GPT-5 mini（デフォルト） | `gpt-5-mini` |
 | GPT-5.2 | `gpt-5.2` |
 | GPT-5.2 Pro | `gpt-5.2-pro` |
 
@@ -228,6 +233,8 @@ Web ダッシュボードの「設定」ページで、プロバイダに **「O
 ## AWS Bedrock
 
 AWS Bedrockを使用すると、既存のAWSインフラ内でClaudeモデルを実行できます。
+
+> **依存ライブラリ**: Bedrock クライアントは `aiobotocore` を使用します。（`boto3` ではありません）
 
 ### メリット
 

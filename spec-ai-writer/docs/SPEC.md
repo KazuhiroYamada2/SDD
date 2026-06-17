@@ -105,6 +105,10 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
   - **OpenAI API**：代替
 - `.env` の `DEFAULT_LLM_PROVIDER` で切り替える
 - 共通の `BaseLLMClient` インターフェースでプロバイダー差異を吸収する
+- 各プロバイダーの実装詳細：
+  - **Claude**: `anthropic.AsyncAnthropic`（httpx ベース、非同期・キャンセル対応）
+  - **OpenAI / OpenRouter / ローカル LLM**: `openai.AsyncOpenAI`（httpx ベース、非同期・キャンセル対応）
+  - **Bedrock**: `aiobotocore`（aiohttp ベース、非同期・キャンセル対応。`boto3` は使用しない）
 - プロバイダー固有のエラーを共通例外クラス（`LLMAuthenticationError`, `LLMConnectionError`, `LLMResponseError`）に変換し、呼び出し元でプロバイダーに依存しないエラー処理を行う
 
 ### 7. Git自動コミット機能
@@ -143,6 +147,8 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
 - LLMの質問生成は30秒以内にタイムアウトする
 - 1工程あたりの最大Q&A回数は15回（無限ループ防止）
 - LLMの最大トークン数は4,096（1回の生成あたり）
+- LLM API呼び出しはすべて非同期（`async/await`）で実装し、uvicorn のイベントループをブロックしない。LLM 待ち中も他のリクエスト（プロジェクト一覧取得など）が応答できる
+- クライアントが切断した場合、LLM への HTTP リクエストをキャンセルしてリソース消費を停止する
 
 ### 可用性
 
@@ -178,6 +184,7 @@ AIとの対話形式のインタビューにより、仕様駆動開発の仕様
 - **2026-03-27**: パストラバーサル（CWE-22）・サーバーバインドアドレス・Content-Disposition ヘッダインジェクションのセキュリティ修正を反映
 - **2026-03-31**: プロダクションビルド対応（Issue #33）。`APP_ENV` 環境変数による動作切り替え（`production`: バックエンドが `frontend/dist` を直接サーブ、`development`: Vite開発サーバー使用）を追加
 - **2026-06-11**: インタビュー入力フォームの複数行テキストエリア対応・AI応答中断ボタン・カラーテーマのブランドカラー統一を追加（Issue #84）
+- **2026-06-12**: LLMクライアントを非同期化（`async/await`）、Bedrock を `boto3` から `aiobotocore` に移行、クライアント切断時のLLMリクエスト中断を実装（Issue #85）
 
 ---
 

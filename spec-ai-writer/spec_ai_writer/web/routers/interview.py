@@ -5,10 +5,10 @@ Endpoints for conducting interviews via REST.
 """
 
 import logging
-from typing import Dict, Optional
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
+import anyio
+
+from fastapi import APIRouter, HTTPException, Request, status
 
 from spec_ai_writer.config.settings import get_settings
 from spec_ai_writer.core.interview_engine import InterviewEngine
@@ -82,6 +82,42 @@ def _reconstruct_chat_history(context: ContextManager) -> list:
         ))
     return messages
 
+async def _run_with_disconnect_guard(request: Request, coro):
+    """LLM コルーチンとクライアント切断監視を競争させ、切断時にLLMタスクをキャンセルする。
+    切断が検知された場合は None を返す。"""
+    result = None
+    disconnected = False
+
+    async def _llm_work(scope: anyio.CancelScope) -> None:
+        nonlocal result
+        result = await coro
+        scope.cancel()
+
+    async def _watch(scope: anyio.CancelScope) -> None:
+        nonlocal disconnected
+        # Starlette 1.0.x の is_disconnected() は即座キャンセルで切断を検知できないため、
+        # リクエストボディ消費後に _receive() を直接 await して http.disconnect を待つ。
+        try:
+            while True:
+                message = await request._receive()
+                if message.get("type") == "http.disconnect":
+                    break
+        except Exception:
+            pass
+        disconnected = True
+        scope.cancel()
+
+    with anyio.CancelScope() as scope:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(_llm_work, scope)
+            tg.start_soon(_watch, scope)
+
+    if disconnected:
+        logger.warning("Disconnect LLM Request")
+        return None
+    return result
+
+
 settings = get_settings()
 phase_manager = PhaseManager()
 
@@ -123,27 +159,14 @@ async def start_interview(request: InterviewStartRequest):
                 chat_history=chat_history,
             )
 
-        # Create interview engine
-        llm_client = LLMFactory.create_client(settings=settings)
-        engine = InterviewEngine(
-            llm_client=llm_client,
-            phase_manager=phase_manager,
-            context_manager=context
-        )
-
         phase_info = phase_manager.get_phase_info(phase_num)
         phase_data = context.get_phase_context(phase_num)
         existing_qa = phase_data.get("qa_pairs", [])
         pending_question = context.get_pending_question(phase_num)
 
         if existing_qa or pending_question:
-            # Mid-phase resume: restore history and show the pending (unanswered) question
+            # Resume: restore history and return pending question if available
             chat_history = _reconstruct_chat_history(context)
-            resume_question = pending_question or engine._generate_follow_up_question(
-                phase_num, context
-            )
-            if not pending_question:
-                context.set_pending_question(phase_num, resume_question)
             logger.info(
                 f"Resuming interview for {request.project_id}, phase {phase_num}, "
                 f"qa_count={len(existing_qa)}"
@@ -153,21 +176,18 @@ async def start_interview(request: InterviewStartRequest):
                 display_name=context.display_name,
                 phase_num=phase_num,
                 phase_name=phase_info.name,
-                initial_message=resume_question,
+                initial_message=pending_question or "",
                 chat_history=chat_history,
             )
 
-        # No prior Q&A for this phase — generate the initial question and persist it
-        initial_question = engine._generate_initial_question(phase_num)
-        context.set_pending_question(phase_num, initial_question)
-        logger.info(f"Started interview for {request.project_id}, phase {phase_num}")
-
+        # New phase: no prior Q&A — frontend will call POST /answer to generate the first question
+        logger.info(f"New phase for {request.project_id}, phase {phase_num}")
         return InterviewStartResponse(
             project_id=request.project_id,
             display_name=context.display_name,
             phase_num=phase_num,
             phase_name=phase_info.name,
-            initial_message=initial_question,
+            initial_message="",
         )
 
     except FileNotFoundError:
@@ -202,7 +222,7 @@ async def start_interview(request: InterviewStartRequest):
 
 
 @router.post("/answer", response_model=AssistantQuestionResponse)
-async def submit_answer(request: UserAnswerRequest):
+async def submit_answer(http_request: Request, request: UserAnswerRequest):
     """
     Submit a user answer and get the next question.
 
@@ -236,24 +256,62 @@ async def submit_answer(request: UserAnswerRequest):
             context_manager=context
         )
 
+        # Question generation mode: no answer provided — generate and return the next question
+        if not request.answer:
+            phase_data = context.get_phase_context(current_phase)
+            existing_qa = phase_data.get("qa_pairs", [])
+            if existing_qa:
+                question = await _run_with_disconnect_guard(
+                    http_request, engine._generate_follow_up_question(current_phase, context)
+                )
+            else:
+                question = await _run_with_disconnect_guard(
+                    http_request, engine._generate_initial_question(current_phase)
+                )
+            if question is None:
+                raise HTTPException(status_code=499, detail="Client disconnected")
+            context.set_pending_question(current_phase, question)
+            logger.info(f"Generated question for {request.project_id}, phase {current_phase}")
+            return AssistantQuestionResponse(
+                question=question,
+                phase_complete=False,
+                phase_num=current_phase,
+                qa_count=len(existing_qa),
+            )
+
         # Save the Q&A pair to persistent storage
-        context.add_qa_pair(current_phase, request.question, request.answer)
+        question = context.get_pending_question(current_phase) or ""
+        context.add_qa_pair(current_phase, question, request.answer)
 
         phase_context = context.get_phase_context(current_phase)
         qa_pairs = phase_context.get("qa_pairs", [])
 
         # Check if phase is complete
-        phase_complete = engine._is_phase_complete(current_phase, context)
+        phase_complete = await _run_with_disconnect_guard(
+            http_request, engine._is_phase_complete(current_phase, context)
+        )
+        if phase_complete is None:
+            raise HTTPException(status_code=499, detail="Client disconnected")
 
         if phase_complete:
             # Generate spec and move to next phase
             try:
-                engine._generate_and_save_spec(current_phase)
+                spec_result = await _run_with_disconnect_guard(
+                    http_request, engine._generate_and_save_spec(current_phase)
+                )
+                if spec_result is None:
+                    raise HTTPException(status_code=499, detail="Client disconnected")
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.warning(f"Failed to generate spec: {e}")
 
             if current_phase < 7:
-                next_question = engine._generate_initial_question(current_phase + 1)
+                next_question = await _run_with_disconnect_guard(
+                    http_request, engine._generate_initial_question(current_phase + 1)
+                )
+                if next_question is None:
+                    raise HTTPException(status_code=499, detail="Client disconnected")
                 context.set_pending_question(current_phase + 1, next_question)
                 return AssistantQuestionResponse(
                     question=next_question,
@@ -270,7 +328,11 @@ async def submit_answer(request: UserAnswerRequest):
                 )
         else:
             # Generate next question and persist it so resume works correctly
-            next_question = engine._generate_follow_up_question(current_phase, context)
+            next_question = await _run_with_disconnect_guard(
+                http_request, engine._generate_follow_up_question(current_phase, context)
+            )
+            if next_question is None:
+                raise HTTPException(status_code=499, detail="Client disconnected")
             context.set_pending_question(current_phase, next_question)
 
             return AssistantQuestionResponse(

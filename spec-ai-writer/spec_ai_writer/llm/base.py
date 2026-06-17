@@ -50,7 +50,7 @@ class BaseLLMClient(ABC):
         self.timeout = timeout
 
     @abstractmethod
-    def chat(
+    async def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: Optional[float] = None,
@@ -73,7 +73,7 @@ class BaseLLMClient(ABC):
         """
         pass
 
-    def generate_question(
+    async def generate_question(
         self,
         system_prompt: str,
         context: Dict[str, Any]
@@ -101,9 +101,9 @@ class BaseLLMClient(ABC):
             {"role": "user", "content": prompt + "\n\n" + QUESTION_GENERATION_INSTRUCTION}
         ]
 
-        return self.chat(messages)
+        return await self.chat(messages)
 
-    def extract_structured_data(
+    async def extract_structured_data(
         self,
         conversation: str,
         schema: Dict[str, Any]
@@ -140,7 +140,7 @@ class BaseLLMClient(ABC):
         ]
 
         # Use lower temperature for more consistent extraction
-        response = self.chat(messages, temperature=0.3)
+        response = await self.chat(messages, temperature=0.3)
 
         # Parse JSON response
         try:
