@@ -1,9 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-primary-50: #eef3fc;
+  --color-primary-100: #d7e2f5;
+  --color-primary-200: #b2c4eb;
+  --color-primary-300: #8aa5de;
+  --color-primary-400: #6081cc;
+  --color-primary-500: #3a5ca8;
+  --color-primary-600: #2f4a8c;
+  --color-primary-700: #253b71;
+  --color-primary-800: #1b2c56;
+  --color-primary-900: #121f3d;
+}
 
 :root {
-  font-family: 'Noto Sans JP', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Noto Sans JP",
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
