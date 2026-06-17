@@ -101,37 +101,48 @@ export interface SpecificationListResponse {
   specifications: SpecificationListItem[];
 }
 
-// ---------- LLM Settings ----------
+// ---------- Settings ----------
 
-export type LLMProvider = 'claude' | 'openai' | 'bedrock';
+export type LLMProvider =
+  | 'claude'
+  | 'openai'
+  | 'openrouter'
+  | 'ollama'
+  | 'lmstudio'
+  | 'kimi'
+  | 'bedrock';
 
-export interface LLMSettingsResponse {
-  provider: LLMProvider;
-  openai_base_url: string;
-  openai_model: string;
-  openai_api_key_masked: string;
-  anthropic_api_key_masked: string;
-  bedrock_model_id: string;
-  aws_region: string;
+export type SettingsSource = 'json' | 'env' | 'default';
+
+export interface ProviderSettingsResponse {
+  model: string;
+  api_key_masked: string;
+  base_url: string;
   aws_access_key_id_masked: string;
   aws_secret_access_key_masked: string;
-  temperature: number;
+  aws_region: string;
 }
 
-/**
- * Payload for PUT /api/settings/llm.
- * All fields optional; empty strings on api_key fields are ignored server-side
- * so re-submitting a masked display value does NOT overwrite the real key.
- */
-export interface LLMSettingsUpdateRequest {
-  provider?: LLMProvider;
-  openai_base_url?: string;
-  openai_model?: string;
-  openai_api_key?: string;
-  anthropic_api_key?: string;
-  bedrock_model_id?: string;
-  aws_region?: string;
+export interface SettingsResponse {
+  active_provider: LLMProvider;
+  temperature: number;
+  providers: Record<LLMProvider, ProviderSettingsResponse>;
+  /** e.g. "kimi.model" → "json" | "env" | "default" */
+  sources: Record<string, SettingsSource>;
+}
+
+export interface ProviderUpdate {
+  model?: string;
+  api_key?: string;
+  base_url?: string;
   aws_access_key_id?: string;
   aws_secret_access_key?: string;
+  aws_region?: string;
+}
+
+/** Payload for PUT /api/settings. All fields optional (partial update). */
+export interface SettingsUpdateRequest {
+  active_provider?: LLMProvider;
   temperature?: number;
+  providers?: Partial<Record<LLMProvider, ProviderUpdate>>;
 }

@@ -1,13 +1,14 @@
-"""
-Unit tests for the Settings JSON overlay and in-place reload behavior.
-"""
+"""Unit tests for the Settings JSON overlay and in-place reload behavior."""
 
 from __future__ import annotations
 
 import pytest
-
-from spec_ai_writer.config.llm_settings_store import save_llm_settings_overlay
-from spec_ai_writer.config.settings import get_settings, reload_settings
+from spec_ai_writer.config.settings import (
+    get_settings,
+    get_settings_sources,
+    reload_settings,
+)
+from spec_ai_writer.config.settings_file import save_settings
 
 
 @pytest.mark.unit
@@ -16,95 +17,109 @@ class TestSettingsOverlay:
         """JSON overlay values must override .env / environment values."""
         monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
         monkeypatch.setenv("OPENAI_API_KEY", "from-env")
-        monkeypatch.setenv("OPENAI_BASE_URL", "")
         monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "claude")
 
-        save_llm_settings_overlay(
+        save_settings(
             {
-                "default_llm_provider": "openai",
-                "openai_api_key": "from-overlay",
-                "openai_base_url": "https://openrouter.ai/api/v1",
-                "openai_model": "anthropic/claude-3.5-sonnet",
+                "active_provider": "openai",
+                "providers": {
+                    "openai": {
+                        "api_key": "from-overlay",
+                        "model": "gpt-4o",
+                    },
+                },
             }
         )
 
         settings = reload_settings()
         assert settings.default_llm_provider == "openai"
         assert settings.openai_api_key == "from-overlay"
-        assert settings.openai_base_url == "https://openrouter.ai/api/v1"
-        assert settings.openai_model == "anthropic/claude-3.5-sonnet"
+        assert settings.openai_model == "gpt-4o"
 
     def test_reload_mutates_in_place(self, tmp_path, monkeypatch):
-        """Module-level captured references must see reloaded values.
-
-        Routers bind ``settings = get_settings()`` at import time, so
-        ``reload_settings()`` has to mutate the existing instance rather than
-        swap it out.
-        """
+        """Module-level captured references must see reloaded values."""
         monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
         monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "claude")
         monkeypatch.setenv("OPENAI_API_KEY", "")
 
-        # Force a reload against the fresh tmp DATA_DIR so prior tests cannot
-        # leak state into the captured reference via the module-level global.
         captured = reload_settings()
         assert captured.default_llm_provider == "claude"
 
-        save_llm_settings_overlay({"default_llm_provider": "openai", "openai_api_key": "k"})
+        save_settings(
+            {
+                "active_provider": "openai",
+                "providers": {"openai": {"api_key": "k", "model": "gpt-4o"}},
+            }
+        )
         returned = reload_settings()
 
-        # Same object identity — reload must mutate in place.
         assert returned is captured
-        # The same object should now reflect the new value.
         assert captured.default_llm_provider == "openai"
         assert captured.openai_api_key == "k"
 
-    def test_unknown_overlay_fields_ignored(self, tmp_path, monkeypatch):
-        """Fields outside the allowlist must not mutate settings."""
+    def test_kimi_overlay(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
-        save_llm_settings_overlay(
+        monkeypatch.setenv("KIMI_API_KEY", "")
+
+        save_settings(
             {
-                "default_llm_provider": "claude",
-                "not_a_real_field": "danger",
-                "__class__": "hacked",
+                "active_provider": "kimi",
+                "providers": {
+                    "kimi": {"api_key": "sk-kimi-123", "model": "kimi-k2.6"},
+                },
             }
         )
 
         settings = reload_settings()
-        assert settings.default_llm_provider == "claude"
-        assert not hasattr(settings, "not_a_real_field")
+        assert settings.default_llm_provider == "kimi"
+        assert settings.kimi_api_key == "sk-kimi-123"
+        assert settings.kimi_model == "kimi-k2.6"
 
-    def test_validate_openai_without_key_when_base_url_set(self, tmp_path, monkeypatch):
-        """Local/OpenRouter setups should validate even without an API key."""
+    def test_source_tracking_json(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
-        monkeypatch.setenv("OPENAI_API_KEY", "")
-        save_llm_settings_overlay(
+        monkeypatch.setenv("KIMI_API_KEY", "")
+
+        save_settings(
             {
-                "default_llm_provider": "openai",
-                "openai_base_url": "http://localhost:11434/v1",
-                "openai_model": "llama3.1:8b",
+                "active_provider": "kimi",
+                "providers": {"kimi": {"api_key": "sk-kimi", "model": "kimi-k2.6"}},
+            }
+        )
+        reload_settings()
+        sources = get_settings_sources()
+
+        assert sources["default_llm_provider"] == "json"
+        assert sources["kimi_api_key"] == "json"
+        assert sources["kimi_model"] == "json"
+
+    def test_source_tracking_env(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+        monkeypatch.setenv("OPENAI_API_KEY", "env-key")
+
+        reload_settings()
+        sources = get_settings_sources()
+
+        assert sources["openai_api_key"] == "env"
+
+    def test_validate_kimi_requires_key(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+        monkeypatch.setenv("KIMI_API_KEY", "")
+        save_settings({"active_provider": "kimi"})
+
+        settings = reload_settings()
+        is_valid, errors = settings.validate_llm_config()
+        assert not is_valid
+        assert any("KIMI_API_KEY" in e for e in errors)
+
+    def test_validate_ollama_no_key_required(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+        save_settings(
+            {
+                "active_provider": "ollama",
+                "providers": {"ollama": {"model": "gemma3:4b"}},
             }
         )
 
         settings = reload_settings()
         is_valid, errors = settings.validate_llm_config()
         assert is_valid, errors
-
-    def test_validate_openai_requires_key_for_official_endpoint(
-        self, tmp_path, monkeypatch
-    ):
-        """Without base_url the OpenAI key is still required."""
-        monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
-        monkeypatch.setenv("OPENAI_API_KEY", "")
-        save_llm_settings_overlay(
-            {
-                "default_llm_provider": "openai",
-                "openai_base_url": "",
-                "openai_api_key": "",
-            }
-        )
-
-        settings = reload_settings()
-        is_valid, errors = settings.validate_llm_config()
-        assert not is_valid
-        assert any("OPENAI_API_KEY" in e for e in errors)

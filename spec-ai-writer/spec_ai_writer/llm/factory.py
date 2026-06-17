@@ -1,36 +1,23 @@
-"""Factory for creating LLM clients."""
+"""Factory for creating LLM clients from settings."""
+
+from __future__ import annotations
 
 from typing import Optional
 
 from spec_ai_writer.config.settings import Settings
 
 from .base import BaseLLMClient
-from .claude_client import ClaudeClient
+from .provider_registry import PROVIDERS, get_model_config
 
 
 class LLMFactory:
-    """Factory for creating LLM client instances."""
+    """Creates LLM client instances from settings + provider registry."""
 
     @staticmethod
     def create_client(
         provider: Optional[str] = None,
-        settings: Optional[Settings] = None
+        settings: Optional[Settings] = None,
     ) -> BaseLLMClient:
-        """
-        Create an LLM client based on provider name.
-
-        Args:
-            provider: LLM provider name ('claude', 'openai', 'bedrock')
-                     If None, uses settings.default_llm_provider
-            settings: Settings instance. If None, creates a new one.
-
-        Returns:
-            Initialized LLM client instance
-
-        Raises:
-            ValueError: If provider is invalid or credentials are missing
-            ImportError: If required provider library is not installed
-        """
         if settings is None:
             from spec_ai_writer.config.settings import get_settings
             settings = get_settings()
@@ -40,119 +27,131 @@ class LLMFactory:
 
         provider = provider.lower()
 
-        if provider == "claude":
-            return LLMFactory._create_claude_client(settings)
-        elif provider == "openai":
-            return LLMFactory._create_openai_client(settings)
-        elif provider == "bedrock":
-            return LLMFactory._create_bedrock_client(settings)
-        else:
+        prov_cfg = PROVIDERS.get(provider)
+        if prov_cfg is None:
             raise ValueError(
                 f"Unknown LLM provider: {provider}. "
-                "Supported providers: claude, openai, bedrock"
+                f"Supported: {', '.join(PROVIDERS)}"
             )
 
+        if prov_cfg.client_type == "claude":
+            return LLMFactory._create_claude_client(settings)
+        elif prov_cfg.client_type == "openai_compatible":
+            return LLMFactory._create_openai_compatible_client(settings, provider)
+        elif prov_cfg.client_type == "bedrock":
+            return LLMFactory._create_bedrock_client(settings)
+
+        raise ValueError(f"Unhandled client_type: {prov_cfg.client_type}")  # pragma: no cover
+
+    # ------------------------------------------------------------------
+    # Provider-specific builders
+    # ------------------------------------------------------------------
+
     @staticmethod
-    def _create_claude_client(settings: Settings) -> ClaudeClient:
-        """Create Claude client."""
+    def _create_claude_client(settings: Settings) -> BaseLLMClient:
         if not settings.anthropic_api_key:
             raise ValueError(
                 "ANTHROPIC_API_KEY is required for Claude provider. "
-                "Set it in .env file or environment variable."
+                "Set it in .env or via the Settings screen."
             )
-
+        from .claude_client import ClaudeClient
         return ClaudeClient(
             api_key=settings.anthropic_api_key,
-            temperature=settings.temperature
+            model=settings.claude_model,
+            temperature=settings.temperature,
         )
 
     @staticmethod
-    def _create_openai_client(settings: Settings) -> BaseLLMClient:
-        """Create OpenAI (or OpenAI-compatible) client.
+    def _create_openai_compatible_client(
+        settings: Settings,
+        provider: str,
+    ) -> BaseLLMClient:
+        prov_cfg = PROVIDERS[provider]
 
-        The same client class backs three use cases:
+        # Resolve model and api_key from per-provider settings fields.
+        model_map: dict[str, str] = {
+            "openai":     settings.openai_model,
+            "openrouter": settings.openrouter_model,
+            "ollama":     settings.ollama_model,
+            "lmstudio":   settings.lmstudio_model,
+            "kimi":       settings.kimi_model,
+        }
+        key_map: dict[str, str] = {
+            "openai":     settings.openai_api_key,
+            "openrouter": settings.openrouter_api_key or settings.openai_api_key,
+            "ollama":     "",
+            "lmstudio":   "",
+            "kimi":       settings.kimi_api_key,
+        }
+        base_url_override_map: dict[str, str] = {
+            "ollama":   settings.ollama_base_url,
+            "lmstudio": settings.lmstudio_base_url,
+        }
 
-        - **Official OpenAI**: ``openai_base_url`` empty, real API key required.
-        - **OpenRouter**: ``openai_base_url=https://openrouter.ai/api/v1`` and a
-          real OpenRouter API key.
-        - **Local LLM** (Ollama / LM Studio / llama.cpp): ``openai_base_url``
-          pointing at ``http://localhost:<port>/v1``. Many local servers ignore
-          the API key entirely, so an empty key is replaced with a dummy so
-          the OpenAI SDK initializer (which requires a non-empty string) is
-          satisfied.
-        """
-        base_url = settings.openai_base_url or None
+        model = model_map.get(provider, "")
+        api_key = key_map.get(provider, "")
+        base_url_override = base_url_override_map.get(provider, "")
 
-        if not settings.openai_api_key:
-            if not base_url:
-                raise ValueError(
-                    "OPENAI_API_KEY is required for the official OpenAI endpoint. "
-                    "Set it in .env file or environment variable, or configure a "
-                    "custom OPENAI_BASE_URL (OpenRouter / local server)."
-                )
-            api_key = "dummy"
-        else:
-            api_key = settings.openai_api_key
+        if not api_key and prov_cfg.api_key_required:
+            env_hint = {
+                "openai":     "OPENAI_API_KEY",
+                "openrouter": "OPENROUTER_API_KEY",
+                "kimi":       "KIMI_API_KEY",
+            }.get(provider, f"{provider.upper()}_API_KEY")
+            raise ValueError(
+                f"API key is required for {prov_cfg.display_name}. "
+                f"Set {env_hint} in .env or via the Settings screen."
+            )
+        if not api_key:
+            api_key = "dummy"  # local servers ignore the key
+
+        effective_base_url = base_url_override or prov_cfg.base_url
 
         try:
             from .openai_client import OpenAIClient
         except ImportError:
             raise ImportError(
-                "openai package is required for OpenAI integration. "
-                "Install it with: pip install openai"
+                "openai package is required. Install with: pip install openai"
             )
 
+        model_cfg = get_model_config(model)
         return OpenAIClient(
             api_key=api_key,
-            model=settings.openai_model,
+            model=model,
             temperature=settings.temperature,
-            base_url=base_url,
+            base_url=effective_base_url,
+            extra_body=prov_cfg.extra_body,
+            max_tokens_param=model_cfg.max_tokens_param,
+            temperature_supported=model_cfg.temperature_supported,
+            fixed_temperature=model_cfg.fixed_temperature,
         )
 
     @staticmethod
     def _create_bedrock_client(settings: Settings) -> BaseLLMClient:
-        """Create AWS Bedrock client."""
         if not settings.aws_access_key_id or not settings.aws_secret_access_key:
             raise ValueError(
                 "AWS credentials (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY) "
-                "are required for Bedrock provider. "
-                "Set them in .env file or environment variables."
+                "are required for Bedrock. Set them in .env or via the Settings screen."
             )
-
         try:
             from .bedrock_client import BedrockClient
         except ImportError:
             raise ImportError(
-                "boto3 is required for Bedrock integration. "
-                "Install it with: pip install boto3"
+                "boto3 is required for Bedrock. Install with: pip install boto3"
             )
-
         return BedrockClient(
             model=settings.bedrock_model_id,
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
             region=settings.aws_region,
-            temperature=settings.temperature
+            temperature=settings.temperature,
         )
 
 
 def create_default_client() -> BaseLLMClient:
-    """
-    Create an LLM client using default settings.
-
-    Returns:
-        Initialized LLM client
-
-    Raises:
-        ValueError: If configuration is invalid
-    """
     from spec_ai_writer.config.settings import get_settings
-
     settings = get_settings()
     is_valid, errors = settings.validate_llm_config()
-
     if not is_valid:
-        error_msg = "Invalid LLM configuration:\n" + "\n".join(f"  - {e}" for e in errors)
-        raise ValueError(error_msg)
-
+        raise ValueError("Invalid LLM configuration:\n" + "\n".join(f"  - {e}" for e in errors))
     return LLMFactory.create_client(settings=settings)
