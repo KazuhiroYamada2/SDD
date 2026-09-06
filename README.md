@@ -30,7 +30,7 @@ This repository lets you practice writing specifications with Cursor while readi
 - Improving specifications through dialogue with AI
 - Basic Git operations (commit, push)
 
-**Important**: This remote repository is for reference only. If you want to make edits, always fork it first and then clone your own remote repository to work locally.
+For the editing exercise, fork this repository and clone your fork locally. See [Fork vs Clone](#fork-vs-clone-important) for the distinction.
 
 ## Use Cases
 
@@ -60,61 +60,81 @@ GitHub has two similar but distinct operations: **Fork** and **Clone**. It is im
 | Item | Fork (operation on GitHub) | Direct Clone (saves to local repository) |
 |------|---------------------------|------------------------------------------|
 | Creates your own repository on GitHub | ✅ | ❌ |
-| Allows free editing and pushing of README.md | ✅ | ❌ |
+| Allows local editing after cloning | ✅ | ✅ |
+| Allows pushing to your own GitHub repository | Yes, to your fork | Requires a repository you can write to |
 | Failures don't affect the original repository | ✅ | ✅ |
-| Can submit Pull Requests | ✅ | ❌ |
+| Can submit Pull Requests | From a branch pushed to your fork | Requires pushing a branch to a repository you can write to |
 | For reference/viewing only | △ | ✅ |
 | Recommended use in this repository | **Editing & Practice** | **Viewing Only** |
 
 ## Usage
 
-### 1. Fork or Clone This Remote Repository
+### Prerequisites
+
+- A GitHub account for creating a fork and sharing your changes
+- Git installed locally for cloning, committing, and pushing
+- Cursor for the book's AI-assisted exercises; another Markdown editor can be used for document editing
+- Access to an AI chat feature if you want to practice AI-assisted review
+
+The document exercise does not require Python, Node.js, or the optional `spec-ai-writer` tool. That tool has its own [setup requirements](spec-ai-writer/README.md).
+
+In the instructions below, **upstream** means `elvezjp/SDD`, **your fork** means the copy under your GitHub account, and **local clone** means the working folder on your PC. Push exercise changes to your fork. Pushing to upstream requires write permission.
+
+### 1. Fork and Clone for Practice
 
 **Recommended: Fork**
 
 1. Open this remote repository on GitHub (https://github.com/elvezjp/SDD)
 2. Click the "Fork" button in the upper right to fork it to your account
-3. Clone your forked repository locally with Cursor:
-   - From the Cursor menu, select "File" > "Clone Repository"
-   - Enter the URL of your forked repository (e.g., `https://github.com/your-username/SDD.git`)
-   - Select a destination folder and click "Clone"
+3. In a terminal, replace `YOUR-USERNAME` with your GitHub username and run:
 
-In recent versions of Cursor, **"File > Clone Repository" may not appear in the menu**.
-In that case, use the **Command Palette** approach.
+   ```sh
+   git clone https://github.com/YOUR-USERNAME/SDD.git
+   cd SDD
+   ```
+
+4. Open the cloned `SDD` folder in Cursor.
 
 **For Reference Only (Direct Clone)**
 
-1. From the Cursor menu, select "File" > "Clone Repository"
-2. Enter the following URL:
-   ```
-   https://github.com/elvezjp/SDD.git
-   ```
-3. Select a destination folder
-4. Click "Clone"
+You can read the files on GitHub without installing anything, or clone upstream for local reference:
+
+```sh
+git clone https://github.com/elvezjp/SDD.git
+```
+
+For the editing and sharing exercise below, use a clone of your fork.
 
 ### 2. Open and Review README.md
 
-After cloning or forking, open `README.md` in the left Explorer panel.
+Open `README.md` in your local clone, then read [the sample guide](examples/README.md). The files in `examples/` illustrate deliverables for a Customer Management System; use them as references when writing your own specifications.
 
-**Note**: Avoid editing this remote repository (elvezjp/SDD) directly. If you want to make edits, always fork it first and clone your own remote repository to work locally.
+### 3. Complete a First Exercise
 
-### 3. Write Specifications While Dialoguing with AI
+For this introductory exercise, use the following layout in your fork:
 
-In the AI chat panel on the right, try asking questions like:
+| Location | What to write |
+|----------|---------------|
+| `README.md` | Your project's purpose, intended users, scope, and links to detailed specifications |
+| `specs/` (create this folder) | Your project's specifications, based on copies of the relevant sample files |
+| `examples/` | The original reference samples |
 
-- "Please read this README.md and tell me what information should be added."
-- "Are there any unclear points in this specification?"
-- "Is this written clearly?"
+1. Read `examples/02-planning-requirement.md` and copy it to `specs/02-planning-requirement.md`.
+2. Change one requirement for your chosen project. State who needs it, the expected behavior, and how you will check that it works.
+3. Ask the AI: "Read specs/02-planning-requirement.md. Identify ambiguous requirements and suggest acceptance criteria. List questions instead of inventing missing requirements."
+4. Review the suggestions and revise the specification. Record unresolved questions explicitly. For individual practice, you make the decisions; in team work, have the relevant stakeholders review them.
+5. Add a short project overview and a link to your specification in your fork's README.
 
-### 4. Save and Share Your Changes (if you cloned your forked repository)
+**Completion criteria**: You have one revised requirement with a checkable acceptance criterion, have reviewed the AI's suggestions, and can explain the changes in the saved diff. After step 4 below, the changes are committed and visible in your fork. Completing all seven processes is a later exercise.
 
-Once you have finished editing locally:
+### 4. Review, Commit, and Share Your Changes
 
-1. Save with `Ctrl+S` (or `Cmd+S` on Mac)
-2. Tell the AI chat "commit and push"
-   - Or manually commit and push from the Source Control panel
+1. Save your files and inspect the changes in Cursor's Source Control panel, including newly created files.
+2. Run `git remote -v` in the local clone and check that the push URL for `origin` points to your fork (`YOUR-USERNAME/SDD`). If it points to upstream, return to step 1 and use your fork's clone before pushing.
+3. Stage the intended files and commit with a message describing the change.
+4. Push the commit to your fork and open it on GitHub to confirm that the changes appear.
 
-**Note**: Do not push directly to this remote repository (elvezjp/SDD). Only push to your forked repository.
+See the [Git command reference](docs/tools/git-commands.md) and [troubleshooting guide](docs/guides/troubleshooting.md) for more help.
 
 ## Directory Structure
 
@@ -155,7 +175,6 @@ SDD/
 │   └── README.md                        # Sample file descriptions
 └── spec-ai-writer/              # Spec-Driven Development support AI tool (optional)
     ├── README.md               # Tool description
-    ├── QUICKSTART.md           # Quick start guide
     └── ...                     # Tool implementation files
 ```
 
@@ -182,6 +201,10 @@ Each process is managed in a single Markdown file:
 6. **Verification & Acceptance**: [`examples/06-verification-acceptance.md`](examples/06-verification-acceptance.md) (Verification Log)
 7. **Migration & Operations**: [`examples/07-migration-operation.md`](examples/07-migration-operation.md) (Operations Log)
 
+For a full practice project, start with processes 1–4 to establish purpose, requirements, design, and tasks. Use processes 5–7 to record implementation, verification, and operation as those activities take place. If you are only practicing specification writing, record that scope and leave later activities pending.
+
+The process numbers provide a reading order, and the documents evolve through iteration. For example, when a requirement changes in process 2, review the affected design, tasks, and acceptance criteria in processes 3, 4, and 6. Record the reason for the change in the commit and identify any follow-up work.
+
 ## Sample Project: Customer Management System
 
 The `examples/` directory contains a sample "Customer Management System" specification covering all 7 processes:
@@ -198,7 +221,7 @@ Each sample file clearly indicates which process it belongs to.
 
 ## spec-ai-writer (Specification Generation Tool)
 
-The `spec-ai-writer/` directory contains an optional AI tool that supports Spec-Driven Development. It conducts interviews via LLM API and automatically generates specification documents for all 7 processes (requires Python 3.9+ and Node.js).
+The `spec-ai-writer/` directory contains an optional AI tool that supports Spec-Driven Development. It conducts interviews via LLM API and automatically generates specification documents for all 7 processes. Review generated documents before adopting them. The tool's README lists environment requirements for its CLI and web interface.
 
 For setup instructions and usage details, see [spec-ai-writer/README.md](spec-ai-writer/README.md).
 
@@ -206,16 +229,11 @@ For setup instructions and usage details, see [spec-ai-writer/README.md](spec-ai
 
 ### Q: Can I edit this remote repository?
 
-A: **This remote repository (elvezjp/SDD) is for reference only, and you do not have permission to edit it directly.** If you want to try editing, fork it first and then clone your forked repository to work locally.
-
-**Fork steps**:
-1. Open this remote repository on GitHub
-2. Click the "Fork" button in the upper right
-3. Clone your forked remote repository locally and work from there
+A: You can edit files in a local clone. To save your exercise changes on GitHub, follow [the fork and clone instructions](#1-fork-and-clone-for-practice). To propose changes to upstream, follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Q: What should I do if I encounter an error?
 
-A: `docs/guides/troubleshooting.md` contains common errors and their solutions. Please check there first. If the issue remains unresolved, ask a question in GitHub Issues.
+A: The [troubleshooting guide](docs/guides/troubleshooting.md) contains common errors and their solutions. Please check there first. If the issue remains unresolved, ask a question in [GitHub Issues](https://github.com/elvezjp/SDD/issues).
 
 ### Q: Which should I use—the repository I created in Chapter 1, or this one?
 
@@ -256,21 +274,9 @@ https://youtu.be/DilSKvi4aQw
 
 ## Next Steps
 
-1. Fork this remote repository (or clone it locally for reference)
-2. Open the forked remote repository locally with Cursor
-3. Edit README.md and write your project's specifications
-4. Grow your specifications through dialogue with AI
-5. Commit and push changes to reflect them in your forked remote repository
-
----
-
-## Repository Protection
-
-This remote repository is maintained for reference. Please note the following:
-
-- **Do not edit this remote repository (elvezjp/SDD) directly**
-- If you want to make edits, always fork it first and clone your own remote repository to work locally
-- This remote repository is maintained as a reference resource for all readers
+1. Complete [the first exercise](#3-complete-a-first-exercise).
+2. Expand your project's `specs/` folder using the other process samples.
+3. Review related documents together when requirements change, and commit the updates to your fork.
 
 ---
 
@@ -284,7 +290,7 @@ This remote repository is maintained for reference. Please note the following:
 
 For security details, see [SECURITY.md](SECURITY.md).
 
-- This repository consists solely of documentation and sample files; no executable code is included
+- This repository includes documentation, sample files, and executable code in the optional `spec-ai-writer/` tool. See the tool's [README](spec-ai-writer/README.md) before running it.
 - If you discover a vulnerability, please report it by email rather than opening a public Issue (info@elvez.co.jp)
 
 ## Contributing
