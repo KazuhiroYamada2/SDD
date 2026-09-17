@@ -9,6 +9,15 @@ export type SalesTrendResponse = {
   items: SalesTrendItem[];
 };
 
+export type CustomerCategoryItem = {
+  category: string;
+  customerCount: number;
+};
+
+export type CustomerCategoriesResponse = {
+  items: CustomerCategoryItem[];
+};
+
 type ApiError = {
   message?: string;
 };
@@ -27,4 +36,13 @@ export const getSalesTrend = async (from: string, to: string): Promise<SalesTren
   }
 
   return response.json() as Promise<SalesTrendResponse>;
+};
+
+export const getCustomerCategories = async (): Promise<CustomerCategoriesResponse> => {
+  const response = await fetch(`${apiBaseUrl}/api/v1/reports/customer-categories`);
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+
+  return response.json() as Promise<CustomerCategoriesResponse>;
 };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { getSalesTrend, type SalesTrendResponse } from '../api/reports';
+import { getCustomerCategories, getSalesTrend, type CustomerCategoriesResponse, type SalesTrendResponse } from '../api/reports';
+import { CustomerCategoriesReport } from './CustomerCategoriesReport';
 
 type Props = {
   onBack: () => void;
@@ -11,6 +12,8 @@ type FormValues = {
 };
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
+
+type ReportKind = 'salesTrend' | 'customerCategories';
 
 const initialValues: FormValues = {
   from: '',
@@ -40,11 +43,15 @@ const formatSalesAmount = (salesAmount: string): string => {
 };
 
 export function ReportsPage({ onBack }: Props) {
+  const [selectedReport, setSelectedReport] = useState<ReportKind>('salesTrend');
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [salesTrend, setSalesTrend] = useState<SalesTrendResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [customerCategories, setCustomerCategories] = useState<CustomerCategoriesResponse | null>(null);
+  const [isCustomerCategoriesLoading, setIsCustomerCategoriesLoading] = useState(false);
+  const [customerCategoriesError, setCustomerCategoriesError] = useState('');
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -70,12 +77,35 @@ export function ReportsPage({ onBack }: Props) {
     }
   };
 
+  const showCustomerCategories = async () => {
+    setSelectedReport('customerCategories');
+    setCustomerCategoriesError('');
+
+    if (customerCategories !== null || isCustomerCategoriesLoading) {
+      return;
+    }
+
+    setIsCustomerCategoriesLoading(true);
+    try {
+      setCustomerCategories(await getCustomerCategories());
+    } catch (error) {
+      setCustomerCategoriesError(error instanceof Error ? error.message : '顧客分類を取得できませんでした。');
+    } finally {
+      setIsCustomerCategoriesLoading(false);
+    }
+  };
+
   return (
     <main>
       <button type="button" onClick={onBack}>顧客登録画面に戻る</button>
       <h1>レポート</h1>
 
-      <section aria-labelledby="sales-trend-heading" className="report-section">
+      <nav aria-label="レポート種別">
+        <button type="button" aria-pressed={selectedReport === 'salesTrend'} onClick={() => setSelectedReport('salesTrend')}>売上推移</button>
+        <button type="button" aria-pressed={selectedReport === 'customerCategories'} onClick={() => void showCustomerCategories()} disabled={isCustomerCategoriesLoading}>顧客分類</button>
+      </nav>
+
+      {selectedReport === 'salesTrend' && <section aria-labelledby="sales-trend-heading" className="report-section">
         <h2 id="sales-trend-heading">売上推移</h2>
         <form noValidate onSubmit={submit}>
           <div className="form-field">
@@ -133,12 +163,13 @@ export function ReportsPage({ onBack }: Props) {
             </tbody>
           </table>
         )}
-      </section>
+      </section>}
 
-      <section aria-labelledby="upcoming-reports-heading" className="report-section">
-        <h2 id="upcoming-reports-heading">その他のレポート</h2>
-        <p>顧客分類と営業担当者別実績は未実装です。</p>
-      </section>
+      {selectedReport === 'customerCategories' && <CustomerCategoriesReport
+        customerCategories={customerCategories}
+        isLoading={isCustomerCategoriesLoading}
+        error={customerCategoriesError}
+      />}
     </main>
   );
 }

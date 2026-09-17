@@ -12,6 +12,14 @@ const salesTrend = {
   ],
 };
 
+const customerCategories = {
+  items: [
+    { category: 'A', customerCount: 25 },
+    { category: 'B', customerCount: 12 },
+    { category: '未分類', customerCount: 3 },
+  ],
+};
+
 const fillPeriod = () => {
   fireEvent.change(screen.getByLabelText('開始日'), { target: { value: '2026-01-15' } });
   fireEvent.change(screen.getByLabelText('終了日'), { target: { value: '2026-03-10' } });
@@ -115,5 +123,85 @@ describe('ReportsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  });
+
+  it('switches to customer categories, requests the API without period parameters, and displays the response order', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(customerCategories),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ReportsPage onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/reports/customer-categories'));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('heading', { name: '顧客分類' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '顧客分類' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '顧客数' })).toBeInTheDocument();
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'A', '25',
+      'B', '12',
+      '未分類', '3',
+    ]);
+  });
+
+  it('shows loading while requesting customer categories', async () => {
+    let resolveResponse: (value: { ok: boolean; json: () => Promise<typeof customerCategories> }) => void;
+    const response = new Promise<{ ok: boolean; json: () => Promise<typeof customerCategories> }>((resolve) => {
+      resolveResponse = resolve;
+    });
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(response));
+    render(<ReportsPage onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('顧客分類を読み込み中...');
+    resolveResponse!({ ok: true, json: vi.fn().mockResolvedValue(customerCategories) });
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+  });
+
+  it('shows an empty-state message when customer categories are empty', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ items: [] }),
+    }));
+    render(<ReportsPage onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
+
+    expect(await screen.findByText('顧客データはありません。')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['401エラー', () => Promise.resolve({ ok: false, json: vi.fn().mockResolvedValue({ message: 'Unauthorized.' }) }), 'Unauthorized.'],
+    ['403エラー', () => Promise.resolve({ ok: false, json: vi.fn().mockResolvedValue({ message: 'Forbidden.' }) }), 'Forbidden.'],
+    ['500エラー', () => Promise.resolve({ ok: false, json: vi.fn().mockResolvedValue({ message: 'Failed to retrieve customer categories.' }) }), 'Failed to retrieve customer categories.'],
+    ['network error', () => Promise.reject(new Error('Network request failed.')), 'Network request failed.'],
+  ])('顧客分類の%sを表示する', async (_, fetchResult, message) => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(fetchResult));
+    render(<ReportsPage onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  });
+
+  it('returns from customer categories to the existing sales trend screen', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(customerCategories),
+    }));
+    render(<ReportsPage onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
+    await screen.findByRole('heading', { name: '顧客分類' });
+    fireEvent.click(screen.getByRole('button', { name: '売上推移' }));
+
+    expect(screen.getByRole('heading', { name: '売上推移' })).toBeInTheDocument();
+    expect(screen.getByLabelText('開始日')).toBeInTheDocument();
+    expect(screen.getByLabelText('終了日')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '表示' })).toBeInTheDocument();
   });
 });

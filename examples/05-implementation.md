@@ -146,6 +146,15 @@
 - 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、18ファイル・67テストが成功した。
 - 未実施: React画面、Playwright、認可、DBスキーマ変更、staffName追加は今回の対象外とした。
 
+## 2026-09-17 React顧客分類画面
+
+- 実施範囲: 既存のレポート画面に、売上推移と顧客分類を切り替える導線を追加した。URLルーティング、外部ライブラリ、バックエンド、DBは変更していない。
+- API: `frontend/src/api/reports.ts` に `CustomerCategoryItem`、`CustomerCategoriesResponse`、`getCustomerCategories` を追加し、期間パラメータなしで `GET /api/v1/reports/customer-categories` を呼び出す。
+- UI: 顧客分類を選択した時だけ取得し、取得結果は画面stateに保持する。APIから返された並び順のまま表に表示し、フロントエンドでの未分類変換・並び替え・件数の文字列化は行わない。0件、読み込み中、APIエラー、通信エラーは既存の表示方式で扱う。
+- テスト: 画面切替、期間パラメータなしのAPI呼び出し、読み込み中、複数分類と未分類の表示順、0件、401・403・500・通信エラー、売上推移への復帰を追加した。
+- 実行結果: `frontend` で `npx.cmd tsc -b --pretty false`、`npm.cmd test`、`npm.cmd run build` を実行した。型チェックは成功し、テストは3ファイル・27件すべて成功し、ビルドも成功した。
+- 未実施: 営業担当者別実績画面、グラフ、Playwright、認可、バックエンド・DB・仕様書の変更は対象外とした。
+
 ## 2026-09-17 React売上推移画面
 
 - 実施範囲: 既存の`App.tsx`にあるReact stateの画面切替へ`reports`を追加し、売上推移を表示するレポート画面を実装した。URLルーティングとルーティングライブラリは追加していない。
