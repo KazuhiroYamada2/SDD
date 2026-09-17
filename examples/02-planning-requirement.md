@@ -49,9 +49,51 @@
 
 ### 3. レポート・分析機能
 
-- 売上推移の表示
-- 顧客分類の分析
-- 営業担当者別の実績表示
+#### 売上推移
+
+- 集計元は`sales_records`とする。
+- `recorded_on`を売上日、`amount`を売上金額として使用する。
+- `from`と`to`を必須パラメータとし、対象期間は両端を含む。
+- 売上金額を月単位で合計する。第1フェーズでは日単位および週単位の集計は実装しない。
+- 売上金額はDBの`NUMERIC(15,2)`の精度を保持するため、小数点以下2桁の文字列として返す。0円は`"0.00"`とする。
+- Response DTOは`from`、`to`、`items`を持つ。itemsの項目は`month`、`salesAmount`とする。
+- itemsは`month`の昇順で返す。SQLまたはService層で順序を保証し、DBの自然順には依存しない。
+- 出力月はmonth(from)からmonth(to)までを両端を含めて生成する。from/toが月途中でも、両端月をitemsに含める。
+- 売上金額の集計対象は`recorded_on >= from AND recorded_on <= to`とする。from以前およびto以後の売上を含めない。
+- 売上がない月もitemsに含め、`{ "month": "YYYY-MM", "salesAmount": "0.00" }`として返す。
+
+#### 顧客分類
+
+- `customers.category`ごとの現在の有効顧客数を集計する。
+- 論理削除済み顧客は、`customers.deleted_at`が`null`ではない顧客として集計対象から除外する。
+- 期間指定は行わず、現在時点のスナップショットを返す。
+- `category`が`null`の顧客は「未分類」として集計する。
+- Response DTOは`items`を持つ。itemsの項目は`category`、`customerCount`とする。
+- itemsは`customerCount`の降順、同数の場合はResponse上の`category`の昇順で返す。SQLまたはService層で順序を保証し、DBの自然順には依存しない。
+- 対象データが存在しない場合は`{ "items": [] }`を返す。
+- categoryの履歴分析は第1フェーズでは実装しない。
+
+#### 営業担当者別実績
+
+- 集計元は`sales_records`とする。
+- 営業担当者IDは`sales_records.user_id`を使用し、営業担当者表示は`users.email`を使用する。
+- 担当者ごとに売上金額合計と売上件数を集計する。
+- `from`と`to`を必須パラメータとし、対象期間は両端を含む。
+- Response DTOの項目は`staffId`、`staffEmail`、`salesAmount`、`salesCount`とする。`staffName`は使用しない。
+- 売上金額合計の降順、同額の場合は`staffEmail`の昇順で返す。
+- 売上金額合計は小数点以下2桁の文字列として返す。0円は`"0.00"`とする。
+- Response DTOは`from`、`to`、`items`を持つ。itemsの項目は`staffId`、`staffEmail`、`salesAmount`、`salesCount`とする。
+- 対象データが存在しない場合は`items`が空配列のResponse DTOを返す。
+
+#### レポートAPIと認可
+
+- 作成対象のAPIは以下とする。
+  - `GET /api/v1/reports/sales-trend?from=YYYY-MM-DD&to=YYYY-MM-DD`
+  - `GET /api/v1/reports/customer-categories`
+  - `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- 売上推移および営業担当者別実績では、`from`なし、`to`なし、日付形式不正、`from > to`を不正な期間指定とし、400を返す。
+- 今回のレポート集計・API実装ではロールによるアクセス制御を実装しない。認証済みユーザーを前提とする。
+- staff、manager、adminのレポート権限は後続の権限管理タスクで実装する。経営層のroleは今回追加しない。
 
 ### 4. 権限管理
 

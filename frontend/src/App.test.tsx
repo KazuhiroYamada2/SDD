@@ -30,7 +30,16 @@ describe('App', () => {
   });
 
   it('submits valid values to the existing customer API and shows success', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: vi.fn() });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          id: '8a1f2d44-1234-4abc-8def-123456789abc',
+          name: '株式会社サンプル',
+          owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) });
     vi.stubGlobal('fetch', fetchMock);
     render(<App />);
 
@@ -49,7 +58,7 @@ describe('App', () => {
         email: 'sales@example.com',
       }),
     });
-    expect(await screen.findByTestId('customer-registration-success')).toHaveTextContent('顧客情報を登録しました。');
+    expect(await screen.findByRole('heading', { name: '顧客詳細' })).toBeInTheDocument();
   });
 
   it('shows the API error message when registration fails', async () => {

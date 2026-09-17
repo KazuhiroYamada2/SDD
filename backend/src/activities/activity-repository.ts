@@ -22,6 +22,7 @@ export type Queryable = {
 
 export type ActivityRepository = {
   create(input: CreateActivityInput): Promise<Activity>;
+  findByCustomerId(customerId: string): Promise<Activity[]>;
 };
 
 export const createActivityRepository = (database: Queryable): ActivityRepository => ({
@@ -45,5 +46,17 @@ export const createActivityRepository = (database: Queryable): ActivityRepositor
     );
 
     return result.rows[0]!;
+  },
+  async findByCustomerId(customerId) {
+    const result = await database.query<Activity>(
+      `SELECT id, customer_id, user_id, activity_type, visited_at, meeting_note, next_visit_at,
+        created_at, updated_at
+      FROM activities
+      WHERE customer_id = $1
+      ORDER BY created_at DESC`,
+      [customerId],
+    );
+
+    return result.rows;
   },
 });

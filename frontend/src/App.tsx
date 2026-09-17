@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { registerCustomer, type CreateCustomerInput } from './api/customers';
+import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
+import { CustomerDetail } from './customers/CustomerDetail';
 
 type FormValues = {
   name: string;
@@ -59,6 +60,7 @@ export function App() {
   const [successMessage, setSuccessMessage] = useState('');
   const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -77,15 +79,20 @@ export function App() {
 
     setIsSubmitting(true);
     try {
-      await registerCustomer(toRequest(values));
+      const customer = await registerCustomer(toRequest(values));
       setValues(initialValues);
       setSuccessMessage('顧客情報を登録しました。');
+      setSelectedCustomer(customer);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : '顧客情報を登録できませんでした。');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (selectedCustomer !== null) {
+    return <CustomerDetail customer={selectedCustomer} onBack={() => setSelectedCustomer(null)} />;
+  }
 
   return (
     <main>

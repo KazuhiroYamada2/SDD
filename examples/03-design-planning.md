@@ -53,7 +53,7 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 ### customers
 
-`id`、`name`、`name_kana`、`email`、`phone`、`address`、`category`、`owner_user_id`、`created_at`、`updated_at`、`deleted_at`を持つ。個人情報に該当する項目はアプリケーション層で暗号化して保存する。削除は論理削除とし、通常の検索結果には含めない。
+`id`、`name`、`name_kana`、`email`、`phone`、`address`、`category`、`owner_user_id`、`created_at`、`updated_at`、`deleted_at`を持つ。個人情報に該当する項目はアプリケーション層で暗号化して保存する。削除は論理削除とし、通常の検索結果および顧客分類集計には含めない。
 
 ### activities
 
@@ -83,12 +83,18 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 | `DELETE /customers/:id` | 顧客論理削除 | F-03、F-13 |
 | `POST /customers/:id/activities` | 訪問・商談・次回予定の登録 | F-06〜F-08 |
 | `GET /customers/:id/activities` | 活動履歴の表示 | F-06〜F-08、F-12 |
-| `GET /reports/sales-trend` | 売上推移 | F-09、F-12 |
-| `GET /reports/customer-categories` | 顧客分類集計 | F-10、F-12 |
-| `GET /reports/representative-performance` | 営業担当者別実績 | F-11、F-12 |
+| `GET /api/v1/reports/sales-trend?from=YYYY-MM-DD&to=YYYY-MM-DD` | 月単位の売上推移 | F-09、F-12 |
+| `GET /api/v1/reports/customer-categories` | 現在の有効顧客の分類集計 | F-10、F-12 |
+| `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD` | 営業担当者別実績 | F-11、F-12 |
 | `GET /users`、`PATCH /users/:id/role` | ユーザー・権限管理 | F-12〜F-14 |
 
-一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。`page_size`の上限は100とする。レポートAPIは期間を必須とし、期間外のデータを集計しない。
+一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。`page_size`の上限は100とする。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けない。
+
+## レポートResponse DTO
+
+- 売上推移は`{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "items": [{ "month": "YYYY-MM", "salesAmount": "1200000.00" }] }`を返す。売上がない月もitemsに含め、`salesAmount`は`"0.00"`とする。
+- 顧客分類は`{ "items": [{ "category": "A", "customerCount": 25 }] }`を返す。`customers.deleted_at`が`null`ではない顧客は除外し、`category`が`null`の場合は`"未分類"`として集計する。
+- 営業担当者別実績は`{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "items": [{ "staffId": "UUID", "staffEmail": "user@example.com", "salesAmount": "3500000.00", "salesCount": 12 }] }`を返す。`salesAmount`は小数点以下2桁の文字列とする。
 
 ## 認証・認可
 

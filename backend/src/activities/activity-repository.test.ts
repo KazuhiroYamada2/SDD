@@ -39,4 +39,22 @@ describe('createActivityRepository', () => {
       ],
     );
   });
+
+  it('retrieves a customer activity history in descending creation order', async () => {
+    const customerId = 'c0a80101-1234-4abc-8def-123456789abc';
+    const activities = [{ id: '8a1f2d44-1234-4abc-8def-123456789abc' }];
+    const query = vi.fn().mockResolvedValue({ rows: activities });
+    const repository = createActivityRepository({ query });
+
+    await expect(repository.findByCustomerId(customerId)).resolves.toEqual(activities);
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE customer_id = $1'),
+      [customerId],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('ORDER BY created_at DESC'),
+      [customerId],
+    );
+  });
 });

@@ -8,6 +8,12 @@ export type CreateCustomerInput = {
   category?: string;
 };
 
+export type Customer = {
+  id: string;
+  name: string;
+  owner_user_id: string;
+};
+
 type ApiError = {
   code?: string;
   message?: string;
@@ -15,7 +21,7 @@ type ApiError = {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
-export const registerCustomer = async (input: CreateCustomerInput) => {
+export const registerCustomer = async (input: CreateCustomerInput): Promise<Customer> => {
   const response = await fetch(`${apiBaseUrl}/api/v1/customers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -23,7 +29,7 @@ export const registerCustomer = async (input: CreateCustomerInput) => {
   });
 
   if (response.ok) {
-    return response.json();
+    return response.json() as Promise<Customer>;
   }
 
   const error = await response.json().catch((): ApiError => ({}));

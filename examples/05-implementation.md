@@ -35,3 +35,94 @@
 - マイグレーション: `activities`テーブルは既存マイグレーションに仕様どおり存在するため、テーブルを重複作成する新規マイグレーションは追加していない。
 - テスト: 活動種別の制約、顧客・ユーザー外部キー、必要な列をDBスキーマテストで確認し、Repositoryがパラメータ化クエリで保存することを確認した。
 - 未実施: API、入力検証、React画面、認証・認可、レポート、活動履歴の更新・削除は今回の対象外とした。
+
+## 2026-09-17 営業活動登録API
+
+- 実施範囲: `POST /api/v1/customers/:customerId/activities`による訪問記録、商談内容、次回訪問予定の登録。
+- 実装内容: Request DTOと入力検証、Service、既存の活動履歴Repository、顧客・ユーザー存在確認Repository、REST APIを追加した。顧客IDはURLパラメータから取得し、活動履歴の`customer_id`として保存する。
+- 異常系: 不正なUUID、活動種別、日時、商談内容は400、存在しない顧客またはユーザーは404、DB未設定は503、保存失敗は500を返す。
+- 未実施: React画面、活動履歴一覧・更新・削除、認証・認可、監査ログ、レポート、権限管理は今回の対象外とした。
+
+## 2026-09-17 営業活動履歴参照API
+
+- 実施範囲: `GET /api/v1/customers/:customerId/activities`による指定顧客の活動履歴取得。
+- 実装内容: Serviceで顧客の存在を確認した後、Repositoryが訪問記録、商談内容、次回訪問予定を含む活動履歴を`created_at`の降順で取得する。
+- ページング: 活動履歴APIのページング仕様は定義されていないため、追加していない。
+- 未実施: React画面、活動履歴の更新・削除、認証・認可、監査ログ、レポート、権限管理は今回の対象外とした。
+
+## 2026-09-17 顧客詳細と営業活動履歴UI
+
+- 実施範囲: 顧客登録後に表示する顧客詳細画面、および営業活動履歴の表示・登録UI。
+- 実装内容: 顧客登録APIの応答から顧客IDと担当ユーザーIDを詳細画面へ引き継ぎ、活動履歴の取得と訪問記録、商談内容、次回訪問予定の登録を実装した。各入力はlabelで関連付け、登録操作は意味のあるボタン名で提供した。
+- エラー表示: 活動履歴取得と活動登録のAPIエラーを、それぞれ画面上に表示する。
+- 未実施: 顧客一覧・既存顧客の詳細取得、活動履歴の更新・削除、認証・認可、レポート、権限管理、Playwrightテストは今回の対象外とした。
+
+## 2026-09-17 営業活動履歴Playwright受入テスト
+
+- 実施範囲: 顧客登録後の詳細画面で、訪問記録、商談内容、次回訪問予定を登録して履歴表示を確認するPlaywrightテスト。
+- 実装内容: `e2e/sales-activity.spec.ts`を追加し、label、role、textによるLocatorで画面を操作した。登録後の履歴表示、再読み込み後のAPI応答、履歴取得APIエラー表示を検証する。
+- テスト環境: PlaywrightがViteを起動する設定を追加した。E2E用PostgreSQLが未構成のため、API応答はテスト内の固定データでモックしている。
+- 未実施: 実DBを使用した永続化確認、再読み込み後に顧客詳細画面へ復帰する導線、認証・認可のE2E確認は今回の対象外とした。
+
+## 2026-09-17 営業活動履歴機能の差分確認
+
+### 実装した内容
+
+- `activities` テーブルを含むデータモデル、Activity Entity/Model、登録用リポジトリを追加した。
+- 訪問記録、商談内容、次回訪問予定を登録するAPIと、指定顧客の営業活動を新しい作成日時順で取得するAPIを追加した。ページングは仕様にないため追加していない。
+- 顧客登録後の詳細表示に、営業活動履歴と登録フォームを追加した。入力項目には label を、登録ボタンには意味のある名前を設定し、取得・登録のAPIエラーを画面に表示する。
+- Playwrightテストで、顧客登録、営業活動登録、履歴表示、再読み込み後のモックAPI応答、および取得APIエラー表示を検証する。
+
+### 関連する04のタスク
+
+| タスク | 確認できた対応 |
+| --- | --- |
+| T-301 | 営業活動の登録・一覧APIと画面を追加した。 |
+| T-302 | 訪問記録の入力・保存・表示を追加した。 |
+| T-303 | 商談内容と次回訪問予定の入力・保存・表示を追加した。 |
+| T-304 | customerId、日時形式、ユーザーIDの検証と顧客・ユーザー存在確認を追加した。権限による制限は未実装である。 |
+| T-305 | Playwrightによる登録・表示のテストを追加した。APIはテスト内でモックしている。 |
+
+### 主要な実装ファイル
+
+- `backend/migrations/001_create_core_schema.sql`
+- `backend/src/activities/activity-repository.ts`
+- `backend/src/activities/activity-reference-repository.ts`
+- `backend/src/activities/activity-validation.ts`
+- `backend/src/activities/activity-service.ts`
+- `backend/src/activities/activities-router.ts`
+- `backend/src/app.ts`
+- `frontend/src/api/activities.ts`
+- `frontend/src/activities/ActivityHistory.tsx`
+- `frontend/src/customers/CustomerDetail.tsx`
+- `frontend/src/App.tsx`
+- `e2e/sales-activity.spec.ts`
+- `playwright.config.ts`
+
+### 作成・更新したテスト
+
+- `backend/src/migrations/activities-schema.test.ts`
+- `backend/src/activities/activity-repository.test.ts`
+- `backend/src/activities/activity-service.test.ts`
+- `backend/src/activities/activities-api.test.ts`
+- `backend/src/activities/activities-read-api.test.ts`
+- `frontend/src/activities/ActivityHistory.test.tsx`
+- `frontend/src/App.test.tsx`
+- `e2e/sales-activity.spec.ts`
+
+### 実行結果
+
+- `backend` で `npm.cmd run build` を実行し、成功した。
+- `backend` で `npm.cmd test` を実行し、9ファイル・32テストが成功した。
+- `frontend` で `npm.cmd run build` を実行し、成功した。
+- `frontend` で `npm.cmd test` を実行し、2ファイル・8テストが成功した。
+- `npx.cmd playwright test e2e/sales-activity.spec.ts --project=chromium` を実行し、2テストが成功した。
+
+## 2026-09-17 売上推移API
+
+- 実施範囲: `GET /api/v1/reports/sales-trend?from=YYYY-MM-DD&to=YYYY-MM-DD`。
+- 実装内容: Repositoryがsales_recordsから指定期間内の月別売上合計を取得し、Serviceがfrom/toの月を昇順で生成して売上0件月を`"0.00"`で補完する。金額は小数点以下2桁の文字列としてResponse DTOへ設定する。
+- 入力検証: from/toの必須、YYYY-MM-DD形式、存在しない日付、from > toを既存APIと同じ`VALIDATION_ERROR`形式の400として返す。
+- テスト: Repositoryのパラメータ化集計クエリ、Serviceの単月・複数レコード・月途中境界・範囲外除外・0件月、APIのResponse DTO・400・500・503を追加した。
+- 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、12ファイル・45テストが成功した。
+- 未実施: 顧客分類API、営業担当者別実績API、React画面、Playwright、認可、DBスキーマ変更は今回の対象外とした。

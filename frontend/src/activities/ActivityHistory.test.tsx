@@ -1,0 +1,90 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ActivityHistory } from './ActivityHistory';
+
+const customerId = '8a1f2d44-1234-4abc-8def-123456789abc';
+const ownerUserId = 'c0a80101-1234-4abc-8def-123456789abc';
+const activity = {
+  id: 'd0a80101-1234-4abc-8def-123456789abc',
+  customer_id: customerId,
+  user_id: ownerUserId,
+  activity_type: 'visit',
+  visited_at: '2026-09-17T01:00:00.000Z',
+  meeting_note: '商談内容',
+  next_visit_at: '2026-09-24T01:00:00.000Z',
+  created_at: '2026-09-17T01:00:00.000Z',
+  updated_at: '2026-09-17T01:00:00.000Z',
+};
+
+describe('ActivityHistory', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows activity history and accessible activity registration controls', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue([activity]),
+    }));
+
+    render(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+
+    expect(await screen.findByText('商談内容')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-24T01:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByLabelText('担当ユーザーID')).toHaveValue(ownerUserId);
+    expect(screen.getByLabelText('活動種別')).toBeInTheDocument();
+    expect(screen.getByLabelText('訪問日時')).toBeInTheDocument();
+    expect(screen.getByLabelText('商談内容')).toBeInTheDocument();
+    expect(screen.getByLabelText('次回訪問予定')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '営業活動を登録' })).toBeInTheDocument();
+  });
+
+  it('registers an activity and reloads the history', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(activity) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([activity]) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    await screen.findByText('営業活動履歴はありません。');
+    fireEvent.change(screen.getByLabelText('商談内容'), { target: { value: ' 新規商談 ' } });
+    fireEvent.click(screen.getByRole('button', { name: '営業活動を登録' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, `/api/v1/customers/${customerId}/activities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: ownerUserId, activity_type: 'visit', meeting_note: '新規商談' }),
+    });
+    expect(await screen.findByTestId('activity-registration-success')).toHaveTextContent('営業活動を登録しました。');
+  });
+
+  it('shows an API error when activity history retrieval fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      json: vi.fn().mockResolvedValue({ message: 'Customer was not found.' }),
+    }));
+
+    render(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+
+    expect(await screen.findByTestId('activity-history-error')).toHaveTextContent('Customer was not found.');
+  });
+
+  it('shows an API error when activity registration fails', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: vi.fn().mockResolvedValue({ message: 'User was not found.' }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    await screen.findByText('営業活動履歴はありません。');
+    fireEvent.click(screen.getByRole('button', { name: '営業活動を登録' }));
+
+    expect(await screen.findByTestId('activity-registration-error')).toHaveTextContent('User was not found.');
+  });
+});

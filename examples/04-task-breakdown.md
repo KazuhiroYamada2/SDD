@@ -74,12 +74,15 @@
 
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
-| T-401 | 売上記録の登録・更新と集計元データを実装 | F-09、F-11 | T-002、T-105 | 中 |
-| T-402 | 売上推移APIと期間指定画面を実装 | F-09 | T-401 | 中 |
-| T-403 | 顧客分類集計APIと分析画面を実装 | F-10 | T-202、T-105 | 中 |
-| T-404 | 営業担当者別実績APIと表示画面を実装 | F-11 | T-401、T-105 | 中 |
-| T-405 | レポートの期間、権限、空データ、集計値を検証 | F-09〜F-11 | T-402〜T-404 | 高 |
-| T-406 | レポート表示をPlaywrightで検証 | F-09〜F-11 | T-405 | 中 |
+| T-401 | sales_recordsの登録・更新と、売上推移・営業担当者別実績の集計元データを実装 | F-09、F-11 | T-002 | 中 |
+| T-402 | `GET /api/v1/reports/sales-trend`を実装。month(from)からmonth(to)までを月昇順で生成し、from/toの期間内だけを月単位で集計する。売上がない月はsalesAmount=`"0.00"`で補完するResponse DTOを返す | F-09 | T-401 | 中 |
+| T-403 | `GET /api/v1/reports/customer-categories`を実装。deleted_atがnullの現在の有効顧客をcategory別に集計し、nullは「未分類」、0件は`{ "items": [] }`を返す。customerCount降順、同数はResponse上のcategory昇順で返す | F-10 | T-002 | 中 |
+| T-404 | `GET /api/v1/reports/staff-performance`を実装。sales_records.user_idとusers.emailを使用し、staffId、staffEmail、salesAmount、salesCountを返す。salesAmountは小数点以下2桁の文字列とし、金額降順・staffEmail昇順で返す | F-11 | T-401 | 中 |
+| T-405 | レポート集計値、0件、売上推移の0埋め、期間境界、営業担当者別実績のstaffEmailを使う並び順、および確定したResponse DTOを単体・統合テストで検証 | F-09〜F-11 | T-402〜T-404 | 高 |
+| T-407 | 売上推移・営業担当者別実績APIのfrom/to必須、YYYY-MM-DD形式、from > toの400応答を単体・統合テストで検証 | F-09、F-11 | T-402、T-404 | 高 |
+| T-408 | 売上推移のmonth昇順、月途中from/to、from/to両端を含む範囲、範囲外sales_recordsの除外、売上0件月のsalesAmount=`"0.00"`を単体・統合テストで検証 | F-09 | T-402 | 高 |
+| T-409 | 顧客分類のcustomerCount降順と、同数時にResponse上のcategory昇順となることを単体・統合テストで検証 | F-10 | T-403 | 高 |
+| T-406 | レポート表示をPlaywrightで検証 | F-09〜F-11 | T-405、T-407〜T-409 | 中 |
 
 ## 権限管理タスク
 
@@ -132,7 +135,7 @@
 | --- | --- | --- |
 | F-01〜F-05 | T-201〜T-206 | T-207、T-802、T-803 |
 | F-06〜F-08 | T-301〜T-304 | T-305、T-802、T-803 |
-| F-09〜F-11 | T-401〜T-404 | T-405、T-406、T-802、T-803 |
+| F-09〜F-11 | T-401〜T-404 | T-405〜T-409、T-802、T-803 |
 | F-12〜F-14 | T-501〜T-503 | T-504、T-505、T-802、T-803 |
 | N-01 | T-601 | T-602、T-804 |
 | N-02 | T-006 | T-603、T-804 |
