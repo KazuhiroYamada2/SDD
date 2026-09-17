@@ -2,3 +2,18 @@
 
 # Claude AI のローカル設定（個人設定を含むため、リポジトリに含めない）
 .claude/
+
+# Playwright
+node_modules/
+/frontend/node_modules/
+/backend/node_modules/
+/frontend/dist/
+/backend/dist/
+*.tsbuildinfo
+.env
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/screenshots/site-capture/

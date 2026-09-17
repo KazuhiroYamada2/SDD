@@ -1,0 +1,51 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2937;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 720px;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+.customer-registration {
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
+}
+
+.form-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.25rem;
+}
+
+button {
+  margin-top: 1.5rem;
+  padding: 0.65rem 1rem;
+  color: #fff;
+  background: #1d4ed8;
+  border: 0;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}

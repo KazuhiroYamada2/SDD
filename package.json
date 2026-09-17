@@ -1,0 +1,29 @@
+{
+  "name": "sdd",
+  "version": "1.0.0",
+  "description": "> [!NOTE]\r > **日本語版をお探しの方へ**\r > このリポジトリは書籍『仕様駆動開発 実践入門』の練習用リポジトリです。\r > 日本語の README は [README_ja.md](./README_ja.md) をご覧ください。\r > **書籍の正誤表は[こちら](./docs/guides/errata.md)です。**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KazuhiroYamada2/SDD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/KazuhiroYamada2/SDD/issues"
+  },
+  "homepage": "https://github.com/KazuhiroYamada2/SDD#readme",
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.9",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.2",
+    "pdfjs-dist": "^6.3.289"
+  }
+}

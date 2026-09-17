@@ -6,6 +6,47 @@
 
 # SDD (Spec-Driven Development) Practice Repository
 
+## Customer Management Application Setup
+
+The initial application structure is in `frontend/` and `backend/`. This stage contains no customer-management features, authentication, database schema, or migrations.
+
+### Prerequisites
+
+- Node.js 24 or later
+- PostgreSQL 16 or later (only required when a later task begins using the database)
+
+### Setup and startup
+
+```powershell
+Copy-Item .env.example backend/.env
+npm.cmd install --prefix frontend
+npm.cmd install --prefix backend
+npm.cmd run dev --prefix backend
+```
+
+In a separate terminal, start the frontend:
+
+```powershell
+npm.cmd run dev --prefix frontend
+```
+
+The frontend is available at the URL printed by Vite (normally `http://localhost:5173`). Verify the backend health check with:
+
+```powershell
+Invoke-WebRequest http://localhost:3000/health | Select-Object -ExpandProperty Content
+```
+
+Expected response: `{"status":"ok"}` with HTTP 200.
+
+### Tests
+
+```powershell
+npm.cmd test --prefix frontend
+npm.cmd test --prefix backend
+```
+
+The PostgreSQL pool configuration reads `DATABASE_URL` but does not open a database connection during startup. Schema creation, migrations, and application features are deliberately deferred.
+
 [English](./README.md) | [日本語](./README_ja.md)
 
 [![Elvez](https://img.shields.io/badge/Elvez-Product-3F61A7?style=flat-square)](https://elvez.co.jp/)
