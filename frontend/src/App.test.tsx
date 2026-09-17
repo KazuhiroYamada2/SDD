@@ -17,6 +17,17 @@ describe('App', () => {
     expect(screen.getByLabelText('担当ユーザーID')).toHaveAttribute('data-testid', 'owner-user-id-input');
   });
 
+  it('switches to the report screen and returns to the customer registration screen', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'レポート' }));
+    expect(screen.getByRole('heading', { name: 'レポート' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客登録画面に戻る' }));
+    expect(screen.getByRole('heading', { name: '顧客管理システム' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
+  });
+
   it('shows validation errors without calling the API', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

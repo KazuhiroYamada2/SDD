@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
+import { ReportsPage } from './reports/ReportsPage';
 
 type FormValues = {
   name: string;
@@ -13,6 +14,8 @@ type FormValues = {
 };
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
+
+type Screen = 'customerRegistration' | 'reports';
 
 const initialValues: FormValues = {
   name: '',
@@ -55,6 +58,7 @@ const toRequest = (values: FormValues): CreateCustomerInput => {
 };
 
 export function App() {
+  const [screen, setScreen] = useState<Screen>('customerRegistration');
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -90,12 +94,20 @@ export function App() {
     }
   };
 
+  if (screen === 'reports') {
+    return <ReportsPage onBack={() => {
+      setSelectedCustomer(null);
+      setScreen('customerRegistration');
+    }} />;
+  }
+
   if (selectedCustomer !== null) {
     return <CustomerDetail customer={selectedCustomer} onBack={() => setSelectedCustomer(null)} />;
   }
 
   return (
     <main>
+      <button type="button" onClick={() => setScreen('reports')}>レポート</button>
       <h1>顧客管理システム</h1>
       <section aria-labelledby="customer-registration-heading" className="customer-registration">
         <h2 id="customer-registration-heading">顧客情報を登録</h2>

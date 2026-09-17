@@ -145,3 +145,12 @@
 - テスト: Repositoryの結合・パラメータバインド・集計・順序、Serviceの単一・複数・集計額・件数・担当者IDとメール・期間境界・0件、APIのResponse DTO・型・400・500・503を追加した。
 - 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、18ファイル・67テストが成功した。
 - 未実施: React画面、Playwright、認可、DBスキーマ変更、staffName追加は今回の対象外とした。
+
+## 2026-09-17 React売上推移画面
+
+- 実施範囲: 既存の`App.tsx`にあるReact stateの画面切替へ`reports`を追加し、売上推移を表示するレポート画面を実装した。URLルーティングとルーティングライブラリは追加していない。
+- API: `src/api/reports.ts`に`getSalesTrend(from, to)`、`SalesTrendItem`、`SalesTrendResponse`を追加し、`GET /api/v1/reports/sales-trend`を呼び出す。
+- UI: 開始日・終了日・表示ボタンを備え、入力後だけAPIを呼び出す。入力不足・期間逆転は画面で検証し、処理中はstatus、APIエラーはalertで表示する。結果は月順を保持した表で表示し、金額文字列の小数点以下2桁を維持して3桁区切りを付ける。
+- テスト: 画面切替、アクセシブルなフォーム、入力検証、API呼び出し、loading、表、0円、0件、400・500・network errorの表示を追加した。
+- 実行結果: `frontend`で`npx.cmd tsc -b --pretty false`、`npm.cmd test`、`npm.cmd run build`を実行し、TypeScriptコンパイル、3ファイル・19テスト、ビルドがすべて成功した。
+- 未実施: 顧客分類・営業担当者別実績のデータ表示、グラフ、Playwright、認可、バックエンド・DB・仕様書の変更は今回の対象外とした。
