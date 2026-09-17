@@ -126,3 +126,12 @@
 - テスト: Repositoryのパラメータ化集計クエリ、Serviceの単月・複数レコード・月途中境界・範囲外除外・0件月、APIのResponse DTO・400・500・503を追加した。
 - 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、12ファイル・45テストが成功した。
 - 未実施: 顧客分類API、営業担当者別実績API、React画面、Playwright、認可、DBスキーマ変更は今回の対象外とした。
+
+## 2026-09-17 顧客分類API
+
+- 実施範囲: `GET /api/v1/reports/customer-categories`。
+- 実装内容: Repositoryが`customers.deleted_at IS NULL`の有効顧客だけを対象に、`category`がnullの顧客を「未分類」として集計する。件数降順、同数時はResponse上のcategory昇順で取得する。
+- Response: Serviceが`{ "items": [{ "category": "A", "customerCount": 25 }] }`形式へ変換し、対象顧客がない場合は`{ "items": [] }`を返す。
+- テスト: Repositoryの有効顧客・未分類・並び順クエリ、Serviceの単一・複数・null集約・論理削除除外・同数順序・0件、APIのResponse DTO・JSON number・期間指定不要・500・503を追加した。
+- 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、15ファイル・54テストが成功した。
+- 未実施: 営業担当者別実績API、React画面、Playwright、認可、DBスキーマ変更は今回の対象外とした。
