@@ -11,12 +11,15 @@ import { createCustomerCategoryService, type CustomerCategoryService } from './r
 import { createReportsRouter } from './reports/reports-router.js';
 import { createSalesTrendRepository } from './reports/sales-trend-repository.js';
 import { createSalesTrendService, type SalesTrendService } from './reports/sales-trend-service.js';
+import { createStaffPerformanceRepository } from './reports/staff-performance-repository.js';
+import { createStaffPerformanceService, type StaffPerformanceService } from './reports/staff-performance-service.js';
 
 type AppDependencies = {
   customerRepository?: CustomerRepository;
   activityService?: ActivityService;
   salesTrendService?: SalesTrendService;
   customerCategoryService?: CustomerCategoryService;
+  staffPerformanceService?: StaffPerformanceService;
 };
 
 export const createApp = (dependencies: AppDependencies = {}) => {
@@ -34,6 +37,8 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     (database === undefined ? undefined : createSalesTrendService(createSalesTrendRepository(database)));
   const customerCategoryService = dependencies.customerCategoryService ??
     (database === undefined ? undefined : createCustomerCategoryService(createCustomerCategoryRepository(database)));
+  const staffPerformanceService = dependencies.staffPerformanceService ??
+    (database === undefined ? undefined : createStaffPerformanceService(createStaffPerformanceRepository(database)));
 
   app.use(express.json());
 
@@ -43,7 +48,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
 
   app.use('/api/v1/customers', createCustomersRouter(customerRepository));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
-  app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService));
+  app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
 
   return app;
 };

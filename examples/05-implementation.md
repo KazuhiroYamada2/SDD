@@ -135,3 +135,13 @@
 - テスト: Repositoryの有効顧客・未分類・並び順クエリ、Serviceの単一・複数・null集約・論理削除除外・同数順序・0件、APIのResponse DTO・JSON number・期間指定不要・500・503を追加した。
 - 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、15ファイル・54テストが成功した。
 - 未実施: 営業担当者別実績API、React画面、Playwright、認可、DBスキーマ変更は今回の対象外とした。
+
+## 2026-09-17 営業担当者別実績API
+
+- 実施範囲: `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD`。
+- 実装内容: Repositoryが`sales_records`を`users.id = sales_records.user_id`で結合し、担当者ID単位で売上金額合計と売上件数を集計する。対象日は`recorded_on`のfrom/to両端を含む範囲とし、売上金額降順、同額時は`users.email`昇順で取得する。
+- Response: Serviceが`staffId`、`staffEmail`、`salesAmount`、`salesCount`を含むResponse DTOへ変換する。`salesAmount`は小数点以下2桁の文字列、`salesCount`はnumberで返す。対象期間の売上がない場合は`items: []`を返す。
+- 入力検証: 既存の売上推移APIと同じfrom/to必須、厳密な日付形式・実在日付、from/toの前後関係を検証し、異常時は`VALIDATION_ERROR`の400を返す。
+- テスト: Repositoryの結合・パラメータバインド・集計・順序、Serviceの単一・複数・集計額・件数・担当者IDとメール・期間境界・0件、APIのResponse DTO・型・400・500・503を追加した。
+- 実行結果: `backend`で`npm.cmd run build`を実行し成功。`npm.cmd test`を実行し、18ファイル・67テストが成功した。
+- 未実施: React画面、Playwright、認可、DBスキーマ変更、staffName追加は今回の対象外とした。
