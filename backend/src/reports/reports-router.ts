@@ -30,7 +30,13 @@ export const createReportsRouter = (
     }
   });
 
-  router.get('/customer-categories', async (_request, response) => {
+  router.get('/customer-categories', async (request, response) => {
+    if (Object.prototype.hasOwnProperty.call(request.query, 'from') ||
+        Object.prototype.hasOwnProperty.call(request.query, 'to')) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: 'from and to are not supported for customer categories.' });
+      return;
+    }
+
     if (customerCategoryService === undefined) {
       response.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Database is not configured.' });
       return;

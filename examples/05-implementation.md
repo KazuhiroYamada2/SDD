@@ -234,3 +234,16 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `e2e/reports/customer-categories.spec.ts`のCC-05だけを修正した。初回GETのHTTP 200確認を維持し、再訪時の2回目のGETではHTTP 200または304を許容する。
 - 再訪時に新たなGETが発生して計2件になること、A=2・B=2・未分類=1の表を表示することを引き続き確認する。304時は取得可能なETagと`If-None-Match`を確認し、両方取得できた場合は一致を検証する。
 - 他のCCシナリオ、Smoke/ST/SP/RP/VLのHTTP 200確認は変更していない。Backend・Frontend・キャッシュ設定・Playwright configは変更していない。
+
+## 2026-09-20 既存の営業担当者別実績画面の記録補完
+
+- 既存の`frontend/src/reports/StaffPerformanceReport.tsx`は、開始日・終了日の入力検証後に`frontend/src/api/reports.ts`から実APIを呼び出し、loading、error、0件メッセージ、担当者のメール・金額・件数を表に表示する。再検索時は旧結果を消去する。
+- 金額は`frontend/src/reports/report-format.ts`でAPIの小数2桁文字列を保持しながら3桁区切り表示に変換する。`ReportsPage.tsx`のstate切替から画面を表示する。
+- `frontend/src/reports/StaffPerformanceReport.test.tsx`に対応するコンポーネントテストがある。この節は既存実装の記録漏れを補うもので、今回アプリコードは変更していない。
+
+## 2026-09-20 レポートコア機能の仕様整合
+
+- F-09/F-11は既存の`sales_records`を参照・集計する範囲とし、examples/02・03とT-401の記述を明確化した。T-401は集計元データ基盤の準備を指す。`backend/migrations/001_create_core_schema.sql`に必要なschemaと項目があり、売上推移・営業担当者別実績のRepositoryが参照する。業務用登録・更新のRequirementはなく、CRUD API・画面は追加していない。
+- F-10の顧客分類APIで、`from`または`to` query parameterが存在する場合は空文字も含めHTTP 400とし、既存の`VALIDATION_ERROR`形式を返す。Backend APIテストを期間指定5ケースへ変更し、期間指定なしの200と`foo`だけの200も確認する。未知query全般の共通規約は追加していない。
+- Frontend、DB schema、migration、fixture、Playwright configは変更していない。CC-05の調査用`console.log`のみ削除し、200/304の受入assertionは維持した。
+- 今回の受入範囲はF-09～F-11の集計・表示。JWT認証、roleによるレポート認可、staff/manager/admin別アクセス制御、T-501・T-504は後続タスクとして継続する。

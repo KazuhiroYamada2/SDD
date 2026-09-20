@@ -109,7 +109,6 @@ test('CC-05 再訪時に実APIを再取得して同じ結果を表示する', as
   expect([200, 304]).toContain(secondResponse.status());
   const requestHeaders = await secondResponse.request().allHeaders();
   const responseHeaders = await secondResponse.allHeaders();
-  console.log(`CC-05 responses: 200 -> ${secondResponse.status()}, If-None-Match: ${requestHeaders['if-none-match'] ?? 'absent'}, ETag: ${responseHeaders.etag ?? 'absent'}`);
   if (secondResponse.status() === 304 && requestHeaders['if-none-match'] && responseHeaders.etag) {
     expect(requestHeaders['if-none-match']).toBe(responseHeaders.etag);
   }

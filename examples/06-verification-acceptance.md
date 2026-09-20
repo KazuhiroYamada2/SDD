@@ -221,3 +221,28 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 
 - 各実行前に`npm run e2e:reports`で専用PostgreSQLのhealthy確認と`customer_management_e2e`の安全チェック付きresetを実施し、実Backend・Repository・実PostgreSQLを使用した。固定fixtureはusers 2、customers 6、sales_records 8件。RP-02を含む既存シナリオを変更せず、3BrowserでPASSした。
 - Backend・Frontend・DB・fixture・migration・API仕様・キャッシュ設定は変更していない。今回のクロスブラウザ受入確認に残るFAILはない。
+
+## 2026-09-20 レポート機能の最終受入レビュー
+
+- Backend既存テストは19ファイル・69件PASS、build PASS。Frontend既存テストは4ファイル・48件PASS、TypeScript型チェックPASS、build PASS。3ブラウザ一括PlaywrightはChromium 21、Firefox 21、WebKit 21の計63件PASS・0件FAIL。
+- E2E実行前に`postgres-e2e`がhealthyとなり、`NODE_ENV=e2e`と`customer_management_e2e`を安全確認してresetした。users 2、customers 6、sales_records 8件の固定fixtureを使い、BrowserからVite proxy・実Backend・Repository・実PostgreSQLへ接続した。今回のCC-05再訪時statusはChromium 200、Firefox 304、WebKit 200。RP-02も3ブラウザでPASS。
+- レビューGap: `examples/04-task-breakdown.md`のT-401にある`sales_records`登録・更新の業務用経路は確認できず、E2E fixture投入だけが存在する。`examples/03-design-planning.md`の顧客分類APIは期間を「受け付けない」と記す一方、現行Routerは期間付きqueryを無視して200を返し、Backendテストもこれを期待する。挙動の契約を確認する必要がある。03がレポートAPIへ割り当てたF-12の閲覧権限も未実装で、02では後続の権限管理タスクに送っているため、本レビューでPASS扱いしない。E2EのCC-05にはstatusとETagを出力する`console.log`が残るが、本番コードには該当するデバッグ出力は見つからなかった。これらは今回修正せず、受入完了判定を保留した。
+
+## 2026-09-20 レポートコア機能のGap解消・最終確認
+
+- 受入範囲はF-09・F-10・F-11の集計・表示。F-12の閲覧権限、JWT認証、roleによる認可、staff/manager/admin別アクセス制御、T-501・T-504は今回対象外の後続タスクとする。Phase 1全体の受入判定ではない。
+- 修正後のT-401はPASS。`001_create_core_schema.sql`の`sales_records`に`id`、`customer_id`、`user_id`、`amount`、`recorded_on`、作成・更新日時が存在する。F-09/F-11のRepositoryが`amount`、`recorded_on`、`user_id`を参照し、実DB E2Eで固定売上8件から月別・担当者別の集計結果を確認した。業務用CRUDはT-401の完了条件に含めない。
+- 顧客分類API契約は、期間queryなしでHTTP 200、`from`のみ・`to`のみ・両方・空の`from`・空の`to`でHTTP 400。Backend APIテストでは400応答の`VALIDATION_ERROR`形式とService未呼出しを確認した。`foo`のみは現行のHTTP 200を確認したが、未知query全般の共通規約は定めていない。Frontendの顧客分類GETにはfrom/toがない。
+- Backendテスト19ファイル・74件PASS、Backend build PASS。Frontendテスト4ファイル・48件PASS、TypeScript型チェックPASS、Frontend build PASS。
+- `npm run e2e:reports`で`postgres-e2e`のhealthy確認後、`NODE_ENV=e2e`かつDB名`customer_management_e2e`の安全確認を通してresetした。固定fixtureはusers 2件、customers 6件、sales_records 8件。BrowserからReact、Vite proxy、実Backend、Repository、専用PostgreSQLへ接続し、Chromium 21件、Firefox 21件、WebKit 21件の計63件PASS・0件FAIL。CC-05の再訪GETは200または304を許容し、RP-02は応答遅延後に実Backend応答を確認した。
+
+### Acceptance Traceability Matrix（今回の受入範囲）
+
+| Requirement | Design | Task | Implementation | Backend Test | Frontend Test | E2E Scenario | Browser | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| F-09 売上推移 | 03 売上推移API・sales_records参照 | T-401・T-402・T-405・T-407 | migration、売上推移Router/Service/Repository、React画面 | 売上推移API・集計・validation | 売上推移component | ST-01～ST-05、RP-01、VL-01 | Chromium/Firefox/WebKit | PASS：集計・表示 |
+| F-10 顧客分類 | 03 現在スナップショット、from/toは400 | T-403・T-405 | 顧客分類Router/Service/Repository、React画面 | 顧客分類API、期間query 5ケース | 顧客分類component | Smoke、CC-01～CC-05、RP-01・RP-02 | Chromium/Firefox/WebKit | PASS：集計・表示・query契約 |
+| F-11 営業担当者別実績 | 03 担当者別API・sales_records参照 | T-401・T-404・T-405・T-407 | migration、担当者別Router/Service/Repository、React画面 | 担当者別API・集計・validation | 担当者別component | SP-01～SP-06、RP-01、VL-01 | Chromium/Firefox/WebKit | PASS：集計・表示 |
+| F-12 レポート閲覧権限 | 03 認証・認可設計 | T-501・T-504等 | 今回対象外 | 今回対象外 | 今回対象外 | 今回対象外 | 今回対象外 | 後続タスク・未受入 |
+
+- 前回Gap 1（T-401の過剰な登録・更新定義）とGap 3（顧客分類の期間query契約）は仕様・実装・テストの整合を確認して解消した。Gap 2（閲覧権限）はF-09～F-11の今回の受入範囲から明示的に分離し、未実装・未受入の後続タスクとして残した。今回のレポートコア範囲に新しいGapは確認されなかった。

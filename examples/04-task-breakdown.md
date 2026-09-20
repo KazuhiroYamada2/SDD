@@ -74,9 +74,9 @@
 
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
-| T-401 | sales_recordsの登録・更新と、売上推移・営業担当者別実績の集計元データを実装 | F-09、F-11 | T-002 | 中 |
+| T-401 | sales_records集計元データ基盤を準備する。schema・migrationとF-09/F-11に必要なデータ項目を整え、既存のsales_recordsをレポート集計元として利用可能にする。業務用登録・更新は含めない | F-09、F-11 | T-002 | 中 |
 | T-402 | `GET /api/v1/reports/sales-trend`を実装。month(from)からmonth(to)までを月昇順で生成し、from/toの期間内だけを月単位で集計する。売上がない月はsalesAmount=`"0.00"`で補完するResponse DTOを返す | F-09 | T-401 | 中 |
-| T-403 | `GET /api/v1/reports/customer-categories`を実装。deleted_atがnullの現在の有効顧客をcategory別に集計し、nullは「未分類」、0件は`{ "items": [] }`を返す。customerCount降順、同数はResponse上のcategory昇順で返す | F-10 | T-002 | 中 |
+| T-403 | `GET /api/v1/reports/customer-categories`を実装。deleted_atがnullの現在の有効顧客をcategory別に集計し、nullは「未分類」、0件は`{ "items": [] }`を返す。customerCount降順、同数はResponse上のcategory昇順で返す。from/toがない場合はHTTP 200、fromのみ・toのみ・両方（空文字を含む）が指定された場合はHTTP 400を検証する | F-10 | T-002 | 中 |
 | T-404 | `GET /api/v1/reports/staff-performance`を実装。sales_records.user_idとusers.emailを使用し、staffId、staffEmail、salesAmount、salesCountを返す。salesAmountは小数点以下2桁の文字列とし、金額降順・staffEmail昇順で返す | F-11 | T-401 | 中 |
 | T-405 | レポート集計値、0件、売上推移の0埋め、期間境界、営業担当者別実績のstaffEmailを使う並び順、および確定したResponse DTOを単体・統合テストで検証 | F-09〜F-11 | T-402〜T-404 | 高 |
 | T-407 | 売上推移・営業担当者別実績APIのfrom/to必須、YYYY-MM-DD形式、from > toの400応答を単体・統合テストで検証 | F-09、F-11 | T-402、T-404 | 高 |

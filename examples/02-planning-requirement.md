@@ -67,6 +67,7 @@
 - `customers.category`ごとの現在の有効顧客数を集計する。
 - 論理削除済み顧客は、`customers.deleted_at`が`null`ではない顧客として集計対象から除外する。
 - 期間指定は行わず、現在時点のスナップショットを返す。
+- `from`または`to`がquery parameterとして指定された場合は、不正な期間指定としてHTTP 400を返す。
 - `category`が`null`の顧客は「未分類」として集計する。
 - Response DTOは`items`を持つ。itemsの項目は`category`、`customerCount`とする。
 - itemsは`customerCount`の降順、同数の場合はResponse上の`category`の昇順で返す。SQLまたはService層で順序を保証し、DBの自然順には依存しない。
@@ -84,6 +85,8 @@
 - 売上金額合計は小数点以下2桁の文字列として返す。0円は`"0.00"`とする。
 - Response DTOは`from`、`to`、`items`を持つ。itemsの項目は`staffId`、`staffEmail`、`salesAmount`、`salesCount`とする。
 - 対象データが存在しない場合は`items`が空配列のResponse DTOを返す。
+
+売上推移と営業担当者別実績は、既存の`sales_records`を参照・集計する。`sales_records`の業務用登録・更新機能はF-09/F-11の対象に含めない。
 
 #### レポートAPIと認可
 

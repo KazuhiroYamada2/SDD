@@ -26,13 +26,32 @@ describe('GET /api/v1/reports/customer-categories', () => {
     expect(customerCategoryService.getCustomerCategories).toHaveBeenCalledWith();
   });
 
-  it('does not require period parameters', async () => {
+  it.each([
+    '?from=2026-01-01',
+    '?to=2026-01-31',
+    '?from=2026-01-01&to=2026-01-31',
+    '?from=',
+    '?to=',
+  ])('returns HTTP 400 when period parameter is supplied: %s', async (query) => {
     const customerCategoryService = createService();
     const response = await request(createApp({ customerCategoryService }))
-      .get('/api/v1/reports/customer-categories?from=2026-01-01&to=2026-01-31');
+      .get(`/api/v1/reports/customer-categories${query}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'from and to are not supported for customer categories.',
+    });
+    expect(customerCategoryService.getCustomerCategories).not.toHaveBeenCalled();
+  });
+
+  it('does not apply the period-only rejection to other query parameters', async () => {
+    const customerCategoryService = createService();
+    const response = await request(createApp({ customerCategoryService }))
+      .get('/api/v1/reports/customer-categories?foo=bar');
 
     expect(response.status).toBe(200);
-    expect(customerCategoryService.getCustomerCategories).toHaveBeenCalledWith();
+    expect(response.body).toEqual(customerCategories);
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {

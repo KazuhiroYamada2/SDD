@@ -61,7 +61,7 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 ### sales_records
 
-`id`、`customer_id`、`user_id`、`amount`、`recorded_on`、`created_at`、`updated_at`を持つ。売上推移と営業担当者別実績の集計元とする。
+`id`、`customer_id`、`user_id`、`amount`、`recorded_on`、`created_at`、`updated_at`を持つ。売上推移と営業担当者別実績の集計元とし、今回のレポート設計では既存データの参照対象とする。業務用登録・更新APIや画面は対象に含めない。
 
 ### audit_logs
 
@@ -88,7 +88,7 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 | `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD` | 営業担当者別実績 | F-11、F-12 |
 | `GET /users`、`PATCH /users/:id/role` | ユーザー・権限管理 | F-12〜F-14 |
 
-一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。`page_size`の上限は100とする。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けない。
+一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。`page_size`の上限は100とする。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けず、`from`または`to`がquery parameterに存在する場合は値が空でもHTTP 400を返す。期間queryがない場合は現在の有効顧客のスナップショットをHTTP 200で返す。
 
 ## レポートResponse DTO
 
