@@ -307,3 +307,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `App.tsx` に `AuthProvider` と認証境界を組み込み、未認証時はLogin画面、Login成功後は従来の初期画面である顧客登録画面を表示する。認証済み画面共通のLogout操作はmemory上のtokenとuserを破棄し、Login画面へ戻す。Provider再生成時も未認証となる。
 - customers・activities・reportsの既存API呼出しへ必須のaccessTokenを引数で渡し、`authenticatedFetch`によるBearer付与へ接続した。API層はReact Contextへ依存しない。UI層の共通hookが`AuthenticationRequiredError`を受けて認証状態を破棄し、共通の再ログイン案内を表示する。400・403・404・500・503・通信障害では認証状態を破棄しない。
 - T-105/T-501のrole別認可は未実装。Backend・DB・Playwrightは変更していない。既存Reports Playwright 63件のmanager Login移行は次段階で行うため、この中間段階ではT-110全体を完了扱いしない。
+## 2026-09-21 T-110 Reports E2EのUI Login移行（完了）
+
+- `e2e/auth/login-helper.ts` に `loginAsE2EManagerViaUi(page)` を追加した。既存のmanager fixtureから認証情報を読み、実Login画面で入力・送信し、Login APIの200と顧客登録画面への遷移を確認する。
+- Reports E2Eの5ファイル・21シナリオで、開始時のAppアクセスを共通UI Login helperに置き換えた。業務assertionは変更していない。
+- Reports smokeで、business APIへのAuthorizationが非空のBearer形式であることを追加確認する。token全文は出力しない。
+- storageStateや永続storageは使用していない。Frontend・Backend production code、DB schema/migrationは変更していない。
+- 起動済みの専用PostgreSQLへ `127.0.0.1:55432` で直接接続してreset・seedし、T-109 Login smoke 2件とReports E2E 3ブラウザー63件のPASSを確認した。UI manager Login、Login API 200、business APIのBearer形式も確認済み。T-110は完了。production業務APIのAuthentication適用はT-111、role認可は後続Taskとする。

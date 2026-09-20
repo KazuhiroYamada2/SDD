@@ -1,9 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { loginAsE2EManagerViaUi } from '../auth/login-helper';
 
 const trendPath = '/api/v1/reports/sales-trend';
 
 async function openSalesTrend(page: Page) {
-  await page.goto('/');
+  await loginAsE2EManagerViaUi(page);
   await page.getByRole('button', { name: 'レポート', exact: true }).click();
   await page.getByRole('button', { name: '売上推移', exact: true }).click();
   await expect(page.getByRole('heading', { name: '売上推移' })).toBeVisible();

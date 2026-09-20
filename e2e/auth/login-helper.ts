@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { e2eManager } from '../fixtures/auth-manager.mjs';
 
 type LoginResult = {
@@ -20,4 +20,18 @@ export async function loginAsE2EManager(request: APIRequestContext): Promise<Log
   expect(result.expiresIn).toBe(1800);
   expect(result.user).toEqual({ id: e2eManager.id, email: e2eManager.email, role: 'manager' });
   return result;
+}
+
+export async function loginAsE2EManagerViaUi(page: Page): Promise<void> {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'ログイン', exact: true })).toBeVisible();
+  await page.getByLabel('メールアドレス').fill(e2eManager.email);
+  await page.getByLabel('パスワード').fill(e2eManager.password);
+  const loginResponse = page.waitForResponse((response) =>
+    response.request().method() === 'POST' &&
+    new URL(response.url()).pathname === '/api/v1/auth/login');
+  await page.getByRole('button', { name: 'ログイン', exact: true }).click();
+  expect((await loginResponse).status()).toBe(200);
+  await expect(page.getByRole('heading', { name: '顧客情報を登録', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'ログイン', exact: true })).toHaveCount(0);
 }

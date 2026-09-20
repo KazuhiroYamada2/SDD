@@ -306,3 +306,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Frontend全テスト8ファイル・98件PASS。AppのLogin境界・Login成功・Logout・Provider再生成、業務APIのBearer付与、customers・activities・reportsからの401時Login復帰、403時に認証状態を保持する動作を確認した。
 - `tsc -b` PASS、`npm run build` PASS。Backendは変更・実行していない。
 - Playwrightは変更・実行していない。以前のReports E2E 63件PASS記録は当時の結果であり、現行AppではLoginが初期表示されるため、既存63件は次段階でmanager Loginへ移行して再検証する。T-110全体の受入は未完了。
+## 2026-09-21 T-110 Reports E2E UI Login移行の検証（PASS）
+
+- `.env.e2e` は `NODE_ENV=e2e`、専用DB `customer_management_e2e`、JWT secretの設定を値を出力せず確認した。`backend/scripts/e2e-db.mjs` の既存safety guardは変更していない。
+- `playwright test --config=playwright.reports.config.ts --list` はPASS。Chromium、Firefox、WebKitそれぞれ21件、計63件を検出した。
+- Docker Named Pipeを使わず、起動済み専用PostgreSQLの `127.0.0.1:55432` へTCP接続成功。既存scriptの `NODE_ENV=e2e`・接続URL・接続後DB識別guardを通して `reset` と `seed` を実行し、それぞれusers 3、customers 6、sales_records 8件を確認した。managerのrole、active状態、既存fixture・集計値もscriptの検証を通過した。JWT secretは設定と長さを値を出力せず確認した。
+- T-109 Login smoke: 2 / 2 PASS。実Login APIのsuccess 200、Bearer、1800秒、manager、非空tokenと、wrong password 401 `AUTHENTICATION_FAILED` を確認した。
+- Reports E2E: Chromium先行 21 / 21 PASS。続く3ブラウザー実行はChromium 21 / 21、Firefox 21 / 21、WebKit 21 / 21、Total 63 / 63 PASS。各scenarioで実UI manager LoginのPOST 200と顧客登録画面への遷移を確認し、代表smokeでbusiness API requestの非空Bearer形式を確認した。token全文は出力していない。
+- ST 5件、CC 5件、SP 6件、RP 2件、VL 2件、Reports smoke 1件の既存業務assertionが各ブラウザーでPASS。CC-05の再訪GET 200/304、RP-02のpending後に実Backendへcontinue、VL-01の不正入力時Reports API GET 0件を維持した。Frontend・Backend production codeは変更せず、production業務APIはPublic、Authorizationは未実装。T-110 PASS。

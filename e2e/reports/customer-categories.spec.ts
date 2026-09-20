@@ -1,9 +1,10 @@
 import { expect, test, type Locator, type Page, type Response } from '@playwright/test';
+import { loginAsE2EManagerViaUi } from '../auth/login-helper';
 
 const categoriesPath = '/api/v1/reports/customer-categories';
 
 async function openReports(page: Page) {
-  await page.goto('/');
+  await loginAsE2EManagerViaUi(page);
   await page.getByRole('button', { name: 'レポート', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'レポート' })).toBeVisible();
 }

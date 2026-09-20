@@ -1,9 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { loginAsE2EManagerViaUi } from '../auth/login-helper';
 
 const staffPath = '/api/v1/reports/staff-performance';
 
 async function openStaffPerformance(page: Page) {
-  await page.goto('/');
+  await loginAsE2EManagerViaUi(page);
   await page.getByRole('button', { name: 'レポート', exact: true }).click();
   await page.getByRole('button', { name: '営業担当者別実績', exact: true }).click();
   await expect(page.getByRole('heading', { name: '営業担当者別実績' })).toBeVisible();

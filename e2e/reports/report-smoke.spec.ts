@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { loginAsE2EManagerViaUi } from '../auth/login-helper';
 
 test('顧客分類が実DBからブラウザへ表示される', async ({ page }) => {
-  await page.goto('/');
+  await loginAsE2EManagerViaUi(page);
   await page.getByRole('button', { name: 'レポート', exact: true }).click();
 
   const categoryResponse = page.waitForResponse((response) => {
@@ -13,6 +14,7 @@ test('顧客分類が実DBからブラウザへ表示される', async ({ page }
 
   const response = await categoryResponse;
   expect(response.status()).toBe(200);
+  expect(/^Bearer \S+$/.test((await response.request().allHeaders()).authorization ?? '')).toBe(true);
   expect(new URL(response.url()).origin).toBe('http://127.0.0.1:5173');
 
   const table = page.getByRole('table', { name: '顧客分類' });
