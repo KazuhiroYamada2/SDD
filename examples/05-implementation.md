@@ -290,3 +290,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - seed時に既存`argon2`でArgon2id hashを毎回生成し、memory 19456 KiB、time cost 2、parallelism 1で`users.password_hash`へ投入する。固定hashは保存しない。E2E専用passwordは本番Initial Password Provisioningとは別である。既存の`NODE_ENV=e2e`、専用DB名・接続先・DB接続後の識別確認を維持した。
 - `e2e/auth/login-helper.ts`の`loginAsE2EManager(request)`はPlaywrightのHTTP requestから実Login APIを呼び、200・Bearer・1800秒・manager情報を確認してtokenを返す。`login-smoke.spec.ts`で成功と誤passwordの401を実Backend・実PostgreSQL経由で確認する。専用`playwright.auth.config.ts`と`npm run e2e:auth`によりAPI smokeを1 projectで実行する。E2E専用JWT secretはGit管理外の`.env.e2e`からBackend webServerへ渡し、`.env.e2e.example`にはplaceholderだけを記載した。
 - Frontend、production業務APIのAuthentication適用、role認可、既存Reportsシナリオは変更していない。T-110・T-111・T-605は引き続き後続Taskである。
+
+## 2026-09-20 T-110 Frontend認証部品の準備（部分実装）
+
+- `frontend/src/auth/auth-types.ts`にrole、認証済みユーザー、memory認証状態、Login request/responseの型を追加した。`frontend/src/api/auth.ts`に`POST /api/v1/auth/login`用のfetch clientを追加し、200のDTO、400 validation、401認証失敗、500/503・network障害を区別する。内部エラー詳細やpassword・tokenを表示・記録しない。
+- `AuthContext.tsx`でaccessTokenとuserをReact stateに保持し、設定・解除できるようにした。永続storageやmodule globalは使用しない。`Login.tsx`にはlabel付きemail/password入力、Login操作、loading・二重送信防止、400/401/障害の区別した表示を追加した。emailの前後空白だけを除去し、passwordは変更しない。成功時はContextに認証情報を設定する。
+- Login API client、認証状態、Login componentのunit/component testを追加した。`App.tsx`、既存customers・activities・reports API、Backend、E2E、Playwrightは変更していない。T-110全体は未完了で、App統合、authenticated fetch・Bearer付与、業務API 401、Logout UI、Browser認証移行は後続段階で行う。

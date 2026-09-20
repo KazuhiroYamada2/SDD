@@ -289,3 +289,9 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - 実Backend・実PostgreSQL・HTTP Login APIによるsmoke 2件PASS。managerのLoginはHTTP 200で非空のJWT、Bearer、1800秒、managerのID・email・roleを返した。誤passwordはHTTP 401 `AUTHENTICATION_FAILED`だった。API mockは使用していない。
 - Backend全テスト25ファイル・120件PASS、build PASS。`npm run e2e:reports`の既存21シナリオ×3 BrowserはChromium 21、Firefox 21、WebKit 21、合計63件PASS。顧客分類A=2/B=2/未分類=1、売上推移、担当者別実績の期待値は維持された。
 - T-109は完了。Frontend認証（T-110）、production業務APIへのAuthentication適用（T-111）、role認可（T-105・T-501）、T-605の最終確認は未実施。本番Initial Password Provisioningは別途残る。
+
+## 2026-09-20 T-110 Frontend認証部品の検証（部分実装）
+
+- Login API client test 7件PASS。200 DTO、400 `VALIDATION_ERROR`、401 `AUTHENTICATION_FAILED`、500/503、network障害、およびpasswordを変えずにJSON送信することを確認した。
+- 認証状態test 2件PASS。初期未認証、token・userの設定と解除、Provider再生成時の未認証、localStorage/sessionStorageを読み書きしないことを確認した。Login component test 7件PASS。accessible label、email trimとpassword空白維持、成功時の状態設定、400/401とその他障害の表示、loadingと二重送信防止を確認した。
+- Frontend全テスト7ファイル・64件PASS、`tsc -b` PASS、`npm run build` PASS。`App.tsx`と既存業務APIに認証を適用していない。BackendとPlaywrightは変更・実行していない。T-110全体および既存Reports 63件の認証移行は未完了。
