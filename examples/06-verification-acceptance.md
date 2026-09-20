@@ -278,3 +278,7 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - header欠落、不正scheme、Bearer token欠落・複数token、query/Cookieのみ、malformed JWT、別secretによる署名不正、期限切れ、`sub`欠落・形式不正、user不存在、token発行後のinactive化はいずれも同じHTTP 401 `AUTHENTICATION_REQUIRED`応答となることを確認した。固定waitは使用していない。
 - Repository障害と想定外のJWT検証障害は401へ変換せずテストappの共通エラーhandlerで500となること、短い`JWT_SECRET`はmiddleware生成時に設定エラーとなることを確認した。secret値やtoken全文は応答へ出していない。
 - Backend全テスト25ファイル・120件PASS、`npm run build` PASS。既存Login APIテストもPASS。production APIへのmiddleware適用、Frontend・Browser経由の認証は未実施のため、T-104・T-605全体はPASS扱いしない。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-20 認証移行仕様・Task分解の文書確認
+
+- examples/02～04を照合し、Login・healthのPublic扱い、その他Phase 1業務APIの認証必須、Login後の顧客登録画面、Login/業務APIの401動作、memory token・Logout、T-109→T-110→T-111→T-605→T-105→T-501の順序が一致することを確認した。T-109～T-111は未実装・未検証であり、T-605も最終PASSとしていない。今回はコード変更とテスト実行を行っていない。

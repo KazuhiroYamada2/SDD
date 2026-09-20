@@ -42,13 +42,17 @@
 | T-101 | Vite、React、TypeScriptのFrontend雛形を作成 | 全機能 | T-001 | 高 |
 | T-102 | Node.js、Express、TypeScriptのBackend雛形を作成 | 全機能 | T-001 | 高 |
 | T-103 | PostgreSQL接続、マイグレーション、トランザクション基盤を作成 | 全機能 | T-002、T-102 | 高 |
-| T-104 | BackendのLogin APIを実装する。入力不正時の400、既存ユーザーのArgon2id password照合、HS256 JWT発行（30分）、Bearer形式・HS256固定・期限の検証、`sub`によるusers存在・`is_active`の各request確認、現在roleを持つ`authenticatedUser`設定、確定した401共通応答とdummy hashによるuser enumeration対策を実装・テストする。role別の認可、Frontend Login画面、audit_logs永続記録、初期password設定は含めない | N-03 | T-003、T-102 | 高 |
+| T-104 | BackendのLogin APIとAuthentication部品を実装する。入力不正時の400、既存ユーザーのArgon2id password照合、HS256 JWT発行（30分）、Bearer形式・HS256固定・期限の検証、`sub`によるusers存在・`is_active`の各request確認、現在roleを持つ`authenticatedUser`設定、確定した401共通応答とdummy hashによるuser enumeration対策を実装・テストする。production業務APIへの適用はT-111、role別の認可はT-105、Frontend Login画面はT-110、audit_logs永続記録はT-108として分け、初期password設定は含めない | N-03 | T-003、T-102 | 高 |
 | T-105 | 共通認可ミドルウェアと403処理を実装 | F-12〜F-14 | T-003、T-104 | 高 |
 | T-106 | 入力検証、エラー形式、リクエストIDの共通処理を実装 | 全機能、N-05 | T-001、T-102 | 高 |
 | T-107 | 顧客情報の暗号化・復号処理と秘密情報の設定を実装 | N-04 | T-004、T-103 | 高 |
 | T-108 | アクセスログと監査ログの記録処理を実装 | N-05 | T-002、T-106 | 高 |
+| T-109 | E2E認証基盤を準備する。既存staff fixtureを維持し、集計値に影響しないE2E専用manager、テスト専用passwordから生成したArgon2id hash、実DB Login API smoke test、Playwrightで再利用可能なlogin helperを追加する。実DBでmanagerのJWT取得と既存Reports 63件PASSを完了条件とし、Frontend認証・production API保護・既存63件の書換えは行わない | N-03 | T-103、T-104、既存E2E専用DB基盤 | 高 |
+| T-110 | Frontend認証を導入する。Login画面とAPI client、token・userのReact memory保持、共通authenticated fetchによるBearer付与と業務API 401処理、Login 400/401表示、既存初期業務画面への遷移、Logout、再読込後のLogin復帰を実装する。Frontend unit/component testとE2E managerでログインする既存Reports Playwright 63件の3 Browser PASSを完了条件とする。production業務APIはまだ保護しない | N-03 | T-101、T-104、T-109 | 高 |
+| T-111 | production業務APIに共通Authentication middlewareを適用する。`POST /api/v1/auth/login`と`GET /health`はPublicのまま、その他の現在および後続のPhase 1業務APIを認証必須とする。Backend production API test、実DB Login→Bearer→業務API成功、Bearerなし401、既存Reports Playwright 63件の3 Browser PASSを完了条件とし、role認可・403は含めない | N-03 | T-104、T-110 | 高 |
 
 T-104は認証結果と内部向け失敗理由を判定可能にする。認証・認可の`audit_logs`永続記録はT-108の責務とし、T-104の前提Taskには追加しない。
+T-104のBackend Authentication部品と、N-03のproduction統合は区別する。移行順はT-109→T-110→T-111→T-605→T-105→T-501等とし、T-105の既存依存関係は変更しない。T-109のE2E専用passwordは本番ユーザーのInitial Password Provisioningを解決しない。
 
 ## 顧客情報管理タスク
 
@@ -104,7 +108,7 @@ T-104は認証結果と内部向け失敗理由を判定可能にする。認証
 | T-602 | 本番相当データで検索95パーセンタイル3秒以内を測定 | N-01 | T-601 | 高 |
 | T-603 | 50同時ユーザーの負荷試験とエラー率を測定 | N-02 | T-602、T-006 | 高 |
 | T-604 | 顧客情報の暗号化保存と復号権限を検証 | N-04 | T-107、T-201、T-203 | 高 |
-| T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する | N-03 | T-104 | 高 |
+| T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する。実DB Loginとproduction保護APIでBearerあり成功・なし401も最終確認する。Browser LoginはT-110のE2Eで検証する | N-03 | T-104、T-111 | 高 |
 | T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |
 | T-607 | ヘルスチェック、監視、バックアップ、復旧手順を設定 | N-06 | T-007 | 高 |
 | T-608 | 平日9:00〜18:00の稼働率99%以上を測定 | N-06 | T-607 | 高 |
@@ -141,7 +145,7 @@ T-104は認証結果と内部向け失敗理由を判定可能にする。認証
 | F-12〜F-14 | T-501〜T-503 | T-504、T-505、T-802、T-803 |
 | N-01 | T-601 | T-602、T-804 |
 | N-02 | T-006 | T-603、T-804 |
-| N-03 | T-104、T-605 | T-803、T-804 |
+| N-03 | T-104、T-109〜T-111 | T-605、T-803、T-804 |
 | N-04 | T-004、T-107、T-702 | T-604、T-804 |
 | N-05 | T-108 | T-606、T-703、T-804 |
 | N-06 | T-007、T-607 | T-608、T-704、T-804 |
@@ -150,7 +154,7 @@ T-104は認証結果と内部向け失敗理由を判定可能にする。認証
 ## マイルストーン
 
 1. **設計承認**: T-001〜T-007が完了し、03の実装開始条件を満たす
-2. **共通基盤完了**: T-101〜T-108が完了し、認証・認可・監査を含むAPI基盤が動作する
+2. **共通基盤完了**: T-101〜T-111が完了し、認証・認可・監査を含むAPI基盤が動作する
 3. **機能実装完了**: T-201〜T-505が完了し、F-01〜F-14を実装する
 4. **非機能検証完了**: T-601〜T-610が完了し、N-01〜N-07の合否を記録する
 5. **受入完了**: T-701〜T-806が完了し、顧客承認を取得する

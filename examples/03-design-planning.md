@@ -71,7 +71,9 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 ## REST API設計
 
-すべてのAPIは`/api/v1`配下に置き、JSONを使用する。認証が必要なAPIでは`Authorization: Bearer <JWT>`を必須とする。エラーは`{ "code": "エラーコード", "message": "説明" }`形式で返す。
+業務APIとLogin APIは`/api/v1`配下に置き、JSONを使用する。health checkは`GET /health`とする。認証が必要なAPIでは`Authorization: Bearer <JWT>`を必須とする。エラーは`{ "code": "エラーコード", "message": "説明" }`形式で返す。
+
+Phase 1では`POST /api/v1/auth/login`と`GET /health`をPublicとし、その他の業務APIは現在実装済みか今後実装するかを問わずAuthenticationを必須とする。新しいPublic APIは仕様へ明示してから追加する。ExpressではPublic routeを先に登録し、その後の`/api/v1`業務APIに共通Authentication middlewareを適用する。認証成功は操作権限を意味しない。roleとデータ範囲の認可・403はT-105と対象機能Taskで扱う。
 
 | エンドポイント | 用途 | 要件 |
 | --- | --- | --- |
@@ -106,7 +108,11 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 - 認証対象APIは`Authorization: Bearer <JWT>`を要求する。header欠落、Bearer形式不正、JWT形式不正、署名不正、期限切れ、`sub`のユーザー不存在、`users.is_active = false`はHTTP 401で`{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を返す。ログイン時も`is_active`を確認し、email不存在、password不一致、無効ユーザーは、区別せずHTTP 401で`{ "code": "AUTHENTICATION_FAILED", "message": "Authentication failed." }`を返す。
 - T-104のAuthentication middlewareはBearer形式・HS256署名・期限を検証し、`sub`でusersを検索して存在と`is_active`を各requestで確認する。現在のDB上のroleを取得し、requestへ`authenticatedUser: { id: users.id, role: users.role }`を設定する。emailは共通認可情報へ含めない。ログイン後の無効化は次requestから401、role変更は次requestから現在のroleを使用する。
 - Loginでemailが存在しない場合も有効なArgon2id dummy hashを使ってverify処理を行い、password不一致と同じ外部応答にする。固定sleepは使用しない。T-104は認証結果・内部向け失敗理由・判明したuser id・時刻とrequest contextを判定可能にする。`audit_logs`への永続記録はT-108の責務とする。raw password、password_hash、JWT全文、署名secretをログに出さない。
-- Phase 1ではrefresh tokenとBackend Logout APIを設けない。将来のFrontendはaccess tokenをJavaScript memoryに保持し、logout時に破棄する。localStorage・sessionStorage・HttpOnly Cookieは使用せず、Browser再読込後とtoken期限切れ後は再ログインする。個別tokenの期限前失効は設けないが、`is_active`によるユーザー単位の無効化は各requestで反映する。Frontend Login画面やtoken保持処理の実装はT-104に含めず、後続Taskとの対応を確認する。
+- Phase 1ではrefresh tokenとBackend Logout APIを設けない。Frontendはaccess tokenをJavaScript memoryに保持し、logout時に破棄する。localStorage・sessionStorage・HttpOnly Cookieは使用せず、Browser再読込後とtoken期限切れ後は再ログインする。個別tokenの期限前失効は設けないが、`is_active`によるユーザー単位の無効化は各requestで反映する。Frontend Login画面やtoken保持処理はT-110で実装し、T-104には含めない。
+- FrontendはLogin成功時の`user: { id, email, role }`とaccess tokenをReactのmemory上で保持し、従来の初期業務画面である顧客登録画面を表示する。Appのstateまたは認証専用Context/stateのうち、子画面とAPI clientへ共有できる最小構成を使い、UI stateと切り離されたmodule globalだけでは管理しない。roleはメニュー・画面・ボタンの表示制御に使い、Backendの認可判定の代わりにはしない。
+- Loginの401 `AUTHENTICATION_FAILED`では原因を区別しない「ログインに失敗しました。」等の共通メッセージを表示し、token・userを保持せずLogin画面に留まる。400 `VALIDATION_ERROR`でもLogin画面に留まり、利用者向けの入力エラーを表示する。Backendの内部情報は表示しない。
+- customers・activities・reports・users等の認証対象APIは、小さな共通fetch helperから`Authorization: Bearer <accessToken>`を付けて呼ぶ。helperはfetch実行と401 `AUTHENTICATION_REQUIRED`の検知を担い、role判定と403画面制御は含めない。業務APIの401ではmemory上のtoken・userを破棄し、認証失効・無効化の原因を区別しない再ログイン案内を表示してLogin画面へ戻る。Browser再読込時はtokenを復元せずLogin画面を表示する。Logout操作もtoken・userを破棄してLogin画面へ戻るだけとし、Backend APIを呼ばない。Axios等の新しいHTTP clientは導入しない。
+- 認証移行は、E2E専用managerと実Argon2id hashによるLogin API実DB確認 → Frontend認証と既存Reports Playwrightのログイン移行 → production業務APIへのAuthentication適用 → T-605最終検証 → T-105 → T-501等の順とする。各実装Task終了時点で既存21シナリオ×3 Browserの63件がPASSする状態を維持する。E2E managerにはテスト専用passwordを使い、既存staffとsales_records等の集計値を変更しない。本番Initial Password Provisioningは別課題であり、本番展開前に決定する。
 - Phase 1の`staff`に許可された顧客は、`customers.owner_user_id = 認証済みusers.id`の顧客とする。`owner_user_id`は登録者ではなく顧客担当者を表す。`manager`の担当者範囲はPhase 1の全staffとする。
 - 認証済みユーザーの操作可否とデータ範囲の判定、および権限不足時の403はT-105のAuthorizationの責務とする。認可判定はAPIごとに行い、Frontendの表示制御だけに依存しない。
 - 次の表をPhase 1のRole × Operation × Scopeとする。Backend APIが表の操作可否とデータ範囲を最終判定する。Frontendは同じrole条件でメニュー・画面アクセス・操作ボタンを表示制御する。

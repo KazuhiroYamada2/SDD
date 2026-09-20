@@ -279,3 +279,7 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 検証後は既存Auth User Repositoryの`findById`で毎requestユーザーを取得し、不存在・`is_active = false`を401にする。成功時は現在のDB上のroleを使い、`request.authenticatedUser = { id, role }`を設定して`next()`する。Express Request型をdeclaration mergingで拡張した。role別の可否判定と403は実装していない。
 - token・user起因の失敗は`AUTHENTICATION_REQUIRED`の401へ統一し、Repository障害などは`next(error)`へ渡す。secret不足はmiddleware生成時の設定エラーとして扱う。middlewareテスト用routeのみで検証し、productionの`app.ts`やcustomers・activities・reports・Login APIには適用していない。Frontend、E2E、schema、migration、fixture、依存ライブラリは変更していない。
 - T-104全体は未完了。production APIへの認証適用範囲とFrontend認証導入順序の整理が残る。T-105の認可、T-108の監査ログ永続化も対象外。
+
+## 2026-09-20 認証移行仕様・Task分解の確定
+
+- 仕様担当者の決定をexamples/02～04に反映し、Public route、Frontend認証動作、E2E manager方針、T-109～T-111の移行Taskと依存順を確定した。既存のT-104 Backend Authentication部品は実装済みだが、N-03のproduction統合はT-111まで未完了と区別した。今回は新規TaskやFrontend・Backend・E2Eのコードを実装していない。
