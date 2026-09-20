@@ -257,3 +257,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 
 - examples/02・03・04を文書レビューし、Login API、Argon2id（19 MiB・time cost 2・parallelism 1）、JWT HS256（`sub`・`iat`・`exp`のみ、30分）、Login失敗と認証対象APIの各401契約、各requestでのusers・`is_active`・現在role確認が一致することを確認した。
 - T-104のAuthentication、T-105のAuthorization、T-108のaudit_logs永続記録を別責務として確認した。Initial Password Provisioningは後続で仕様決定する。T-104実装と認証テストは未実施のため、実装・検証PASSとは判定していない。
+
+## 2026-09-20 T-104 Backend認証共通部品の検証
+
+- 認証用User Repositoryはemail検索、id検索、不存在、role・is_active・password_hashの取得範囲をunit test 3件で確認しPASS。id検索はpassword_hashをSELECTしない。
+- Argon2id helperは正しいpassword・異なるpasswordの照合、Argon2id形式とmemory 19456 KiB・time cost 2・parallelism 1、同一passwordで異なるsalt、dummy hashをunit test 3件で確認しPASS。
+- JWT serviceはHS256発行・検証、`sub`・`iat`・`exp`だけのclaim、1800秒の期限、別secret・改ざん・期限切れ・HS256以外・`sub`欠落/不正・JWT形式不正・`exp`欠落、短いsecret拒否をunit test 7件で確認しPASS。期限は時刻注入で検証し、固定waitは使用していない。
+- Backend全テスト22ファイル・87件PASS、`npm run build` PASS。FrontendとPlaywrightは今回実行していない。Login API、Authentication middleware、HTTP 401変換、request時のusers・is_active・現在role確認、T-605は未実装・未検証で、T-104全体は未完了。

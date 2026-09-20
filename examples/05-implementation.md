@@ -257,3 +257,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 
 - 仕様担当者の決定をexamples/02のN-03、examples/03のLogin API・Argon2id・JWT・401契約・Authentication責務、examples/04のT-104とT-605へ反映した。T-105の認可とT-108の監査ログ永続記録は別Taskとして維持する。
 - 本番ユーザーのInitial Password Provisioningは未決定の後続課題とした。T-104のBackendコード、Frontend Login画面、DB、fixture、Playwright、packageは今回変更していない。T-104の実装と認証テストは未実施。
+
+## 2026-09-20 T-104 Backend認証共通部品
+
+- `backend/src/auth/`に認証用User型とRepositoryを追加した。email検索では`password_hash`を取得し、id検索では取得しない。Repositoryは既存のdatabase注入方式を使用し、emailの大文字小文字・空白を変更しない。
+- `argon2`でArgon2idのhash/verifyを実装した。設定はmemory 19456 KiB、time cost 2、parallelism 1。後続Login Serviceがemail不存在時に使うdummy hash生成helperも追加した。
+- `jose`でHS256のJWT access token発行・検証を実装した。claimは`sub`・`iat`・`exp`のみ、期限は1800秒。検証はHS256へ固定し、`sub`のUUID形式を確認する。`JWT_SECRET`は環境変数から取得し、32 byte未満なら秘密値を表示せず拒否する。単体テストではtest専用secretを注入する。
+- AuthenticatedUser型は`{ id, role }`とした。Repository、password helper、JWT serviceのunit testを追加した。Login API、Login Service、Authentication/Authorization middleware、HTTP 401変換、request時のusers・is_active・現在role確認は未実装であり、T-104全体は未完了。`app.ts`、既存API、Frontend、DB schema、migration、E2E fixture、Playwrightは変更していない。
