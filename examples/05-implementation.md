@@ -302,3 +302,8 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `frontend/src/api/authenticated-fetch.ts`にReact非依存の`authenticatedFetch(input, accessToken, init?)`を追加した。`Request`と`RequestInit`の既存headerを`Headers`で統合し、Authorizationだけを渡されたtoken由来の`Bearer`値で上書きする。空・未設定tokenは送信前に`MissingAccessTokenError`とする。
 - HTTP 401かつbodyの`code`が`AUTHENTICATION_REQUIRED`の場合だけ、token情報を保持しない`AuthenticationRequiredError`を投げる。Responseをcloneして判定し、その他の401、400、403、500、503は元のResponseを呼び出し側に返す。network障害も認証失敗に変換しない。
 - helperのunit testを追加した。`AuthContext`・Login API client・`App.tsx`・既存customers/activities/reports API・Backend・Playwrightは変更していない。401時の認証状態破棄とLogin画面復帰は後続のApp統合で行い、T-110全体は未完了とする。
+## 2026-09-20 T-110 Frontend本体への認証統合（部分実装）
+
+- `App.tsx` に `AuthProvider` と認証境界を組み込み、未認証時はLogin画面、Login成功後は従来の初期画面である顧客登録画面を表示する。認証済み画面共通のLogout操作はmemory上のtokenとuserを破棄し、Login画面へ戻す。Provider再生成時も未認証となる。
+- customers・activities・reportsの既存API呼出しへ必須のaccessTokenを引数で渡し、`authenticatedFetch`によるBearer付与へ接続した。API層はReact Contextへ依存しない。UI層の共通hookが`AuthenticationRequiredError`を受けて認証状態を破棄し、共通の再ログイン案内を表示する。400・403・404・500・503・通信障害では認証状態を破棄しない。
+- T-105/T-501のrole別認可は未実装。Backend・DB・Playwrightは変更していない。既存Reports Playwright 63件のmanager Login移行は次段階で行うため、この中間段階ではT-110全体を完了扱いしない。

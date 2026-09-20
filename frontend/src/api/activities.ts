@@ -1,3 +1,5 @@
+import { authenticatedFetch } from './authenticated-fetch';
+
 export type ActivityType = 'visit' | 'meeting';
 
 export type Activity = {
@@ -29,16 +31,16 @@ const errorMessage = async (response: Response, fallback: string) => {
   return error.message ?? fallback;
 };
 
-export const getActivities = async (customerId: string): Promise<Activity[]> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/customers/${customerId}/activities`);
+export const getActivities = async (customerId: string, accessToken: string): Promise<Activity[]> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/customers/${customerId}/activities`, accessToken);
   if (!response.ok) {
     throw new Error(await errorMessage(response, '営業活動履歴を取得できませんでした。'));
   }
   return response.json() as Promise<Activity[]>;
 };
 
-export const registerActivity = async (customerId: string, input: CreateActivityInput): Promise<Activity> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/customers/${customerId}/activities`, {
+export const registerActivity = async (customerId: string, input: CreateActivityInput, accessToken: string): Promise<Activity> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/customers/${customerId}/activities`, accessToken, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),

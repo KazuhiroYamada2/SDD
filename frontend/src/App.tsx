@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
 import { ReportsPage } from './reports/ReportsPage';
+import { AuthProvider, useAuthentication } from './auth/AuthContext';
+import { Login } from './auth/Login';
+import { useAuthenticatedApi } from './auth/useAuthenticatedApi';
 
 type FormValues = {
   name: string;
@@ -57,7 +60,8 @@ const toRequest = (values: FormValues): CreateCustomerInput => {
   } as CreateCustomerInput;
 };
 
-export function App() {
+function BusinessApp() {
+  const runAuthenticated = useAuthenticatedApi();
   const [screen, setScreen] = useState<Screen>('customerRegistration');
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -83,7 +87,7 @@ export function App() {
 
     setIsSubmitting(true);
     try {
-      const customer = await registerCustomer(toRequest(values));
+      const customer = await runAuthenticated((token) => registerCustomer(toRequest(values), token));
       setValues(initialValues);
       setSuccessMessage('顧客情報を登録しました。');
       setSelectedCustomer(customer);
@@ -187,4 +191,24 @@ export function App() {
       </section>
     </main>
   );
+}
+
+function AuthenticatedApp() {
+  const { authentication, authenticationNotice, clearAuthentication } = useAuthentication();
+
+  if (authentication === null) {
+    return <>
+      {authenticationNotice && <p role="status">{authenticationNotice}</p>}
+      <Login />
+    </>;
+  }
+
+  return <>
+    <header><button type="button" onClick={clearAuthentication}>ログアウト</button></header>
+    <BusinessApp />
+  </>;
+}
+
+export function App() {
+  return <AuthProvider><AuthenticatedApp /></AuthProvider>;
 }

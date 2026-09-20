@@ -1,15 +1,56 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { login } from './api/auth';
+
+vi.mock('./api/auth', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./api/auth')>(),
+  login: vi.fn(),
+}));
+
+const loginMock = vi.mocked(login);
+const loginResult = {
+  accessToken: 'test-access-token', tokenType: 'Bearer' as const, expiresIn: 1800 as const,
+  user: { id: 'test-user-id', email: 'user@example.test', role: 'manager' as const },
+};
+
+const renderLoggedInApp = async () => {
+  loginMock.mockResolvedValue(loginResult);
+  render(<App />);
+  fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'user@example.test' } });
+  fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'test-only-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+  await screen.findByRole('heading', { name: '顧客管理システム' });
+};
+
+const submitCustomer = () => {
+  fireEvent.change(screen.getByTestId('customer-name-input'), { target: { value: '株式会社サンプル' } });
+  fireEvent.change(screen.getByTestId('owner-user-id-input'), { target: { value: 'c0a80101-1234-4abc-8def-123456789abc' } });
+  fireEvent.click(screen.getByTestId('customer-submit-button'));
+};
+
+const customer = {
+  id: '8a1f2d44-1234-4abc-8def-123456789abc',
+  name: '株式会社サンプル',
+  owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+};
+
+const authenticationRequired = () => new Response(JSON.stringify({
+  code: 'AUTHENTICATION_REQUIRED', message: 'Authentication required.',
+}), { status: 401, headers: { 'Content-Type': 'application/json' } });
 
 describe('App', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
-  it('renders an accessible customer registration form', () => {
+  it('starts with Login and renders customer registration after Login', async () => {
     render(<App />);
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    cleanup();
+    await renderLoggedInApp();
 
     expect(screen.getByRole('heading', { name: '顧客管理システム' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
@@ -17,8 +58,8 @@ describe('App', () => {
     expect(screen.getByLabelText('担当ユーザーID')).toHaveAttribute('data-testid', 'owner-user-id-input');
   });
 
-  it('switches to the report screen and returns to the customer registration screen', () => {
-    render(<App />);
+  it('switches to the report screen and returns to the customer registration screen', async () => {
+    await renderLoggedInApp();
 
     fireEvent.click(screen.getByRole('button', { name: 'レポート' }));
     expect(screen.getByRole('heading', { name: 'レポート' })).toBeInTheDocument();
@@ -28,10 +69,10 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
   });
 
-  it('shows validation errors without calling the API', () => {
+  it('shows validation errors without calling the business API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    render(<App />);
+    await renderLoggedInApp();
 
     fireEvent.click(screen.getByTestId('customer-submit-button'));
 
@@ -40,7 +81,7 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('submits valid values to the existing customer API and shows success', async () => {
+  it('submits valid values with Bearer to the existing customer API and shows success', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
@@ -52,7 +93,7 @@ describe('App', () => {
       })
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) });
     vi.stubGlobal('fetch', fetchMock);
-    render(<App />);
+    await renderLoggedInApp();
 
     fireEvent.change(screen.getByTestId('customer-name-input'), { target: { value: '株式会社サンプル' } });
     fireEvent.change(screen.getByTestId('owner-user-id-input'), { target: { value: 'c0a80101-1234-4abc-8def-123456789abc' } });
@@ -60,15 +101,16 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('customer-submit-button'));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/customers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/customers');
+    expect(options.method).toBe('POST');
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
+    expect(new Headers(options.headers).get('Content-Type')).toBe('application/json');
+    expect(options.body).toBe(JSON.stringify({
         name: '株式会社サンプル',
         owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
         email: 'sales@example.com',
-      }),
-    });
+      }));
     expect(await screen.findByRole('heading', { name: '顧客詳細' })).toBeInTheDocument();
   });
 
@@ -78,12 +120,113 @@ describe('App', () => {
       json: vi.fn().mockResolvedValue({ code: 'VALIDATION_ERROR', message: 'email must be a valid email address.' }),
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<App />);
+    await renderLoggedInApp();
 
     fireEvent.change(screen.getByTestId('customer-name-input'), { target: { value: '株式会社サンプル' } });
     fireEvent.change(screen.getByTestId('owner-user-id-input'), { target: { value: 'c0a80101-1234-4abc-8def-123456789abc' } });
     fireEvent.click(screen.getByTestId('customer-submit-button'));
 
     expect(await screen.findByTestId('customer-registration-error')).toHaveTextContent('email must be a valid email address.');
+  });
+
+  it('logs out from the business screen without calling a Backend logout API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await renderLoggedInApp();
+    fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '顧客管理システム' })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('offers Logout from the report screen and returns to the original screen after another Login', async () => {
+    await renderLoggedInApp();
+    fireEvent.click(screen.getByRole('button', { name: 'レポート' }));
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'user@example.test' } });
+    fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'test-only-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+    expect(await screen.findByRole('heading', { name: '顧客管理システム' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'レポート' })).not.toBeInTheDocument();
+  });
+
+  it('returns to Login when the Provider is recreated after a browser reload', async () => {
+    await renderLoggedInApp();
+    cleanup();
+    render(<App />);
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '顧客管理システム' })).not.toBeInTheDocument();
+  });
+
+  it('returns to Login with one common notice for a customer Authentication 401', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticationRequired()));
+    await renderLoggedInApp();
+    submitCustomer();
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('認証の有効期限が切れたか、認証状態が無効です。再度ログインしてください。');
+    expect(screen.queryByRole('button', { name: 'ログアウト' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'user@example.test' } });
+    fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'test-only-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+    expect(await screen.findByRole('heading', { name: '顧客管理システム' })).toBeInTheDocument();
+    expect(screen.queryByText('認証の有効期限が切れたか、認証状態が無効です。再度ログインしてください。')).not.toBeInTheDocument();
+  });
+
+  it('returns to Login when activity history receives an Authentication 401', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customer) })
+      .mockResolvedValueOnce(authenticationRequired()));
+    await renderLoggedInApp();
+    submitCustomer();
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('再度ログインしてください。');
+  });
+
+  it('returns to Login when activity registration receives an Authentication 401', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customer) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) })
+      .mockResolvedValueOnce(authenticationRequired()));
+    await renderLoggedInApp();
+    submitCustomer();
+    await screen.findByText('営業活動履歴はありません。');
+    fireEvent.click(screen.getByRole('button', { name: '営業活動を登録' }));
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('再度ログインしてください。');
+  });
+
+  it.each(['売上推移', '顧客分類', '営業担当者別実績'])('returns to Login for an Authentication 401 from %s', async (report) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(authenticationRequired()));
+    await renderLoggedInApp();
+    fireEvent.click(screen.getByRole('button', { name: 'レポート' }));
+    if (report !== '売上推移') fireEvent.click(screen.getByRole('button', { name: report }));
+    if (report !== '顧客分類') {
+      fireEvent.change(screen.getByLabelText('開始日'), { target: { value: '2026-01-01' } });
+      fireEvent.change(screen.getByLabelText('終了日'), { target: { value: '2026-03-31' } });
+      fireEvent.click(screen.getByRole('button', { name: '表示' }));
+    }
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('再度ログインしてください。');
+  });
+
+  it.each([400, 403, 404, 500, 503])('keeps authentication for a customer HTTP %i', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'BUSINESS_ERROR', message: 'Business request failed.',
+    }), { status, headers: { 'Content-Type': 'application/json' } })));
+    await renderLoggedInApp();
+    submitCustomer();
+    expect(await screen.findByTestId('customer-registration-error')).toHaveTextContent('Business request failed.');
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'ログイン' })).not.toBeInTheDocument();
+  });
+
+  it('keeps authentication on a network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network request failed.')));
+    await renderLoggedInApp();
+    submitCustomer();
+    expect(await screen.findByTestId('customer-registration-error')).toHaveTextContent('Network request failed.');
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
   });
 });

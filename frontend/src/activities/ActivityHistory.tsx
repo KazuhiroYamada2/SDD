@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getActivities, registerActivity, type Activity, type ActivityType, type CreateActivityInput } from '../api/activities';
+import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
 
 type Props = {
   customerId: string;
@@ -36,6 +37,7 @@ const activityTypeLabel = (activityType: ActivityType) =>
 const dateTimeLabel = (value: string | null) => value ?? '未設定';
 
 export function ActivityHistory({ customerId, ownerUserId }: Props) {
+  const runAuthenticated = useAuthenticatedApi();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [values, setValues] = useState<FormValues>(() => initialValues(ownerUserId));
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +50,7 @@ export function ActivityHistory({ customerId, ownerUserId }: Props) {
     setIsLoading(true);
     setLoadError('');
     try {
-      setActivities(await getActivities(customerId));
+      setActivities(await runAuthenticated((token) => getActivities(customerId, token)));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : '営業活動履歴を取得できませんでした。');
     } finally {
@@ -70,7 +72,7 @@ export function ActivityHistory({ customerId, ownerUserId }: Props) {
     setSuccessMessage('');
     setIsSubmitting(true);
     try {
-      await registerActivity(customerId, toRequest(values));
+      await runAuthenticated((token) => registerActivity(customerId, toRequest(values), token));
       setValues(initialValues(ownerUserId));
       setSuccessMessage('営業活動を登録しました。');
       await loadActivities();

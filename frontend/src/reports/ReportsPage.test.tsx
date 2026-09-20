@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReportsPage } from './ReportsPage';
+import { renderAuthenticated } from '../test/render-authenticated';
 
 const salesTrend = {
   from: '2026-01-15',
@@ -32,7 +33,7 @@ describe('ReportsPage', () => {
   });
 
   it('renders the report screen with accessible sales trend controls', () => {
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'レポート' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '売上推移' })).toBeInTheDocument();
@@ -48,7 +49,7 @@ describe('ReportsPage', () => {
   ])('%sの場合はAPIを呼び出さない', (_, from, to, message) => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText('開始日'), { target: { value: from } });
     fireEvent.change(screen.getByLabelText('終了日'), { target: { value: to } });
@@ -64,12 +65,14 @@ describe('ReportsPage', () => {
       json: vi.fn().mockResolvedValue(salesTrend),
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/reports/sales-trend?from=2026-01-15&to=2026-03-10'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/reports/sales-trend?from=2026-01-15&to=2026-03-10');
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer test-access-token');
     expect(await screen.findByRole('table')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '月' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '売上金額' })).toBeInTheDocument();
@@ -86,7 +89,7 @@ describe('ReportsPage', () => {
       resolveResponse = resolve;
     });
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(response));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
@@ -105,7 +108,7 @@ describe('ReportsPage', () => {
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(salesTrend) })
       .mockReturnValueOnce(secondResponse);
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
@@ -115,7 +118,7 @@ describe('ReportsPage', () => {
     fireEvent.change(screen.getByLabelText('終了日'), { target: { value: '2026-04-30' } });
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/reports/sales-trend?from=2026-04-01&to=2026-04-30');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/reports/sales-trend?from=2026-04-01&to=2026-04-30');
     expect(screen.getByRole('status')).toHaveTextContent('売上推移を読み込み中...');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
@@ -126,7 +129,7 @@ describe('ReportsPage', () => {
 
   it('売上推移のエラー応答にmessageがない場合は専用の代替文言を表示する', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: vi.fn().mockResolvedValue({}) }));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('売上推移を取得できませんでした。');
@@ -137,7 +140,7 @@ describe('ReportsPage', () => {
       ok: true,
       json: vi.fn().mockResolvedValue({ from: '2026-01-01', to: '2026-01-31', items: [] }),
     }));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
@@ -151,7 +154,7 @@ describe('ReportsPage', () => {
     ['network error', () => Promise.reject(new Error('Network request failed.')), 'Network request failed.'],
   ])('%sを表示する', async (_, fetchResult, message) => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(fetchResult));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
@@ -165,11 +168,13 @@ describe('ReportsPage', () => {
       json: vi.fn().mockResolvedValue(customerCategories),
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/reports/customer-categories'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/reports/customer-categories');
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer test-access-token');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('heading', { name: '顧客分類' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '顧客分類' })).toBeInTheDocument();
@@ -187,7 +192,7 @@ describe('ReportsPage', () => {
       resolveResponse = resolve;
     });
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(response));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
 
@@ -201,7 +206,7 @@ describe('ReportsPage', () => {
       ok: true,
       json: vi.fn().mockResolvedValue({ items: [] }),
     }));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
 
@@ -210,7 +215,7 @@ describe('ReportsPage', () => {
 
   it('顧客分類のエラー応答にmessageがない場合は専用の代替文言を表示する', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: vi.fn().mockResolvedValue({}) }));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('顧客分類を取得できませんでした。');
   });
@@ -222,7 +227,7 @@ describe('ReportsPage', () => {
     });
     const fetchMock = vi.fn().mockReturnValue(pending);
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -257,7 +262,7 @@ describe('ReportsPage', () => {
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerCategories) })
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(updatedCategories) });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -277,7 +282,7 @@ describe('ReportsPage', () => {
     ['network error', () => Promise.reject(new Error('Network request failed.')), 'Network request failed.'],
   ])('顧客分類の%sを表示する', async (_, fetchResult, message) => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(fetchResult));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
 
@@ -289,7 +294,7 @@ describe('ReportsPage', () => {
       ok: true,
       json: vi.fn().mockResolvedValue(customerCategories),
     }));
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客分類' }));
     await screen.findByRole('heading', { name: '顧客分類' });

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReportsPage } from './ReportsPage';
+import { renderAuthenticated } from '../test/render-authenticated';
 
 const performance = {
   from: '2026-01-01',
@@ -12,7 +13,7 @@ const performance = {
 };
 
 const openReport = () => {
-  render(<ReportsPage onBack={vi.fn()} />);
+  renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: '営業担当者別実績' }));
 };
 
@@ -30,7 +31,7 @@ describe('営業担当者別実績レポート', () => {
   it('切替操作と関連付けられた日付入力・表示ボタンを表示し、開いただけでは取得しない', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReportsPage onBack={vi.fn()} />);
+    renderAuthenticated(<ReportsPage onBack={vi.fn()} />);
     const switchButton = screen.getByRole('button', { name: '営業担当者別実績' });
     expect(switchButton).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(switchButton);
@@ -66,7 +67,9 @@ describe('営業担当者別実績レポート', () => {
     fillPeriod();
     fireEvent.click(screen.getByRole('button', { name: '表示' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-03-31'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-03-31');
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer test-access-token');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('table', { name: '営業担当者別実績' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['営業担当者', '売上金額', '売上件数']);

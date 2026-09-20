@@ -301,3 +301,8 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - `authenticated-fetch.test.ts`の18件PASS。Bearer付与、plain object・`Headers`・配列の既存header保持、`Request` headerとの統合、呼び出し側Authorizationの上書き、空・未設定tokenの送信前拒否を確認した。
 - 401 `AUTHENTICATION_REQUIRED`だけが専用errorになること、errorへtoken/headerを保持しないこと、別codeまたは不正JSONの401はbodyを読める元のResponseとして返ること、400・403・500・503とnetwork障害を認証失敗へ変換しないことを確認した。
 - Frontend全テスト8ファイル・82件PASS、`tsc -b` PASS、`npm run build` PASS。Backend・Playwrightは変更・実行していない。Appおよび既存業務APIへのBearer接続、401時の認証状態破棄・Login復帰、既存Reports E2Eの認証移行は未実施であり、T-110全体は未完了。
+## 2026-09-20 T-110 Frontend本体への認証統合の検証（部分実装）
+
+- Frontend全テスト8ファイル・98件PASS。AppのLogin境界・Login成功・Logout・Provider再生成、業務APIのBearer付与、customers・activities・reportsからの401時Login復帰、403時に認証状態を保持する動作を確認した。
+- `tsc -b` PASS、`npm run build` PASS。Backendは変更・実行していない。
+- Playwrightは変更・実行していない。以前のReports E2E 63件PASS記録は当時の結果であり、現行AppではLoginが初期表示されるため、既存63件は次段階でmanager Loginへ移行して再検証する。T-110全体の受入は未完了。

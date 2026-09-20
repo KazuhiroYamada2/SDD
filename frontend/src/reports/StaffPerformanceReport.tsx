@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getStaffPerformance, type StaffPerformanceResponse } from '../api/reports';
+import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
 import { formatSalesAmount } from './report-format';
 
 type FormValues = {
@@ -33,6 +34,7 @@ const validate = (values: FormValues): FormErrors => {
 };
 
 export function StaffPerformanceReport() {
+  const runAuthenticated = useAuthenticatedApi();
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [staffPerformance, setStaffPerformance] = useState<StaffPerformanceResponse | null>(null);
@@ -56,7 +58,7 @@ export function StaffPerformanceReport() {
 
     setIsLoading(true);
     try {
-      setStaffPerformance(await getStaffPerformance(values.from, values.to));
+      setStaffPerformance(await runAuthenticated((token) => getStaffPerformance(values.from, values.to, token)));
     } catch (error) {
       setApiError(error instanceof Error ? error.message : '営業担当者別実績を取得できませんでした。');
     } finally {

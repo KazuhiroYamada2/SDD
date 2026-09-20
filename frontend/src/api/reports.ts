@@ -1,3 +1,5 @@
+import { authenticatedFetch } from './authenticated-fetch';
+
 export type SalesTrendItem = {
   month: string;
   salesAmount: string;
@@ -42,8 +44,8 @@ const errorMessage = async (response: Response, fallbackMessage: string): Promis
   return fallbackMessage;
 };
 
-export const getSalesTrend = async (from: string, to: string): Promise<SalesTrendResponse> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/reports/sales-trend?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+export const getSalesTrend = async (from: string, to: string, accessToken: string): Promise<SalesTrendResponse> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/reports/sales-trend?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, accessToken);
   if (!response.ok) {
     throw new Error(await errorMessage(response, '売上推移を取得できませんでした。'));
   }
@@ -51,8 +53,8 @@ export const getSalesTrend = async (from: string, to: string): Promise<SalesTren
   return response.json() as Promise<SalesTrendResponse>;
 };
 
-export const getCustomerCategories = async (): Promise<CustomerCategoriesResponse> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/reports/customer-categories`);
+export const getCustomerCategories = async (accessToken: string): Promise<CustomerCategoriesResponse> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/reports/customer-categories`, accessToken);
   if (!response.ok) {
     throw new Error(await errorMessage(response, '顧客分類を取得できませんでした。'));
   }
@@ -60,8 +62,8 @@ export const getCustomerCategories = async (): Promise<CustomerCategoriesRespons
   return response.json() as Promise<CustomerCategoriesResponse>;
 };
 
-export const getStaffPerformance = async (from: string, to: string): Promise<StaffPerformanceResponse> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/reports/staff-performance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+export const getStaffPerformance = async (from: string, to: string, accessToken: string): Promise<StaffPerformanceResponse> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/reports/staff-performance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, accessToken);
   if (!response.ok) {
     throw new Error(await errorMessage(response, '営業担当者別実績を取得できませんでした。'));
   }

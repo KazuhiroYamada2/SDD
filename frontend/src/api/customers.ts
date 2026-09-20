@@ -1,3 +1,5 @@
+import { authenticatedFetch } from './authenticated-fetch';
+
 export type CreateCustomerInput = {
   name: string;
   owner_user_id: string;
@@ -21,8 +23,8 @@ type ApiError = {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
-export const registerCustomer = async (input: CreateCustomerInput): Promise<Customer> => {
-  const response = await fetch(`${apiBaseUrl}/api/v1/customers`, {
+export const registerCustomer = async (input: CreateCustomerInput, accessToken: string): Promise<Customer> => {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/customers`, accessToken, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),

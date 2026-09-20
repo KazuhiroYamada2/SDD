@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getCustomerCategories, getSalesTrend, type CustomerCategoriesResponse, type SalesTrendResponse } from '../api/reports';
+import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
 import { CustomerCategoriesReport } from './CustomerCategoriesReport';
 import { formatSalesAmount } from './report-format';
 import { StaffPerformanceReport } from './StaffPerformanceReport';
@@ -37,6 +38,7 @@ const validate = (values: FormValues): FormErrors => {
 };
 
 export function ReportsPage({ onBack }: Props) {
+  const runAuthenticated = useAuthenticatedApi();
   const [selectedReport, setSelectedReport] = useState<ReportKind>('salesTrend');
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -64,7 +66,7 @@ export function ReportsPage({ onBack }: Props) {
     setSalesTrend(null);
     setIsLoading(true);
     try {
-      setSalesTrend(await getSalesTrend(values.from, values.to));
+      setSalesTrend(await runAuthenticated((token) => getSalesTrend(values.from, values.to, token)));
     } catch (error) {
       setApiError(error instanceof Error ? error.message : '売上推移を取得できませんでした。');
     } finally {
@@ -87,7 +89,7 @@ export function ReportsPage({ onBack }: Props) {
     setCustomerCategories(null);
     setIsCustomerCategoriesLoading(true);
     try {
-      setCustomerCategories(await getCustomerCategories());
+      setCustomerCategories(await runAuthenticated((token) => getCustomerCategories(token)));
     } catch (error) {
       setCustomerCategoriesError(error instanceof Error ? error.message : '顧客分類を取得できませんでした。');
     } finally {
