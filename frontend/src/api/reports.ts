@@ -18,6 +18,19 @@ export type CustomerCategoriesResponse = {
   items: CustomerCategoryItem[];
 };
 
+export type StaffPerformanceItem = {
+  staffId: string;
+  staffEmail: string;
+  salesAmount: string;
+  salesCount: number;
+};
+
+export type StaffPerformanceResponse = {
+  from: string;
+  to: string;
+  items: StaffPerformanceItem[];
+};
+
 type ApiError = {
   message?: string;
 };
@@ -45,4 +58,13 @@ export const getCustomerCategories = async (): Promise<CustomerCategoriesRespons
   }
 
   return response.json() as Promise<CustomerCategoriesResponse>;
+};
+
+export const getStaffPerformance = async (from: string, to: string): Promise<StaffPerformanceResponse> => {
+  const response = await fetch(`${apiBaseUrl}/api/v1/reports/staff-performance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  if (!response.ok) {
+    throw new Error(await errorMessage(response));
+  }
+
+  return response.json() as Promise<StaffPerformanceResponse>;
 };

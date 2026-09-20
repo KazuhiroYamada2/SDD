@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { getCustomerCategories, getSalesTrend, type CustomerCategoriesResponse, type SalesTrendResponse } from '../api/reports';
 import { CustomerCategoriesReport } from './CustomerCategoriesReport';
+import { formatSalesAmount } from './report-format';
+import { StaffPerformanceReport } from './StaffPerformanceReport';
 
 type Props = {
   onBack: () => void;
@@ -13,7 +15,7 @@ type FormValues = {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-type ReportKind = 'salesTrend' | 'customerCategories';
+type ReportKind = 'salesTrend' | 'customerCategories' | 'staffPerformance';
 
 const initialValues: FormValues = {
   from: '',
@@ -32,14 +34,6 @@ const validate = (values: FormValues): FormErrors => {
     errors.to = '開始日は終了日以前の日付を指定してください。';
   }
   return errors;
-};
-
-const formatSalesAmount = (salesAmount: string): string => {
-  const [integer, decimal = ''] = salesAmount.split('.');
-  const sign = integer.startsWith('-') ? '-' : '';
-  const absoluteInteger = sign === '' ? integer : integer.slice(1);
-  const groupedInteger = absoluteInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${sign}${groupedInteger}.${decimal.padEnd(2, '0')}`;
 };
 
 export function ReportsPage({ onBack }: Props) {
@@ -103,6 +97,7 @@ export function ReportsPage({ onBack }: Props) {
       <nav aria-label="レポート種別">
         <button type="button" aria-pressed={selectedReport === 'salesTrend'} onClick={() => setSelectedReport('salesTrend')}>売上推移</button>
         <button type="button" aria-pressed={selectedReport === 'customerCategories'} onClick={() => void showCustomerCategories()} disabled={isCustomerCategoriesLoading}>顧客分類</button>
+        <button type="button" aria-pressed={selectedReport === 'staffPerformance'} onClick={() => setSelectedReport('staffPerformance')}>営業担当者別実績</button>
       </nav>
 
       {selectedReport === 'salesTrend' && <section aria-labelledby="sales-trend-heading" className="report-section">
@@ -170,6 +165,8 @@ export function ReportsPage({ onBack }: Props) {
         isLoading={isCustomerCategoriesLoading}
         error={customerCategoriesError}
       />}
+
+      {selectedReport === 'staffPerformance' && <StaffPerformanceReport />}
     </main>
   );
 }
