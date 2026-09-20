@@ -252,3 +252,8 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - T-003の検討に必要な画面・API・操作種別・共通エラー形式・users.id/roleが正本にあることを確認した。T-001全体の完了承認は判定していない。
 - examples/02・03・04を照合し、staff・manager・adminの顧客、活動履歴、3レポート、ユーザー参照・role変更について操作可否とデータ範囲が一致し、03の対象セルに未定義がないことを文書レビューで確認した。T-003の仕様成果物は完了。ユーザー新規登録、role以外のユーザー情報変更、将来の複数managerの関係モデル、JWT詳細は対象外。
 - 文書レビューのみ実施した。認証・認可コードの実装と関連テストは実施しておらず、T-104・T-105・T-501以降は未実装・未検証。
+
+## 2026-09-20 T-104実装前の認証仕様レビュー
+
+- examples/02・03・04を文書レビューし、Login API、Argon2id（19 MiB・time cost 2・parallelism 1）、JWT HS256（`sub`・`iat`・`exp`のみ、30分）、Login失敗と認証対象APIの各401契約、各requestでのusers・`is_active`・現在role確認が一致することを確認した。
+- T-104のAuthentication、T-105のAuthorization、T-108のaudit_logs永続記録を別責務として確認した。Initial Password Provisioningは後続で仕様決定する。T-104実装と認証テストは未実施のため、実装・検証PASSとは判定していない。

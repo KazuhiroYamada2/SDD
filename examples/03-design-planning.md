@@ -75,7 +75,7 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 | エンドポイント | 用途 | 要件 |
 | --- | --- | --- |
-| `POST /auth/login` | ログインしてJWTを発行 | N-03 |
+| `POST /api/v1/auth/login` | ログインしてJWTを発行 | N-03 |
 | `GET /customers` | 一覧、検索、フィルタリング | F-04、F-05、N-01 |
 | `POST /customers` | 顧客登録 | F-01 |
 | `GET /customers/:id` | 顧客詳細表示 | F-05、F-12 |
@@ -98,11 +98,17 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 ## 認証・認可
 
-- パスワードは平文保存せず、ソルト付きの一方向ハッシュで保存する。
-- ログイン成功時に有効期限付きJWTを発行し、署名鍵は環境変数または秘密情報管理サービスから取得する。
-- JWTの署名不正、期限切れ、無効ユーザーは401を返す。
+- `POST /api/v1/auth/login`は`Content-Type: application/json`で`{ "email": "user@example.com", "password": "password" }`を受け取る。emailは必須の文字列で、前後の空白を除去した後に空文字を認めず、最大254文字とする。大文字小文字を変換せず、既存の`users.email`検索規約を維持する。passwordは必須の文字列で、trimせず、空文字を認めず、最大1024文字とする。request構造・型・必須項目・空文字・最大文字数が不正な場合はHTTP 400と既存の`{ "code": "VALIDATION_ERROR", "message": "..." }`形式を返す。
+- ログイン成功時はHTTP 200で`{ "accessToken": "<JWT>", "tokenType": "Bearer", "expiresIn": 1800, "user": { "id": "<users.id>", "email": "<users.email>", "role": "<staff|manager|admin>" } }`を返す。`password_hash`は返さない。
+- passwordはArgon2idで照合する。基準値はmemory 19 MiB、time cost 2、parallelism 1とし、passwordごとのsaltはライブラリが生成する。saltを別列へ追加せず、エンコード済みハッシュを`users.password_hash`へ保存する。T-104は有効なハッシュを持つ既存ユーザーのログインを対象とし、作成・変更・再設定APIやpassword作成ポリシーは含めない。テスト用には固定passwordから正規のArgon2id hashを生成してよいが、本番の初期password_hash登録方法（Initial Password Provisioning）は後続で決定する。
+- JWTはHS256で署名し、検証時も許可アルゴリズムをHS256に固定する。token headerの`alg`で任意の方式へ切り替えない。署名鍵は推測困難な最低256 bit相当のランダムsecretとし、人間用passwordを流用しない。local・test・E2EではGit管理外の環境変数、productionでは秘密情報管理サービスから取得する。秘密値は仕様書へ記載しない。
+- JWTの基本claimは`sub = users.id`、`iat`、`exp`のみとする。独自`userId`、`role`、`email` claimは含めない。`exp`は発行から30分後とし、Responseの`expiresIn`は1800秒とする。Phase 1では単一Backendが発行・検証し、他サービスとtokenを共有しないため`iss`・`aud`を必須にしない。複数issuer・API・サービスへ拡張する場合は導入して検証する。
+- 認証対象APIは`Authorization: Bearer <JWT>`を要求する。header欠落、Bearer形式不正、JWT形式不正、署名不正、期限切れ、`sub`のユーザー不存在、`users.is_active = false`はHTTP 401で`{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を返す。ログイン時も`is_active`を確認し、email不存在、password不一致、無効ユーザーは、区別せずHTTP 401で`{ "code": "AUTHENTICATION_FAILED", "message": "Authentication failed." }`を返す。
+- T-104のAuthentication middlewareはBearer形式・HS256署名・期限を検証し、`sub`でusersを検索して存在と`is_active`を各requestで確認する。現在のDB上のroleを取得し、requestへ`authenticatedUser: { id: users.id, role: users.role }`を設定する。emailは共通認可情報へ含めない。ログイン後の無効化は次requestから401、role変更は次requestから現在のroleを使用する。
+- Loginでemailが存在しない場合も有効なArgon2id dummy hashを使ってverify処理を行い、password不一致と同じ外部応答にする。固定sleepは使用しない。T-104は認証結果・内部向け失敗理由・判明したuser id・時刻とrequest contextを判定可能にする。`audit_logs`への永続記録はT-108の責務とする。raw password、password_hash、JWT全文、署名secretをログに出さない。
+- Phase 1ではrefresh tokenとBackend Logout APIを設けない。将来のFrontendはaccess tokenをJavaScript memoryに保持し、logout時に破棄する。localStorage・sessionStorage・HttpOnly Cookieは使用せず、Browser再読込後とtoken期限切れ後は再ログインする。個別tokenの期限前失効は設けないが、`is_active`によるユーザー単位の無効化は各requestで反映する。Frontend Login画面やtoken保持処理の実装はT-104に含めず、後続Taskとの対応を確認する。
 - Phase 1の`staff`に許可された顧客は、`customers.owner_user_id = 認証済みusers.id`の顧客とする。`owner_user_id`は登録者ではなく顧客担当者を表す。`manager`の担当者範囲はPhase 1の全staffとする。
-- 権限のないリソースへのアクセスは403を返す。認可判定はAPIごとに行い、Frontendの表示制御だけに依存しない。
+- 認証済みユーザーの操作可否とデータ範囲の判定、および権限不足時の403はT-105のAuthorizationの責務とする。認可判定はAPIごとに行い、Frontendの表示制御だけに依存しない。
 - 次の表をPhase 1のRole × Operation × Scopeとする。Backend APIが表の操作可否とデータ範囲を最終判定する。Frontendは同じrole条件でメニュー・画面アクセス・操作ボタンを表示制御する。
 
 | 機能 | 操作 | staff | manager | admin | データ範囲 |

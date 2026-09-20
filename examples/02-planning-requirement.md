@@ -116,7 +116,9 @@
 
 ### セキュリティ
 
-- ログイン認証が必要
+- ログイン認証が必要。既存ユーザーはemailとpasswordでログインし、成功時に30分有効なJWT access tokenを受け取る。Phase 1ではrefresh tokenを発行せず、期限切れ後は再ログインする。
+- email不存在、password不一致、無効ユーザーは同じHTTP 401の認証失敗として扱う。認証対象APIでは無効ユーザーを各requestで拒否する。
+- ログイン入力のpasswordは必須の文字列とし、空文字と1024文字超を受け付けない。passwordの作成・変更機能と、そのための作成ポリシーは今回のログイン要件に含めない。
 - 顧客情報は暗号化して保存
 - アクセスログを記録
 
@@ -131,6 +133,7 @@
 
 - **モバイルアプリの開発時期**：Web版のリリース後に検討（[01-principle-definition.md](./01-principle-definition.md)のOut of Scopeに記載）
 - **外部システムとの連携方法**：○○システムとつなぐ必要がありますが、方法は検討中（第2フェーズで検討）
+- **Initial Password Provisioning**：本番ユーザーの初期password_hashを登録する運用方法は後続で決定する。今回のログインは有効なpassword_hashを持つ既存ユーザーを前提とし、ユーザー登録・password設定・変更・再設定は含めない。
 
 ## 仕様の変更履歴
 

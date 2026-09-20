@@ -252,3 +252,8 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 
 - 仕様担当者の決定に基づき、examples/02の権限概要、examples/03のRole × Operation × Scope表、examples/04のT-003成果物・完了条件を確定した。Phase 1のmanagerの担当者範囲は全staffとする。
 - これは仕様確定の記録であり、JWTログイン、Backend認可、Frontend表示制御は実装していない。Backend・Frontend・DB・fixture・Playwrightは変更していない。
+
+## 2026-09-20 T-104実装前の認証仕様確定
+
+- 仕様担当者の決定をexamples/02のN-03、examples/03のLogin API・Argon2id・JWT・401契約・Authentication責務、examples/04のT-104とT-605へ反映した。T-105の認可とT-108の監査ログ永続記録は別Taskとして維持する。
+- 本番ユーザーのInitial Password Provisioningは未決定の後続課題とした。T-104のBackendコード、Frontend Login画面、DB、fixture、Playwright、packageは今回変更していない。T-104の実装と認証テストは未実施。
