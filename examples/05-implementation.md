@@ -272,3 +272,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `auth-router.ts`に`POST /api/v1/auth/login`を追加し、200のLogin DTO、400 `VALIDATION_ERROR`、401 `AUTHENTICATION_FAILED`、既存形式の503/500を返す。auth Router内でJSONを解析し、壊れたJSONも400の共通形式にする。`app.ts`にはauth Routerだけを登録した。既存customers・activities・reports APIへ認証は適用していない。
 - `login-service.test.ts`と`auth-api.test.ts`を追加した。APIテストでは実Argon2id helperとテスト専用secretによる実JWT発行を使い、DB Repositoryはテスト内で置き換えた。Frontend、DB schema、migration、E2E fixture、Playwrightは変更していない。
 - T-104全体は未完了。Authentication middleware、Bearer検証のAPI適用、requestごとのuser・is_active・現在role取得、protected APIの401、T-605は後続作業とする。
+
+## 2026-09-20 T-104 Authentication middleware
+
+- `backend/src/auth/authentication-middleware.ts`を追加した。`Authorization: Bearer <JWT>`からtokenを取り出し、既存JWT ServiceでHS256署名・期限・subを検証する。JWT Serviceではtoken起因の検証失敗を`InvalidAccessTokenError`に統一し、設定不備や想定外の内部障害と区別する。
+- 検証後は既存Auth User Repositoryの`findById`で毎requestユーザーを取得し、不存在・`is_active = false`を401にする。成功時は現在のDB上のroleを使い、`request.authenticatedUser = { id, role }`を設定して`next()`する。Express Request型をdeclaration mergingで拡張した。role別の可否判定と403は実装していない。
+- token・user起因の失敗は`AUTHENTICATION_REQUIRED`の401へ統一し、Repository障害などは`next(error)`へ渡す。secret不足はmiddleware生成時の設定エラーとして扱う。middlewareテスト用routeのみで検証し、productionの`app.ts`やcustomers・activities・reports・Login APIには適用していない。Frontend、E2E、schema、migration、fixture、依存ライブラリは変更していない。
+- T-104全体は未完了。production APIへの認証適用範囲とFrontend認証導入順序の整理が残る。T-105の認可、T-108の監査ログ永続化も対象外。

@@ -271,3 +271,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Login API test 17件PASS。実Argon2id hash/verifyと実HS256 JWTを使い、200のaccessToken・Bearer・1800秒・user情報、email trimと大文字小文字保持、password空白保持、3種類の失敗が同一401、入力不正と壊れたJSONの400、内部障害の500、DB未設定時の503を確認した。password_hashはResponseに含まれない。
 - Backend全テスト24ファイル・109件PASS、`npm run build` PASS。既存APIテストも全件PASS。FrontendとPlaywrightは変更・実行していない。既存APIは引き続き認証不要である。
 - Authentication middleware、protected APIのBearer検証・401、requestごとのusers・is_active・現在role確認、T-605は未実装・未検証。T-104全体は未完了。
+
+## 2026-09-20 T-104 Authentication middlewareの検証
+
+- `authentication-middleware.test.ts`の11件PASS。テスト内だけの`GET /protected`で、有効JWTからDB上のid・現在roleだけを`authenticatedUser`へ設定して後続handlerへ進むこと、同じtokenでもDB上のrole変更を次requestに反映することを確認した。
+- header欠落、不正scheme、Bearer token欠落・複数token、query/Cookieのみ、malformed JWT、別secretによる署名不正、期限切れ、`sub`欠落・形式不正、user不存在、token発行後のinactive化はいずれも同じHTTP 401 `AUTHENTICATION_REQUIRED`応答となることを確認した。固定waitは使用していない。
+- Repository障害と想定外のJWT検証障害は401へ変換せずテストappの共通エラーhandlerで500となること、短い`JWT_SECRET`はmiddleware生成時に設定エラーとなることを確認した。secret値やtoken全文は応答へ出していない。
+- Backend全テスト25ファイル・120件PASS、`npm run build` PASS。既存Login APIテストもPASS。production APIへのmiddleware適用、Frontend・Browser経由の認証は未実施のため、T-104・T-605全体はPASS扱いしない。FrontendとPlaywrightは変更・実行していない。

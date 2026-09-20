@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose';
+import { errors, SignJWT, jwtVerify } from 'jose';
 
 const ACCESS_TOKEN_LIFETIME_SECONDS = 1800;
 const MIN_SECRET_BYTES = 32;
@@ -13,6 +13,13 @@ export type JwtServiceOptions = {
   secret?: string;
   now?: () => Date;
 };
+
+export class InvalidAccessTokenError extends Error {
+  constructor() {
+    super('Invalid access token.');
+    this.name = 'InvalidAccessTokenError';
+  }
+}
 
 export const createJwtService = ({
   secret = process.env.JWT_SECRET,
@@ -39,17 +46,24 @@ export const createJwtService = ({
         .sign(key);
     },
     async verifyAccessToken(token) {
-      const { payload } = await jwtVerify(token, key, {
-        algorithms: ['HS256'],
-        requiredClaims: ['sub', 'iat', 'exp'],
-        currentDate: now(),
-      });
+      try {
+        const { payload } = await jwtVerify(token, key, {
+          algorithms: ['HS256'],
+          requiredClaims: ['sub', 'iat', 'exp'],
+          currentDate: now(),
+        });
 
-      if (typeof payload.sub !== 'string' || !uuidPattern.test(payload.sub)) {
-        throw new Error('Invalid JWT subject.');
+        if (typeof payload.sub !== 'string' || !uuidPattern.test(payload.sub)) {
+          throw new InvalidAccessTokenError();
+        }
+
+        return { userId: payload.sub };
+      } catch (error) {
+        if (error instanceof errors.JOSEError) {
+          throw new InvalidAccessTokenError();
+        }
+        throw error;
       }
-
-      return { userId: payload.sub };
     },
   };
 };
