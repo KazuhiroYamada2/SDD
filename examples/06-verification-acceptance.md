@@ -177,3 +177,16 @@ E2E用PostgreSQLが未構成のため、上記のAPI応答はテスト内でモ�
 各SPテストで`GET /api/v1/reports/staff-performance`のfrom/to、HTTP 200、Vite originを確認した。API mockは使用していない。`npm run e2e:reports`は2回連続で各17件成功（Smoke 1件＋ST 5件＋CC 5件＋SP 6件）。各実行前にE2E安全チェック付きresetを行い、`customer_management_e2e`の固定fixtureを使用した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
 
 未実施: RP-01～RP-02、VL-01、Firefox、WebKit。
+
+## 2026-09-20 レポート横断・入力検証Playwright受入テスト
+
+| Scenario / Requirement | 操作 | 期待結果 | 実結果 | 判定 |
+| --- | --- | --- | --- | --- |
+| RP-01 / F-09～F-11 連続切替 | 売上推移を検索し、顧客分類を取得、担当者別実績を検索して売上推移へ戻る | 各実APIがHTTP 200。選択中の画面だけ表示し、他画面の表・error・loadingが混在せず、再操作可能 | 売上推移1月3,000.00、顧客分類A=2/B=2/未分類=1、sales-a 3,500.00/3件を順に表示。他レポート表は非表示で、最後に表示ボタンが使用可能 | PASS |
+| RP-02 / F-10 取得中切替 | 顧客分類GETをPromiseで保留し、売上推移・担当者別実績へ切替後、顧客分類に再訪して保留を解除 | loading中も切替可能。pending中の再訪で重複GETなし。実Backend応答後に固定fixture値を表示 | statusでloadingを確認。再訪前後・完了後のGETは計1件。`route.continue()`後にHTTP 200、A=2/B=2/未分類=1を表示 | PASS |
+| VL-01 / F-09 売上推移入力検証 | 開始日未入力、終了日未入力、開始日>終了日を画面で送信 | 各validation errorを表示し、売上推移GETを送信しない | 3ケースで該当errorを表示し、監視した売上推移GETは0件 | PASS |
+| VL-01 / F-11 担当者別入力検証 | 同じ3ケースを担当者別実績画面で送信 | 各validation errorを表示し、担当者別GETを送信しない | 3ケースで該当errorを表示し、監視した担当者別GETは0件 | PASS |
+
+RP-02の`page.route`は通信を一時保留するためだけに使用した。API Responseやfixture JSONをmockせず、`route.continue()`で実Backendへ転送して実PostgreSQLの値を確認した。VL-01では`page.on('request')`で対象URIのGET件数を監視した。`npm run e2e:reports`は2回連続で各21件成功（既存17件＋今回4件）。両実行前にE2E安全チェック付きresetを行った。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
+
+未実施: Firefox、WebKit、CI、認証、権限制御。

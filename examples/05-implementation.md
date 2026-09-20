@@ -214,3 +214,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 各検索で`GET /api/v1/reports/staff-performance`のfrom/to、HTTP 200、Vite originを確認し、表の`row`・`cell`でstaffEmail、表示金額、件数の対応を検証する。staffIdはUIに表示しない。
 - SP-01は基本集計、SP-02は売上合計、SP-03は売上件数、SP-04は金額降順・同額時email昇順と再検索後の旧結果消去、SP-05は期間境界、SP-06は0件メッセージと表非表示を検証する。
 - 既存のSmoke Test、ST-01～ST-05、CC-01～CC-05、専用config、Backend・Frontend、DB schema、fixtureは変更していない。RP/VLは未実装。
+
+## 2026-09-20 レポート横断・入力検証Playwright受入テスト RP-01、RP-02、VL-01
+
+- `e2e/reports/report-navigation.spec.ts`を追加。既存の`playwright.reports.config.ts`と`npm run e2e:reports`を使用し、RP-01・RP-02と、売上推移・営業担当者別実績に分けたVL-01の計4テストを独立して実行する。
+- RP-01は売上推移→顧客分類→営業担当者別実績→売上推移の連続切替、実APIのHTTP 200、現在画面以外の表やerror/loadingの非表示、再操作可能な状態を確認する。
+- RP-02は顧客分類のGETを`page.route`内のPromiseで一時保留し、取得中の画面切替と再訪で重複GETが発生しないことを確認する。保留解除後は`route.continue()`で実Backendへ転送し、実PostgreSQL由来のA=2、B=2、未分類=1を画面で確認する。固定JSONやResponse mockは使用しない。
+- VL-01は売上推移と営業担当者別実績の開始日未入力、終了日未入力、開始日>終了日をBrowserで操作し、画面上のvalidation errorと各APIへのGETが0件であることを確認する。API mockや固定待機は使用しない。
+- 既存のSmoke/ST/CC/SP、Backend・Frontend、fixture、DB schema、Playwright configは変更していない。Firefox・WebKit・CIは未実施。
