@@ -264,3 +264,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `argon2`でArgon2idのhash/verifyを実装した。設定はmemory 19456 KiB、time cost 2、parallelism 1。後続Login Serviceがemail不存在時に使うdummy hash生成helperも追加した。
 - `jose`でHS256のJWT access token発行・検証を実装した。claimは`sub`・`iat`・`exp`のみ、期限は1800秒。検証はHS256へ固定し、`sub`のUUID形式を確認する。`JWT_SECRET`は環境変数から取得し、32 byte未満なら秘密値を表示せず拒否する。単体テストではtest専用secretを注入する。
 - AuthenticatedUser型は`{ id, role }`とした。Repository、password helper、JWT serviceのunit testを追加した。Login API、Login Service、Authentication/Authorization middleware、HTTP 401変換、request時のusers・is_active・現在role確認は未実装であり、T-104全体は未完了。`app.ts`、既存API、Frontend、DB schema、migration、E2E fixture、Playwrightは変更していない。
+
+## 2026-09-20 T-104 Login Service・Login API
+
+- `backend/src/auth/login-validation.ts`でemailの前後空白除去、必須・型・長さを確認する。passwordは空文字と1024文字超を拒否するが、前後空白を除去しない。独自email形式検証や大文字小文字変換は追加していない。
+- `login-service.ts`は既存のAuth User Repository、Argon2id verify、dummy hash helper、JWT Serviceを再利用する。dummy hashは初回利用時に一度生成して共有し、email不存在時にもverifyを行う。inactive userもpassword照合後に拒否する。成功時はJWTと公開可能なuser情報だけを返し、認証失敗は同一結果にする。内部障害は認証失敗へ変換しない。
+- `auth-router.ts`に`POST /api/v1/auth/login`を追加し、200のLogin DTO、400 `VALIDATION_ERROR`、401 `AUTHENTICATION_FAILED`、既存形式の503/500を返す。auth Router内でJSONを解析し、壊れたJSONも400の共通形式にする。`app.ts`にはauth Routerだけを登録した。既存customers・activities・reports APIへ認証は適用していない。
+- `login-service.test.ts`と`auth-api.test.ts`を追加した。APIテストでは実Argon2id helperとテスト専用secretによる実JWT発行を使い、DB Repositoryはテスト内で置き換えた。Frontend、DB schema、migration、E2E fixture、Playwrightは変更していない。
+- T-104全体は未完了。Authentication middleware、Bearer検証のAPI適用、requestごとのuser・is_active・現在role取得、protected APIの401、T-605は後続作業とする。

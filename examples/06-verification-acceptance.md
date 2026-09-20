@@ -264,3 +264,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Argon2id helperは正しいpassword・異なるpasswordの照合、Argon2id形式とmemory 19456 KiB・time cost 2・parallelism 1、同一passwordで異なるsalt、dummy hashをunit test 3件で確認しPASS。
 - JWT serviceはHS256発行・検証、`sub`・`iat`・`exp`だけのclaim、1800秒の期限、別secret・改ざん・期限切れ・HS256以外・`sub`欠落/不正・JWT形式不正・`exp`欠落、短いsecret拒否をunit test 7件で確認しPASS。期限は時刻注入で検証し、固定waitは使用していない。
 - Backend全テスト22ファイル・87件PASS、`npm run build` PASS。FrontendとPlaywrightは今回実行していない。Login API、Authentication middleware、HTTP 401変換、request時のusers・is_active・現在role確認、T-605は未実装・未検証で、T-104全体は未完了。
+
+## 2026-09-20 T-104 Login Service・Login APIの検証
+
+- Login Service unit test 5件PASS。active userの成功と公開user項目、email不存在時のdummy hash verifyと一度だけの生成、password不一致、inactive userでもpassword照合、Repository/JWT障害の伝播を確認した。
+- Login API test 17件PASS。実Argon2id hash/verifyと実HS256 JWTを使い、200のaccessToken・Bearer・1800秒・user情報、email trimと大文字小文字保持、password空白保持、3種類の失敗が同一401、入力不正と壊れたJSONの400、内部障害の500、DB未設定時の503を確認した。password_hashはResponseに含まれない。
+- Backend全テスト24ファイル・109件PASS、`npm run build` PASS。既存APIテストも全件PASS。FrontendとPlaywrightは変更・実行していない。既存APIは引き続き認証不要である。
+- Authentication middleware、protected APIのBearer検証・401、requestごとのusers・is_active・現在role確認、T-605は未実装・未検証。T-104全体は未完了。

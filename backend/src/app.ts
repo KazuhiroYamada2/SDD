@@ -3,6 +3,9 @@ import { createActivitiesRouter } from './activities/activities-router.js';
 import { createActivityReferenceRepository } from './activities/activity-reference-repository.js';
 import { createActivityRepository } from './activities/activity-repository.js';
 import { createCreateActivityService, type ActivityService } from './activities/activity-service.js';
+import { createAuthUserRepository } from './auth/auth-user-repository.js';
+import { createAuthRouter } from './auth/auth-router.js';
+import { createLoginService, type LoginService } from './auth/login-service.js';
 import { createCustomersRouter } from './customers/customers-router.js';
 import { createCustomerRepository, type CustomerRepository } from './customers/customer-repository.js';
 import { database } from './db.js';
@@ -15,6 +18,7 @@ import { createStaffPerformanceRepository } from './reports/staff-performance-re
 import { createStaffPerformanceService, type StaffPerformanceService } from './reports/staff-performance-service.js';
 
 type AppDependencies = {
+  loginService?: LoginService;
   customerRepository?: CustomerRepository;
   activityService?: ActivityService;
   salesTrendService?: SalesTrendService;
@@ -24,6 +28,8 @@ type AppDependencies = {
 
 export const createApp = (dependencies: AppDependencies = {}) => {
   const app = express();
+  const loginService = dependencies.loginService ??
+    (database === undefined ? undefined : createLoginService({ userRepository: createAuthUserRepository(database) }));
   const customerRepository = dependencies.customerRepository ??
     (database === undefined ? undefined : createCustomerRepository(database));
   const activityService = dependencies.activityService ??
@@ -40,6 +46,8 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   const staffPerformanceService = dependencies.staffPerformanceService ??
     (database === undefined ? undefined : createStaffPerformanceService(createStaffPerformanceRepository(database)));
 
+  // Auth parses JSON in its own router so malformed login bodies use the auth error DTO.
+  app.use('/api/v1/auth', createAuthRouter(loginService));
   app.use(express.json());
 
   app.get('/health', (_request, response) => {
