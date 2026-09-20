@@ -148,3 +148,32 @@ E2E用PostgreSQLが未構成のため、上記のAPI応答はテスト内でモ�
 各検索で実Backendへの`GET /api/v1/reports/sales-trend`のfrom/toとHTTP 200を確認し、画面の表を検証した。API mockは使用していない。`npm run e2e:reports`は2回連続で各6件成功（Smoke Test 1件＋ST 5件）。両実行前に`customer_management_e2e`を安全チェック付きでresetし、users 2件、customers 6件、sales_records 8件の固定fixtureを確認した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
 
 未実施: CC-01～CC-05、SP-01～SP-06、RP-01～RP-02、VL-01、Firefox、WebKit。
+
+## 2026-09-20 顧客分類Playwright受入テスト CC-01～CC-05
+
+| Scenario / Requirement | 操作 | 期待結果 | 実結果 | 判定 |
+| --- | --- | --- | --- | --- |
+| CC-01 / F-10 基本集計 | 顧客分類画面を開き実API応答後の表を確認 | A=2、B=2、未分類=1 | 3分類の各row内で分類と件数が一致 | PASS |
+| CC-02 / F-10 論理削除除外 | 独立した画面で顧客分類を取得 | D1を除外してA=2、A=3は表示しない | A=2のrowが表示され、A=3のrowは0件 | PASS |
+| CC-03 / F-10 NULL分類 | 独立した画面で顧客分類を取得 | N1を未分類=1と表示し、nullを表示しない | 未分類=1のrowが表示され、nullのcellは0件 | PASS |
+| CC-04 / F-10 並び順 | 独立した画面で表のデータrow順を取得 | 件数降順、同数時は分類昇順でA→B→未分類 | 表のデータrow順はA→B→未分類、各件数も一致 | PASS |
+| CC-05 / F-10 再表示・再取得 | 顧客分類を表示後、売上推移へ切替えて再訪 | 2回目の実GETが発生し、再表示後もA=2、B=2、未分類=1 | GETを2回観測し双方HTTP 200。再訪後の各rowも一致 | PASS |
+
+各CCテストで`GET /api/v1/reports/customer-categories`の確定URI、HTTP 200、from/to等のquery parameterなし、Vite originを確認した。`page.route`等のAPI mockは使用していない。`npm run e2e:reports`は2回連続で各11件成功（Smoke 1件＋ST 5件＋CC 5件）。各実行前にE2E安全チェック付きresetを行い、`customer_management_e2e`の固定fixtureを使用した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
+
+未実施: SP-01～SP-06、RP-01～RP-02、VL-01、Firefox、WebKit。
+
+## 2026-09-20 営業担当者別実績Playwright受入テスト SP-01～SP-06
+
+| Scenario / Requirement | 操作 | 期待結果 | 実結果 | 判定 |
+| --- | --- | --- | --- | --- |
+| SP-01 / F-11 基本集計 | 2026-01-15～03-10を画面から検索 | sales-a 3,500.00 / 3件、sales-b 1,500.00 / 1件 | 両担当者のemail・金額・件数が各row内で一致 | PASS |
+| SP-02 / F-11 SUM | 同期間を独立した画面で検索 | sales-aの売上合計3,500.00 | sales-aのrow内に3,500.00を表示 | PASS |
+| SP-03 / F-11 COUNT | 同期間を独立した画面で検索 | sales-a 3件、sales-b 1件 | 両担当者のrow内に各件数を表示 | PASS |
+| SP-04 / F-11 並び順 | 基本期間を検索後、同じ画面で2026-04-01～04-30を再検索 | 基本期間は金額降順、4月は両者100.00 / 1件でemail昇順。旧金額は残さない | 両期間ともsales-a→sales-bのrow順。4月の両rowは100.00 / 1件で、旧3,500.00・1,500.00のcellは0件 | PASS |
+| SP-05 / F-11 期間境界 | 2026-01-15～03-10を独立した画面で検索 | 1/14・3/11を除外し、1/15・3/10を含めてsales-a 3,500.00 / 3件、sales-b 1,500.00 / 1件 | 両担当者のrow内で金額・件数が一致 | PASS |
+| SP-06 / F-11 0件 | 2026-02-01～02-28を画面から検索 | 0件メッセージを表示し担当者行を作らない | 「対象期間の営業実績データはありません。」を表示し、表は0件 | PASS |
+
+各SPテストで`GET /api/v1/reports/staff-performance`のfrom/to、HTTP 200、Vite originを確認した。API mockは使用していない。`npm run e2e:reports`は2回連続で各17件成功（Smoke 1件＋ST 5件＋CC 5件＋SP 6件）。各実行前にE2E安全チェック付きresetを行い、`customer_management_e2e`の固定fixtureを使用した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
+
+未実施: RP-01～RP-02、VL-01、Firefox、WebKit。

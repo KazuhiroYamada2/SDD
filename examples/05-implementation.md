@@ -198,3 +198,19 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - すべての検索で`GET /api/v1/reports/sales-trend`のfrom/to、HTTP 200、Vite originを確認し、`table`・`row`・`cell`のroleで月と金額を同一行として検証する。
 - ST-01は基本集計と月昇順、ST-02は0件月、ST-03は期間境界、ST-04は月途中の両端月、ST-05は再検索時の結果置換を検証する。
 - 既存のSmoke Testと専用config、Backend・Frontend、DB schema、fixtureは変更していない。CC/SP/RP/VLは未実装。
+
+## 2026-09-20 顧客分類Playwright受入テスト CC-01～CC-05
+
+- `e2e/reports/customer-categories.spec.ts`を追加。既存の`playwright.reports.config.ts`と`npm run e2e:reports`を使用する。各テストはトップ画面から独立してレポート画面へ移動する。
+- BrowserからVite `/api` proxy、BackendのRouter・Service・Repositoryを経由して`customer_management_e2e`の固定fixtureを参照する。顧客分類APIのmock、固定待機、test単位のDB resetは使用しない。
+- 各表示で`GET /api/v1/reports/customer-categories`のHTTP 200とquery parameterなしを確認し、表の`row`・`cell`で分類と件数の対応を検証する。
+- CC-01はA/B/未分類の基本集計、CC-02は論理削除D1の除外、CC-03はNULLの未分類表示、CC-04は件数降順と同数時の分類昇順、CC-05は再訪時の2回目の実GETと同じ画面値を検証する。
+- 既存のSmoke Test、ST-01～ST-05、専用config、Backend・Frontend、DB schema、fixtureは変更していない。SP/RP/VLは未実装。
+
+## 2026-09-20 営業担当者別実績Playwright受入テスト SP-01～SP-06
+
+- `e2e/reports/staff-performance.spec.ts`を追加。既存の`playwright.reports.config.ts`と`npm run e2e:reports`を使用し、各テストが独立してトップ画面から営業担当者別実績へ移動する。
+- BrowserからVite `/api` proxy、実BackendのRouter・Service・Repositoryを経由して`customer_management_e2e`の固定fixtureを参照する。staff-performance APIのmock、固定待機、test単位のDB resetは使用しない。
+- 各検索で`GET /api/v1/reports/staff-performance`のfrom/to、HTTP 200、Vite originを確認し、表の`row`・`cell`でstaffEmail、表示金額、件数の対応を検証する。staffIdはUIに表示しない。
+- SP-01は基本集計、SP-02は売上合計、SP-03は売上件数、SP-04は金額降順・同額時email昇順と再検索後の旧結果消去、SP-05は期間境界、SP-06は0件メッセージと表非表示を検証する。
+- 既存のSmoke Test、ST-01～ST-05、CC-01～CC-05、専用config、Backend・Frontend、DB schema、fixtureは変更していない。RP/VLは未実装。
