@@ -190,3 +190,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - ルート`package.json`に`e2e:reports:prepare`と`e2e:reports`を追加。前者が専用PostgreSQLを起動して既存のE2E DB安全チェック付きresetを1回実行し、後者が準備後に専用Playwright configを実行する。
 - `e2e/reports/report-smoke.spec.ts`を1件追加。レポート画面から顧客分類を選択し、確定URIへのHTTP 200応答と、固定fixtureのA=2、B=2、未分類=1の表表示を確認する。API mockは使用しない。
 - 既存の`playwright.config.ts`、`e2e/sales-activity.spec.ts`、Backend・Frontend・DB schemaは変更していない。ST/CC/SP/RP/VLの本格シナリオは未実装。
+
+## 2026-09-20 売上推移Playwright受入テスト ST-01～ST-05
+
+- `e2e/reports/sales-trend.spec.ts`を追加。既存の`playwright.reports.config.ts`と`npm run e2e:reports`を使用し、各テストが独立してトップ画面から売上推移へ移動する。
+- 実DBの固定fixtureを使用し、BrowserからVite `/api` proxy、BackendのRouter・Service・Repositoryを経て`customer_management_e2e`に接続する。`page.route`等のAPI mockと固定待機は使用しない。
+- すべての検索で`GET /api/v1/reports/sales-trend`のfrom/to、HTTP 200、Vite originを確認し、`table`・`row`・`cell`のroleで月と金額を同一行として検証する。
+- ST-01は基本集計と月昇順、ST-02は0件月、ST-03は期間境界、ST-04は月途中の両端月、ST-05は再検索時の結果置換を検証する。
+- 既存のSmoke Testと専用config、Backend・Frontend、DB schema、fixtureは変更していない。CC/SP/RP/VLは未実装。
