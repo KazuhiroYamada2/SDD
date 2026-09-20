@@ -8,12 +8,12 @@
 
 ## Customer Management Application Setup
 
-The initial application structure is in `frontend/` and `backend/`. This stage contains no customer-management features, authentication, database schema, or migrations.
+The customer management application is in `frontend/` and `backend/`. Its schema and E2E PostgreSQL setup are available; authentication is not yet implemented. For this application, `examples/01` through `examples/06` are the source of truth, as defined in [`AGENTS.md`](AGENTS.md).
 
 ### Prerequisites
 
 - Node.js 24 or later
-- PostgreSQL 16 or later (only required when a later task begins using the database)
+- PostgreSQL 16 or later for database-backed features; Docker Desktop can run the dedicated E2E database
 
 ### Setup and startup
 
@@ -45,7 +45,16 @@ npm.cmd test --prefix frontend
 npm.cmd test --prefix backend
 ```
 
-The PostgreSQL pool configuration reads `DATABASE_URL` but does not open a database connection during startup. Schema creation, migrations, and application features are deliberately deferred.
+The backend reads `DATABASE_URL` at startup and connects when a database-backed endpoint is called. The schema is in [`backend/migrations/001_create_core_schema.sql`](backend/migrations/001_create_core_schema.sql). For the isolated E2E database, copy [`.env.e2e.example`](.env.e2e.example) to `.env.e2e`, set a unique local password in both `E2E_DB_PASSWORD` and `DATABASE_URL`, then run:
+
+```powershell
+docker compose --env-file .env.e2e -f compose.e2e.yml up -d --wait
+npm.cmd run e2e:db:reset --prefix backend
+npm.cmd run build --prefix backend
+npm.cmd run e2e:api:verify --prefix backend
+```
+
+`.env.e2e` is ignored by Git. The E2E database is separate from the regular development database.
 
 [English](./README.md) | [日本語](./README_ja.md)
 
@@ -148,7 +157,7 @@ For the editing and sharing exercise below, use a clone of your fork.
 
 ### 2. Open and Review README.md
 
-Open `README.md` in your local clone, then read [the sample guide](examples/README.md). The files in `examples/` illustrate deliverables for a Customer Management System; use them as references when writing your own specifications.
+Open `README.md` in your local clone, then read [the example guide](examples/README.md). In this customer management project, `examples/01` through `examples/06` are the source of truth.
 
 ### 3. Complete a First Exercise
 
@@ -157,12 +166,11 @@ For this introductory exercise, use the following layout in your fork:
 | Location | What to write |
 |----------|---------------|
 | `README.md` | Your project's purpose, intended users, scope, and links to detailed specifications |
-| `specs/` (create this folder) | Your project's specifications, based on copies of the relevant sample files |
-| `examples/` | The original reference samples |
+| `examples/` | This project's specifications and implementation and verification records |
 
-1. Read `examples/02-planning-requirement.md` and copy it to `specs/02-planning-requirement.md`.
-2. Change one requirement for your chosen project. State who needs it, the expected behavior, and how you will check that it works.
-3. Ask the AI: "Read specs/02-planning-requirement.md. Identify ambiguous requirements and suggest acceptance criteria. List questions instead of inventing missing requirements."
+1. Read `examples/02-planning-requirement.md` in your fork.
+2. Change one requirement in that file. State who needs it, the expected behavior, and how you will check that it works.
+3. Ask the AI: "Read examples/02-planning-requirement.md. Identify ambiguous requirements and suggest acceptance criteria. List questions instead of inventing missing requirements."
 4. Review the suggestions and revise the specification. Record unresolved questions explicitly. For individual practice, you make the decisions; in team work, have the relevant stakeholders review them.
 5. Add a short project overview and a link to your specification in your fork's README.
 
@@ -316,7 +324,7 @@ https://youtu.be/DilSKvi4aQw
 ## Next Steps
 
 1. Complete [the first exercise](#3-complete-a-first-exercise).
-2. Expand your project's `specs/` folder using the other process samples.
+2. Continue with the related files in `examples/`, following the priorities in `AGENTS.md`.
 3. Review related documents together when requirements change, and commit the updates to your fork.
 
 ---

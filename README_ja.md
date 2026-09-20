@@ -1,5 +1,7 @@
 # SDD（仕様駆動開発） 練習用リポジトリ
 
+このリポジトリの顧客管理アプリでは、`examples/01`～`examples/06`を仕様・実装記録・検証記録の正本として扱います。`frontend/`、`backend/`には実行可能なアプリがあり、E2E専用PostgreSQLの構成は[`compose.e2e.yml`](compose.e2e.yml)にあります。作業ルールは[`AGENTS.md`](AGENTS.md)を参照してください。
+
 [English](./README.md) | [日本語](./README_ja.md)
 
 [![Elvez](https://img.shields.io/badge/Elvez-Product-3F61A7?style=flat-square)](https://elvez.co.jp/)
@@ -278,7 +280,7 @@ https://youtu.be/DilSKvi4aQw
 
 セキュリティに関する詳細は [SECURITY_ja.md](SECURITY_ja.md) を参照してください。
 
-- 本リポジトリはドキュメントとサンプルファイルのみで構成されており、実行可能なコードは含みません
+- 本リポジトリにはドキュメントとサンプルに加え、顧客管理アプリと`spec-ai-writer/`の実行可能なコードが含まれます
 - 脆弱性を発見した場合は、公開 Issue ではなくメールでご報告ください（info@elvez.co.jp）
 
 ## コントリビューション
