@@ -283,3 +283,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 ## 2026-09-20 認証移行仕様・Task分解の確定
 
 - 仕様担当者の決定をexamples/02～04に反映し、Public route、Frontend認証動作、E2E manager方針、T-109～T-111の移行Taskと依存順を確定した。既存のT-104 Backend Authentication部品は実装済みだが、N-03のproduction統合はT-111まで未完了と区別した。今回は新規TaskやFrontend・Backend・E2Eのコードを実装していない。
+
+## 2026-09-20 T-109 E2E認証基盤準備
+
+- `e2e/fixtures/auth-manager.mjs`にE2E専用managerの固定ID・email・role・テスト用passwordを一元化した。`backend/scripts/e2e-db.mjs`は既存staff 2名と顧客6件・売上8件を維持し、manager 1名だけを追加する。managerは顧客ownerでも売上担当者でもない。
+- seed時に既存`argon2`でArgon2id hashを毎回生成し、memory 19456 KiB、time cost 2、parallelism 1で`users.password_hash`へ投入する。固定hashは保存しない。E2E専用passwordは本番Initial Password Provisioningとは別である。既存の`NODE_ENV=e2e`、専用DB名・接続先・DB接続後の識別確認を維持した。
+- `e2e/auth/login-helper.ts`の`loginAsE2EManager(request)`はPlaywrightのHTTP requestから実Login APIを呼び、200・Bearer・1800秒・manager情報を確認してtokenを返す。`login-smoke.spec.ts`で成功と誤passwordの401を実Backend・実PostgreSQL経由で確認する。専用`playwright.auth.config.ts`と`npm run e2e:auth`によりAPI smokeを1 projectで実行する。E2E専用JWT secretはGit管理外の`.env.e2e`からBackend webServerへ渡し、`.env.e2e.example`にはplaceholderだけを記載した。
+- Frontend、production業務APIのAuthentication適用、role認可、既存Reportsシナリオは変更していない。T-110・T-111・T-605は引き続き後続Taskである。

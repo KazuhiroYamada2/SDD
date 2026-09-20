@@ -39,7 +39,7 @@ export default defineConfig({
     {
       command: 'npm --prefix backend run dev',
       url: 'http://127.0.0.1:3000/health',
-      env: { NODE_ENV: 'e2e', DATABASE_URL: databaseUrl, PORT: '3000' },
+      env: { NODE_ENV: 'e2e', DATABASE_URL: databaseUrl, PORT: '3000', JWT_SECRET: e2eEnv.JWT_SECRET },
       reuseExistingServer: false,
       timeout: 30_000,
     },

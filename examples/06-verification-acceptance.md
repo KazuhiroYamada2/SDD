@@ -282,3 +282,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 ## 2026-09-20 認証移行仕様・Task分解の文書確認
 
 - examples/02～04を照合し、Login・healthのPublic扱い、その他Phase 1業務APIの認証必須、Login後の顧客登録画面、Login/業務APIの401動作、memory token・Logout、T-109→T-110→T-111→T-605→T-105→T-501の順序が一致することを確認した。T-109～T-111は未実装・未検証であり、T-605も最終PASSとしていない。今回はコード変更とテスト実行を行っていない。
+
+## 2026-09-20 T-109 E2E認証基盤の受入確認
+
+- `npm run e2e:auth`で既存の安全guardを通した。`NODE_ENV=e2e`、接続先`customer_management_e2e`、接続後のDB識別確認を維持し、専用PostgreSQLをreset/seedした結果はusers 3件、customers 6件、sales_records 8件だった。managerはactive、Argon2id形式であり、顧客owner・売上担当者に含まれないことをseed後に確認した。
+- 実Backend・実PostgreSQL・HTTP Login APIによるsmoke 2件PASS。managerのLoginはHTTP 200で非空のJWT、Bearer、1800秒、managerのID・email・roleを返した。誤passwordはHTTP 401 `AUTHENTICATION_FAILED`だった。API mockは使用していない。
+- Backend全テスト25ファイル・120件PASS、build PASS。`npm run e2e:reports`の既存21シナリオ×3 BrowserはChromium 21、Firefox 21、WebKit 21、合計63件PASS。顧客分類A=2/B=2/未分類=1、売上推移、担当者別実績の期待値は維持された。
+- T-109は完了。Frontend認証（T-110）、production業務APIへのAuthentication適用（T-111）、role認可（T-105・T-501）、T-605の最終確認は未実施。本番Initial Password Provisioningは別途残る。

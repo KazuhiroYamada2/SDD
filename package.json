@@ -9,7 +9,8 @@
   },
   "scripts": {
     "e2e:reports:prepare": "docker compose --env-file .env.e2e -f compose.e2e.yml up -d --wait && npm --prefix backend run e2e:db:reset",
-    "e2e:reports": "npm run e2e:reports:prepare && playwright test --config=playwright.reports.config.ts"
+    "e2e:reports": "npm run e2e:reports:prepare && playwright test --config=playwright.reports.config.ts",
+    "e2e:auth": "npm run e2e:reports:prepare && playwright test --config=playwright.auth.config.ts"
   },
   "repository": {
     "type": "git",
