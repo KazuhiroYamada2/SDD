@@ -296,3 +296,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `frontend/src/auth/auth-types.ts`にrole、認証済みユーザー、memory認証状態、Login request/responseの型を追加した。`frontend/src/api/auth.ts`に`POST /api/v1/auth/login`用のfetch clientを追加し、200のDTO、400 validation、401認証失敗、500/503・network障害を区別する。内部エラー詳細やpassword・tokenを表示・記録しない。
 - `AuthContext.tsx`でaccessTokenとuserをReact stateに保持し、設定・解除できるようにした。永続storageやmodule globalは使用しない。`Login.tsx`にはlabel付きemail/password入力、Login操作、loading・二重送信防止、400/401/障害の区別した表示を追加した。emailの前後空白だけを除去し、passwordは変更しない。成功時はContextに認証情報を設定する。
 - Login API client、認証状態、Login componentのunit/component testを追加した。`App.tsx`、既存customers・activities・reports API、Backend、E2E、Playwrightは変更していない。T-110全体は未完了で、App統合、authenticated fetch・Bearer付与、業務API 401、Logout UI、Browser認証移行は後続段階で行う。
+
+## 2026-09-20 T-110 authenticated fetch基盤（部分実装）
+
+- `frontend/src/api/authenticated-fetch.ts`にReact非依存の`authenticatedFetch(input, accessToken, init?)`を追加した。`Request`と`RequestInit`の既存headerを`Headers`で統合し、Authorizationだけを渡されたtoken由来の`Bearer`値で上書きする。空・未設定tokenは送信前に`MissingAccessTokenError`とする。
+- HTTP 401かつbodyの`code`が`AUTHENTICATION_REQUIRED`の場合だけ、token情報を保持しない`AuthenticationRequiredError`を投げる。Responseをcloneして判定し、その他の401、400、403、500、503は元のResponseを呼び出し側に返す。network障害も認証失敗に変換しない。
+- helperのunit testを追加した。`AuthContext`・Login API client・`App.tsx`・既存customers/activities/reports API・Backend・Playwrightは変更していない。401時の認証状態破棄とLogin画面復帰は後続のApp統合で行い、T-110全体は未完了とする。
