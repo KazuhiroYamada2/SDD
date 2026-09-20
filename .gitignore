@@ -11,6 +11,7 @@ node_modules/
 /backend/dist/
 *.tsbuildinfo
 .env
+.env.e2e
 /test-results/
 /playwright-report/
 /blob-report/

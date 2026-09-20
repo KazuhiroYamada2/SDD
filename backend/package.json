@@ -7,7 +7,11 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e:db:migrate": "node --env-file=../.env.e2e scripts/e2e-db.mjs migrate",
+    "e2e:db:seed": "node --env-file=../.env.e2e scripts/e2e-db.mjs seed",
+    "e2e:db:reset": "node --env-file=../.env.e2e scripts/e2e-db.mjs reset",
+    "e2e:api:verify": "node --env-file=../.env.e2e scripts/verify-e2e-api.mjs"
   },
   "dependencies": {
     "dotenv": "^17.0.0",
