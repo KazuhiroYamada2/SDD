@@ -163,3 +163,30 @@
 - テスト: 画面切替、アクセシブルなフォーム、入力検証、API呼び出し、loading、表、0円、0件、400・500・network errorの表示を追加した。
 - 実行結果: `frontend`で`npx.cmd tsc -b --pretty false`、`npm.cmd test`、`npm.cmd run build`を実行し、TypeScriptコンパイル、3ファイル・19テスト、ビルドがすべて成功した。
 - 未実施: 顧客分類・営業担当者別実績のデータ表示、グラフ、Playwright、認可、バックエンド・DB・仕様書の変更は今回の対象外とした。
+
+## 2026-09-20 E2E実DB基盤
+
+- 範囲: Playwright受入テスト用の実DB基盤。レポート業務ロジック、Repository集計、DB schema、React、Playwright設定・specは変更していない。
+- `compose.e2e.yml`: 専用project `customer-management-e2e`、service `postgres-e2e`、専用volume、DB `customer_management_e2e`、ホスト公開 `127.0.0.1:55432`、healthcheckを追加した。公式 `postgres:16` を採用。READMEの要件「PostgreSQL 16 or later」に合致し、メジャーバージョンを固定できるため。
+- `.env.e2e.example`: E2E専用環境変数の例を追加。実際の秘密情報はGit管理外の `.env.e2e` に置き、`.gitignore`に追加した。
+- `backend/scripts/e2e-db.mjs`: Node.js + pgで既存の `001_create_core_schema.sql` を適用。`migrate`、`seed`、`reset`を追加した。resetは専用DBへの接続確認後、トランザクション内でE2E用テーブルだけを削除してmigration、固定fixture投入、件数・値検証を実施する。seedは同じ検証を伴う再投入。すべてのIDと日時は固定値。
+- 安全確認: `NODE_ENV=e2e`、DATABASE_URLのDB名・ユーザー・ホスト・ポート、接続後のDB名・ユーザー・サーバーポートを検証する。満たさない場合、DROP/TRUNCATE前に停止する。エラー表示でURL内パスワードを伏せる。
+- `backend/scripts/verify-e2e-api.mjs`: 実Backendを起動し、HTTPで3レポートAPIと4月同額順を検証する。
+- `backend/src/migrations/e2e-db-safety.test.ts`: 別DB名・別NODE_ENVを拒否するテストを追加した。
+
+### 実行方法
+
+1. `.env.e2e.example`を `.env.e2e` にコピーし、同じローカル専用パスワードを `E2E_DB_PASSWORD` と `DATABASE_URL` に設定する。`.env.e2e` はコミットしない。
+2. `docker compose --env-file .env.e2e -f compose.e2e.yml up -d --wait`
+3. `cd backend` 後、`npm run e2e:db:reset`。既存DBが空でmigrationだけ必要なら `npm run e2e:db:migrate`、migration済みなら `npm run e2e:db:seed`。
+4. `npm run build`、`npm run e2e:api:verify`。
+
+Backendを単独起動する場合は、`backend`から `node --env-file=../.env.e2e dist/server.js` を実行する。
+
+## 2026-09-20 レポート実DB Playwright起動基盤
+
+- `playwright.reports.config.ts`を追加。探索先を`e2e/reports`に限定し、Chromiumだけを使用する。baseURLは`http://127.0.0.1:5173`、retryは0、失敗時のtraceとscreenshotを保存し、videoは無効にした。
+- PlaywrightのwebServerでBackendとFrontendを起動する。Backendは既存の`npm --prefix backend run dev`を使い、`.env.e2e`の`DATABASE_URL`と`NODE_ENV=e2e`、`PORT=3000`を`env`で渡す。Frontendは既存のViteを`127.0.0.1:5173`で起動し、既存の`/api` proxyを使用する。両serverとも既存プロセスを再利用しない。
+- ルート`package.json`に`e2e:reports:prepare`と`e2e:reports`を追加。前者が専用PostgreSQLを起動して既存のE2E DB安全チェック付きresetを1回実行し、後者が準備後に専用Playwright configを実行する。
+- `e2e/reports/report-smoke.spec.ts`を1件追加。レポート画面から顧客分類を選択し、確定URIへのHTTP 200応答と、固定fixtureのA=2、B=2、未分類=1の表表示を確認する。API mockは使用しない。
+- 既存の`playwright.config.ts`、`e2e/sales-activity.spec.ts`、Backend・Frontend・DB schemaは変更していない。ST/CC/SP/RP/VLの本格シナリオは未実装。

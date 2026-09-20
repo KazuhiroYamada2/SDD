@@ -101,3 +101,36 @@ Playwrightテストはユーザー指示により未実施とする。
 | Playwright | 合格: Chromiumで2件成功 |
 
 E2E用PostgreSQLが未構成のため、上記のAPI応答はテスト内でモックした。実DBに対する受入確認は未実施とする。
+
+## 2026-09-20 E2E実DB基盤
+
+| 項目 | 結果 |
+| --- | --- |
+| Docker PostgreSQL | `postgres:16`、実サーバー `16.15`。専用project/volume/DBで起動、`Up (healthy)`。公開先 `127.0.0.1:55432`。 |
+| reset 1回目 | 成功。users 2、customers 6、sales_records 8、activities 0、audit_logs 0。固定fixtureの値も一致。 |
+| reset 2回目 | 成功。1回目と同じ件数・値。migration再適用も成功。 |
+| seed単独再実行 | 成功。同じ件数・値。 |
+| 誤DB防止 | DATABASE_URLのDB名を `wrong_database` としたresetを実行し、接続・変更処理前に拒否。別NODE_ENV拒否も単体テストで確認。パスワードは表示されない。 |
+| Backend→実PostgreSQL | `NODE_ENV=e2e` と専用DATABASE_URLで実Backendを起動。HTTP 200で各レポートを取得。 |
+| 売上推移API | 2026-01-15〜2026-03-10: 1月 `3000.00`、2月 `0.00`、3月 `2000.00`。 |
+| 顧客分類API | A 2、B 2、未分類 1。論理削除D1は集計外。 |
+| 担当者別API | 同期間: sales-a@example.com `3500.00` / 3件、sales-b@example.com `1500.00` / 1件。 |
+| 4月同額順 | 2026-04-01〜2026-04-30: 両者 `100.00` / 1件。sales-a、sales-bのemail昇順。 |
+| Backendテスト・build | 19ファイル、69件成功。`npm run build`成功。 |
+| Frontendテスト・型チェック・build | 4ファイル、48件成功。`npx tsc -b --pretty false`、`npm run build`成功。 |
+
+残課題: Playwrightの実DB受入テストは次タスク。
+
+## 2026-09-20 レポート実DB Playwright Smoke Test
+
+| 項目 | 結果 |
+| --- | --- |
+| 専用DB準備 | `npm run e2e:reports`から`postgres-e2e`のhealthyを確認し、E2E安全チェック付きresetを1回実行。users 2、customers 6、sales_records 8件。 |
+| Playwright探索範囲 | `--list`で`e2e/reports/report-smoke.spec.ts`のChromium 1件のみ検出。`tests/`と既存の営業活動テストは実行対象外。 |
+| 実接続 | BackendにE2E専用`DATABASE_URL`を渡して起動。BrowserがVite originの`/api/v1/reports/customer-categories`でHTTP 200を受け、固定fixtureの値を表示。Vite `/api` proxyと実Backend・Repository・専用PostgreSQLを通ることを確認。 |
+| 画面表示 | 顧客分類の表にA 2、B 2、未分類 1を表示。API mockなし。 |
+| Smoke Test | Chromium 1件成功。 |
+| Backend回帰 | 全19ファイル・69件成功。build成功。 |
+| Frontend回帰 | 全4ファイル・48件成功。TypeScript型チェック、build成功。 |
+
+未実施: ST-01～ST-05、CC-01～CC-05、SP-01～SP-06、RP-01～02、VL-01、Firefox、WebKit。既存の営業活動Playwrightテストは変更・再実行していない。
