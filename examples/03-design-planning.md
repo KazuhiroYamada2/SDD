@@ -101,8 +101,26 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 - パスワードは平文保存せず、ソルト付きの一方向ハッシュで保存する。
 - ログイン成功時に有効期限付きJWTを発行し、署名鍵は環境変数または秘密情報管理サービスから取得する。
 - JWTの署名不正、期限切れ、無効ユーザーは401を返す。
-- `staff`は許可された顧客の閲覧・編集、`manager`は担当者範囲の閲覧とレポート参照、`admin`は全顧客・ユーザー権限の管理を行う。
+- Phase 1の`staff`に許可された顧客は、`customers.owner_user_id = 認証済みusers.id`の顧客とする。`owner_user_id`は登録者ではなく顧客担当者を表す。`manager`の担当者範囲はPhase 1の全staffとする。
 - 権限のないリソースへのアクセスは403を返す。認可判定はAPIごとに行い、Frontendの表示制御だけに依存しない。
+- 次の表をPhase 1のRole × Operation × Scopeとする。Backend APIが表の操作可否とデータ範囲を最終判定する。Frontendは同じrole条件でメニュー・画面アクセス・操作ボタンを表示制御する。
+
+| 機能 | 操作 | staff | manager | admin | データ範囲 |
+| --- | --- | --- | --- | --- | --- |
+| 顧客 | 一覧・検索 | 可 | 可 | 可 | staff: 自担当顧客のみ。manager・admin: 全顧客 |
+| 顧客 | 詳細閲覧 | 可 | 可 | 可 | staff: 自担当顧客のみ。manager・admin: 全顧客 |
+| 顧客 | 登録 | 可 | 不可 | 可 | staff: 登録顧客の`owner_user_id`を認証済み本人にする。admin: 顧客登録可 |
+| 顧客 | 編集 | 可 | 不可 | 可 | staff: 自担当顧客のみ。admin: 全顧客 |
+| 顧客 | 論理削除 | 不可 | 不可 | 可 | admin: 全顧客 |
+| 活動履歴 | 一覧閲覧 | 可 | 可 | 可 | staff: 自担当顧客のみ。manager・admin: 全顧客 |
+| 活動履歴 | 登録 | 可 | 不可 | 可 | staff: 自担当顧客のみ。admin: 全顧客 |
+| レポート | 売上推移閲覧 | 不可 | 可 | 可 | manager・admin: 全社売上 |
+| レポート | 顧客分類閲覧 | 不可 | 可 | 可 | manager・admin: 全社の有効顧客 |
+| レポート | 営業担当者別実績閲覧 | 不可 | 可 | 可 | manager・admin: 全担当者 |
+| ユーザー管理 | ユーザー参照 | 不可 | 不可 | 可 | admin: 全ユーザー |
+| ユーザー管理 | role変更 | 不可 | 不可 | 可 | admin: ユーザーのrole変更 |
+
+ユーザー新規登録とrole以外のユーザー情報変更は現行要件・APIにないため、この表の対象外とする。将来、複数managerごとに担当staffを分ける場合はmanagerとstaffの関係を表すデータモデルを別途設計する。Phase 1ではその関係をschemaに追加しない。
 
 ## セキュリティ・監査
 

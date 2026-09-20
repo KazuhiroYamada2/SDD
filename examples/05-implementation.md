@@ -247,3 +247,8 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - F-10の顧客分類APIで、`from`または`to` query parameterが存在する場合は空文字も含めHTTP 400とし、既存の`VALIDATION_ERROR`形式を返す。Backend APIテストを期間指定5ケースへ変更し、期間指定なしの200と`foo`だけの200も確認する。未知query全般の共通規約は追加していない。
 - Frontend、DB schema、migration、fixture、Playwright configは変更していない。CC-05の調査用`console.log`のみ削除し、200/304の受入assertionは維持した。
 - 今回の受入範囲はF-09～F-11の集計・表示。JWT認証、roleによるレポート認可、staff/manager/admin別アクセス制御、T-501・T-504は後続タスクとして継続する。
+
+## 2026-09-20 T-003 権限マトリクスの仕様確定
+
+- 仕様担当者の決定に基づき、examples/02の権限概要、examples/03のRole × Operation × Scope表、examples/04のT-003成果物・完了条件を確定した。Phase 1のmanagerの担当者範囲は全staffとする。
+- これは仕様確定の記録であり、JWTログイン、Backend認可、Frontend表示制御は実装していない。Backend・Frontend・DB・fixture・Playwrightは変更していない。
