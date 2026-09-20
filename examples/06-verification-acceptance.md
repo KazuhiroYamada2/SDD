@@ -157,9 +157,9 @@ E2E用PostgreSQLが未構成のため、上記のAPI応答はテスト内でモ�
 | CC-02 / F-10 論理削除除外 | 独立した画面で顧客分類を取得 | D1を除外してA=2、A=3は表示しない | A=2のrowが表示され、A=3のrowは0件 | PASS |
 | CC-03 / F-10 NULL分類 | 独立した画面で顧客分類を取得 | N1を未分類=1と表示し、nullを表示しない | 未分類=1のrowが表示され、nullのcellは0件 | PASS |
 | CC-04 / F-10 並び順 | 独立した画面で表のデータrow順を取得 | 件数降順、同数時は分類昇順でA→B→未分類 | 表のデータrow順はA→B→未分類、各件数も一致 | PASS |
-| CC-05 / F-10 再表示・再取得 | 顧客分類を表示後、売上推移へ切替えて再訪 | 2回目の実GETが発生し、再表示後もA=2、B=2、未分類=1 | GETを2回観測し双方HTTP 200。再訪後の各rowも一致 | PASS |
+| CC-05 / F-10 再表示・再取得 | 顧客分類を表示後、売上推移へ切替えて再訪 | 再訪時に顧客分類GETが再度発生し、HTTP 200または条件付きGETによる304で最新性が確認され、A=2、B=2、未分類=1を表示 | 当時のChromium実行ではGETを2回観測し双方HTTP 200。再訪後の各rowも一致 | PASS |
 
-各CCテストで`GET /api/v1/reports/customer-categories`の確定URI、HTTP 200、from/to等のquery parameterなし、Vite originを確認した。`page.route`等のAPI mockは使用していない。`npm run e2e:reports`は2回連続で各11件成功（Smoke 1件＋ST 5件＋CC 5件）。各実行前にE2E安全チェック付きresetを行い、`customer_management_e2e`の固定fixtureを使用した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
+各CCテストで`GET /api/v1/reports/customer-categories`の確定URI、from/to等のquery parameterなし、Vite originを確認した。初回GETおよびCC-01～CC-04はHTTP 200、CC-05の再訪時だけHTTP 200または304を許容する。`page.route`等のAPI mockは使用していない。`npm run e2e:reports`は2回連続で各11件成功（Smoke 1件＋ST 5件＋CC 5件）。各実行前にE2E安全チェック付きresetを行い、`customer_management_e2e`の固定fixtureを使用した。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
 
 未実施: SP-01～SP-06、RP-01～RP-02、VL-01、Firefox、WebKit。
 
@@ -190,3 +190,34 @@ E2E用PostgreSQLが未構成のため、上記のAPI応答はテスト内でモ�
 RP-02の`page.route`は通信を一時保留するためだけに使用した。API Responseやfixture JSONをmockせず、`route.continue()`で実Backendへ転送して実PostgreSQLの値を確認した。VL-01では`page.on('request')`で対象URIのGET件数を監視した。`npm run e2e:reports`は2回連続で各21件成功（既存17件＋今回4件）。両実行前にE2E安全チェック付きresetを行った。Backend既存テストは19ファイル・69件、Frontend既存テストは4ファイル・48件成功。アプリ本体を変更していないため、buildと型チェックは今回再実行していない。
 
 未実施: Firefox、WebKit、CI、認証、権限制御。
+
+## 2026-09-20 レポートPlaywrightクロスブラウザ確認
+
+- Playwrightは`1.63.0`。`npx playwright install --list`でChromium・Firefox・WebKitが導入済みと確認し、追加インストールは行わなかった。
+- 各全件実行前に`npm run e2e:reports`が専用PostgreSQLをhealthyまで起動し、`customer_management_e2e`を安全チェック付きでresetした。毎回users 2、customers 6、sales_records 8件。PlaywrightのBackend `webServer`へ`NODE_ENV=e2e`と専用`DATABASE_URL`を渡し、Vite `/api` proxyから実Backend・Repository・実PostgreSQLへ接続した。API response mockは追加していない。
+
+| Browser | Smoke単独 | 全21件 PASS | 全21件 FAIL | RP-02 | 判定 |
+| --- | ---: | ---: | ---: | --- | --- |
+| Chromium | 単独実行なし | 21 | 0 | PASS | PASS |
+| Firefox | 1 PASS | 20 | 1（CC-05） | PASS | FAIL |
+| WebKit | 1 PASS | 21 | 0 | PASS | PASS |
+
+- FirefoxのCC-05は再訪時の2回目の`GET /api/v1/reports/customer-categories`でHTTP 200を期待したが、304を受信して失敗。単独再実行でも同じ結果。traceでは同じURIへの1回目が200、2回目が304で、双方に同じETagがある。Firefoxのキャッシュ再検証が原因候補。失敗時のscreenshotにはA=2、B=2、未分類=1の表が表示されている。ただし2回目HTTP 200という現行受入条件は満たしていないため、CC-05をPASSとしていない。
+- FirefoxとWebKitのRP-02はいずれもPASS。保留中の画面切替・重複GETなし・`route.continue()`後の実DB値表示を確認した。日付inputを使うST/SP/VLも両BrowserでPASSした。
+- Firefox CC-05の失敗時にtraceとscreenshotを生成・確認した。WebKitとChromiumでは失敗時のtrace・screenshotは発生していない。
+- 3Browserの個別確認がすべて成功していないため、一括63件実行は未実施。クロスブラウザ受入確認は未完了。既存テスト・Backend・Frontendは変更していない。
+
+## 2026-09-20 CC-05条件付きGET対応後のクロスブラウザ再確認
+
+- examples/02～04にCC-05の2回目GETをHTTP 200に限定する明示要件はない。受入条件は、再訪時の新たなHTTP確認（200または条件付きGETの304）と正しい画面表示とした。初回GETと他シナリオのHTTP 200確認は維持した。
+- Firefox CC-05単独は1 PASS / 0 FAIL。初回200、再訪時304、GET計2件、A=2・B=2・未分類=1を確認。304応答のETagは取得できた。Playwrightの`request.allHeaders()`ではFirefoxの2回目`If-None-Match`は取得できなかったため、そのheaderの有無はテストの必須条件にしていない。前回のtraceでは1回目200と2回目304に同じETagが記録されている。キャッシュ再検証が304の原因と判断した。
+
+| 実行 | PASS | FAIL | CC-05の再訪時status |
+| --- | ---: | ---: | --- |
+| Firefox全件 | 21 | 0 | 304 |
+| Chromium全件 | 21 | 0 | 200 |
+| WebKit全件 | 21 | 0 | 200 |
+| 3Browser一括 | 63 | 0 | Chromium 200、Firefox 304、WebKit 200 |
+
+- 各実行前に`npm run e2e:reports`で専用PostgreSQLのhealthy確認と`customer_management_e2e`の安全チェック付きresetを実施し、実Backend・Repository・実PostgreSQLを使用した。固定fixtureはusers 2、customers 6、sales_records 8件。RP-02を含む既存シナリオを変更せず、3BrowserでPASSした。
+- Backend・Frontend・DB・fixture・migration・API仕様・キャッシュ設定は変更していない。今回のクロスブラウザ受入確認に残るFAILはない。

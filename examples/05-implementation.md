@@ -222,3 +222,15 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - RP-02は顧客分類のGETを`page.route`内のPromiseで一時保留し、取得中の画面切替と再訪で重複GETが発生しないことを確認する。保留解除後は`route.continue()`で実Backendへ転送し、実PostgreSQL由来のA=2、B=2、未分類=1を画面で確認する。固定JSONやResponse mockは使用しない。
 - VL-01は売上推移と営業担当者別実績の開始日未入力、終了日未入力、開始日>終了日をBrowserで操作し、画面上のvalidation errorと各APIへのGETが0件であることを確認する。API mockや固定待機は使用しない。
 - 既存のSmoke/ST/CC/SP、Backend・Frontend、fixture、DB schema、Playwright configは変更していない。Firefox・WebKit・CIは未実施。
+
+## 2026-09-20 レポートPlaywrightクロスブラウザ設定
+
+- `playwright.reports.config.ts`の`projects`を、Playwright標準の`Desktop Chrome`、`Desktop Firefox`、`Desktop Safari`を使うChromium・Firefox・WebKitの3件に拡張した。
+- `testDir`、baseURL、Backend・Frontendの`webServer`、E2E DB接続安全確認、retries、trace、screenshot、videoなど既存設定は変更していない。Playwrightのversion変更とブラウザの追加インストールは行っていない。
+- Backend・Frontend・DB schema・fixture・migration・既存Playwrightテストは変更していない。
+
+## 2026-09-20 CC-05の条件付きGET受入判定
+
+- `e2e/reports/customer-categories.spec.ts`のCC-05だけを修正した。初回GETのHTTP 200確認を維持し、再訪時の2回目のGETではHTTP 200または304を許容する。
+- 再訪時に新たなGETが発生して計2件になること、A=2・B=2・未分類=1の表を表示することを引き続き確認する。304時は取得可能なETagと`If-None-Match`を確認し、両方取得できた場合は一致を検証する。
+- 他のCCシナリオ、Smoke/ST/SP/RP/VLのHTTP 200確認は変更していない。Backend・Frontend・キャッシュ設定・Playwright configは変更していない。
