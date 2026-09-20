@@ -61,6 +61,7 @@ export function ReportsPage({ onBack }: Props) {
       return;
     }
 
+    setSalesTrend(null);
     setIsLoading(true);
     try {
       setSalesTrend(await getSalesTrend(values.from, values.to));
@@ -72,13 +73,18 @@ export function ReportsPage({ onBack }: Props) {
   };
 
   const showCustomerCategories = async () => {
-    setSelectedReport('customerCategories');
-    setCustomerCategoriesError('');
-
-    if (customerCategories !== null || isCustomerCategoriesLoading) {
+    if (selectedReport === 'customerCategories') {
       return;
     }
 
+    setSelectedReport('customerCategories');
+    setCustomerCategoriesError('');
+
+    if (isCustomerCategoriesLoading) {
+      return;
+    }
+
+    setCustomerCategories(null);
     setIsCustomerCategoriesLoading(true);
     try {
       setCustomerCategories(await getCustomerCategories());
@@ -96,7 +102,7 @@ export function ReportsPage({ onBack }: Props) {
 
       <nav aria-label="レポート種別">
         <button type="button" aria-pressed={selectedReport === 'salesTrend'} onClick={() => setSelectedReport('salesTrend')}>売上推移</button>
-        <button type="button" aria-pressed={selectedReport === 'customerCategories'} onClick={() => void showCustomerCategories()} disabled={isCustomerCategoriesLoading}>顧客分類</button>
+        <button type="button" aria-pressed={selectedReport === 'customerCategories'} onClick={() => void showCustomerCategories()}>顧客分類</button>
         <button type="button" aria-pressed={selectedReport === 'staffPerformance'} onClick={() => setSelectedReport('staffPerformance')}>営業担当者別実績</button>
       </nav>
 

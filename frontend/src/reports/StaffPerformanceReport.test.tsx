@@ -121,6 +121,14 @@ describe('営業担当者別実績レポート', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Network request failed.');
   });
 
+  it('エラー応答にmessageがない場合は営業担当者別実績の代替文言を表示する', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: vi.fn().mockResolvedValue({}) }));
+    openReport();
+    fillPeriod();
+    fireEvent.click(screen.getByRole('button', { name: '表示' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('営業担当者別実績を取得できませんでした。');
+  });
+
   it('別のレポートを経由して開き直すと前回のエラーを表示しない', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network request failed.')));
     openReport();
