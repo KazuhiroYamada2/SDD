@@ -339,3 +339,9 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Docker CLIを使わず、`.env.e2e`の`NODE_ENV=e2e`・専用DB`customer_management_e2e`・接続先`127.0.0.1:55432`を確認した。既存scriptのURL・接続後DB識別guardを通してreset・seedを実行し、それぞれusers 3、customers 6、sales_records 8を確認した。managerのDB上のroleはmanager、`is_active=true`。
 - T-109実DB Login smokeはsuccess 200とwrong password 401 `AUTHENTICATION_FAILED`の2/2 PASS。実production appでBearerなしLogin 200、Login JWTのBearer・1800秒・manager情報を確認した。同じJWTで`GET /api/v1/reports/sales-trend`と`GET /api/v1/reports/customer-categories`へ送信し、Bearerあり200と固定fixtureどおりの応答、Bearerなし401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を両経路で確認した。JWT全文は出力していない。
 - Browser LoginはT-110/T-111の既存Reports E2E証跡（Chromium 21/21、Firefox 21/21、WebKit 21/21、合計63/63 PASS）を参照し、今回は再実行していない。Public healthもT-111の既存証跡を参照した。Authorization・403は未実装であり、T-105以降の責務。以上によりT-605 PASS。
+
+## 2026-09-21 T-105A 共通Authorization core検証（PASS）
+
+- 新規unit testは2ファイル・16/16 PASS。9操作×staff/manager/adminの全matrix、staff own/other、manager/adminのcustomer scope、未知role・operationの拒否、operation拒否時の`ForbiddenError`、403のstatus・code・messageと公開応答に内部理由がないことを確認した。
+- Backend全testは28ファイル・146/146 PASS。Backend buildはPASS。
+- policyはDB・Express非依存。production business APIへのAuthorization適用、scope外404の生成、staff顧客登録時のowner強制、Authentication→Authorization共通integration、Frontend・Playwrightは今回未実施。T-105AはPASS、T-105全体は未完了。

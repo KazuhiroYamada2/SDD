@@ -330,3 +330,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 第1段階で、Publicの`POST /api/v1/auth/login`と`GET /health`の後、Phase 1業務APIの前へ共通Authentication middlewareを登録した。既存DB poolのAuth User RepositoryとJWT Serviceをproductionへ接続し、Backend API testを有効Bearer前提へ移行した。
 - 第2段階Aで、実DB Login、protected Reports APIのBearerあり200・Bearerなし401 `AUTHENTICATION_REQUIRED`、Public Login・health、Chromium Reports 21/21を確認した。
 - 最終段階で、既存の同じ実装・専用fixtureのままFirefox 21/21とWebKit 21/21を確認した。前回Chromium 21/21と合わせて既存Reports E2Eは3ブラウザー63/63 PASS。今回はproduction code、E2E、Playwright設定を変更していない。T-111完了。role別Authorization・403とT-605の最終受入確認は後続Taskとする。
+
+## 2026-09-21 T-105A 共通Authorization core（部分実装）
+
+- `backend/src/authorization/authorization-policy.ts`に、既存`AuthenticatedUser`と`UserRole`を使う9操作のRole × Operation判定・拒否時の`ForbiddenError`送出と、取得済みcustomerの`owner_user_id`を受け取るscope判定を追加した。未知role・operationは許可しない。staffは自担当顧客のみ、manager・adminは全顧客をscope内とする。活動履歴も親customerのownerで同じpolicyを再利用できる。
+- `backend/src/authorization/forbidden-error.ts`にHTTP 403、`FORBIDDEN`、`Forbidden.`の共通coreを追加した。公開応答へrole・owner・operation等の内部理由を含めない。
+- policyと403 coreのunit testを追加した。DB・Express・Repositoryへの依存、404生成、production routerへの適用、staff顧客登録時のowner強制は追加していない。T-105全体は未完了で、Authentication→Authorization共通integrationはT-105B、業務APIへの適用はT-501/T-502/T-503に残る。
