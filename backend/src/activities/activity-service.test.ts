@@ -17,16 +17,18 @@ const otherOwnerId = '22222222-2222-4222-8222-222222222222';
 describe('create activity service', () => {
   it('rejects a missing customer before creating an activity', async () => {
     const create = vi.fn();
+    const findCustomerReference = vi.fn().mockResolvedValue(null);
     const service = createCreateActivityService({
       activityRepository: { create, findByCustomerId: vi.fn() },
       referenceRepository: {
-        customerExists: vi.fn().mockResolvedValue(false),
-        findCustomerReference: vi.fn(),
+        customerExists: vi.fn(),
+        findCustomerReference,
         userExists: vi.fn(),
       },
     });
 
-    await expect(service.execute(input)).rejects.toBeInstanceOf(CustomerNotFoundError);
+    await expect(service.execute(input, staff)).rejects.toBeInstanceOf(CustomerNotFoundError);
+    expect(findCustomerReference).toHaveBeenCalledOnce();
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -35,14 +37,73 @@ describe('create activity service', () => {
     const service = createCreateActivityService({
       activityRepository: { create, findByCustomerId: vi.fn() },
       referenceRepository: {
-        customerExists: vi.fn().mockResolvedValue(true),
-        findCustomerReference: vi.fn(),
+        customerExists: vi.fn(),
+        findCustomerReference: vi.fn().mockResolvedValue({
+          id: input.customer_id, owner_user_id: staff.id,
+        }),
         userExists: vi.fn().mockResolvedValue(false),
       },
     });
 
-    await expect(service.execute(input)).rejects.toBeInstanceOf(UserNotFoundError);
+    await expect(service.execute(input, staff)).rejects.toBeInstanceOf(UserNotFoundError);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('creates an activity for a staff customer in scope with one customer lookup', async () => {
+    const created = { id: 'activity-id' };
+    const create = vi.fn().mockResolvedValue(created);
+    const findCustomerReference = vi.fn().mockResolvedValue({
+      id: input.customer_id, owner_user_id: staff.id,
+    });
+    const service = createCreateActivityService({
+      activityRepository: { create, findByCustomerId: vi.fn() },
+      referenceRepository: {
+        customerExists: vi.fn(),
+        findCustomerReference,
+        userExists: vi.fn().mockResolvedValue(true),
+      },
+    });
+
+    await expect(service.execute(input, staff)).resolves.toEqual(created);
+    expect(findCustomerReference).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledWith(input);
+  });
+
+  it('hides another owner customer from staff before user lookup and activity creation', async () => {
+    const create = vi.fn();
+    const userExists = vi.fn();
+    const service = createCreateActivityService({
+      activityRepository: { create, findByCustomerId: vi.fn() },
+      referenceRepository: {
+        customerExists: vi.fn(),
+        findCustomerReference: vi.fn().mockResolvedValue({
+          id: input.customer_id, owner_user_id: otherOwnerId,
+        }),
+        userExists,
+      },
+    });
+
+    await expect(service.execute(input, staff)).rejects.toBeInstanceOf(CustomerNotFoundError);
+    expect(userExists).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('lets admin create an activity for another owner customer', async () => {
+    const created = { id: 'activity-id' };
+    const create = vi.fn().mockResolvedValue(created);
+    const service = createCreateActivityService({
+      activityRepository: { create, findByCustomerId: vi.fn() },
+      referenceRepository: {
+        customerExists: vi.fn(),
+        findCustomerReference: vi.fn().mockResolvedValue({
+          id: input.customer_id, owner_user_id: otherOwnerId,
+        }),
+        userExists: vi.fn().mockResolvedValue(true),
+      },
+    });
+
+    await expect(service.execute(input, { id: staff.id, role: 'admin' })).resolves.toEqual(created);
+    expect(create).toHaveBeenCalledWith(input);
   });
 
   it('retrieves a staff customer activity history when the customer is in scope', async () => {

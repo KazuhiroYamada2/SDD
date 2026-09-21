@@ -7,7 +7,7 @@ export class CustomerNotFoundError extends Error {}
 export class UserNotFoundError extends Error {}
 
 export type CreateActivityService = {
-  execute(input: CreateActivityInput): Promise<Activity>;
+  execute(input: CreateActivityInput, authenticatedUser: AuthenticatedUser): Promise<Activity>;
 };
 
 export type FindActivitiesService = {
@@ -20,8 +20,9 @@ export const createCreateActivityService = (dependencies: {
   activityRepository: ActivityRepository;
   referenceRepository: ActivityReferenceRepository;
 }): ActivityService => ({
-  async execute(input) {
-    if (!await dependencies.referenceRepository.customerExists(input.customer_id)) {
+  async execute(input, authenticatedUser) {
+    const customer = await dependencies.referenceRepository.findCustomerReference(input.customer_id);
+    if (customer === null || !isCustomerInScope(authenticatedUser, customer.owner_user_id)) {
       throw new CustomerNotFoundError();
     }
 

@@ -420,3 +420,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Backend全テストは34 files・243/243 PASS、Backend buildはPASS。Frontend全テストは11 files・133/133 PASS、`tsc -b`を含むFrontend buildはPASS。
 - Reports PlaywrightはChromium先行実行が21/21 PASS。専用E2E DBを再初期化した最終3 browser回帰はChromium・Firefox・WebKit各21件、計63/63 PASS。既存manager loginとReports business contractを維持し、新規E2Eは追加していない。
 - 最終Acceptanceでコード修正は不要だった。以上によりT-501はPASS・完了。T-502とT-503は着手可能で、次の正式TaskはT-502とする。
+
+## 2026-09-21 T-502 既存production write API Authorization検証（部分PASS）
+
+- Backend関連テストは6 files・65/65 PASS。Customer createはstaffの201と保存ownerの`authenticatedUser.id`強制、adminのrequest owner維持、managerのvalidation・Repository前403を確認した。tokenなし401はProduction Authentication testで維持した。
+- Activity createはstaff own成功、staff otherとcustomer不存在の同一404 `CUSTOMER_NOT_FOUND / Customer was not found.`、managerのvalidation・Service前403、admin other owner成功を確認した。Service testでcustomer reference lookupは各処理1回、staff scope外と不存在ではuser lookup・activity createが0回であることを確認した。`activity.user_id`契約は変更していない。
+- Frontend関連テストは2 files・41/41 PASS。managerではCustomer登録画面とActivity登録formを表示せず、staff・adminでは登録UIを維持する。managerの顧客一覧・Activity履歴・Reports表示、既存Customer登録・401処理も維持した。
+- Backend全テストは34 files・251/251 PASS、Backend buildはPASS。Frontend全テストは11 files・137/137 PASS、`tsc -b`を含むFrontend buildはPASS。PlaywrightはT-502の今回の完了条件ではなく、T-504/T-505を先取りしないため未実施。
+- 既存production write APIへの適用はPASS。Customer edit API・画面はT-203、論理削除API・画面はT-204が未実装であり、それらへのT-502適用が残るためT-502全体は部分完了。次の正式TaskはT-203とする。

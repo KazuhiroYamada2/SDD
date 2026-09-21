@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
+import {
+  authenticatedRequest,
+  createAuthenticatedTestApp,
+  testUserId,
+} from '../test/authenticated-api.js';
 import type { CustomerRepository } from './customer-repository.js';
 
 const ownerUserId = 'c0a80101-1234-4abc-8def-123456789abc';
@@ -23,7 +27,7 @@ const createRepository = (): CustomerRepository => ({
 });
 
 describe('POST /api/v1/customers', () => {
-  it('registers a valid customer and returns HTTP 201', async () => {
+  it('forces the authenticated staff user as owner and returns HTTP 201', async () => {
     const repository = createRepository();
     const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }))
       .post('/api/v1/customers')
@@ -50,8 +54,29 @@ describe('POST /api/v1/customers', () => {
       phone: '03-1234-5678',
       address: '東京都千代田区',
       category: '既存顧客',
-      owner_user_id: ownerUserId,
+      owner_user_id: testUserId,
     });
+  });
+
+  it('lets admin use the requested owner', async () => {
+    const repository = createRepository();
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }, 'admin'))
+      .post('/api/v1/customers')
+      .send({ name: '株式会社サンプル', owner_user_id: ownerUserId });
+
+    expect(response.status).toBe(201);
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ owner_user_id: ownerUserId }));
+  });
+
+  it('rejects manager before validation and repository processing', async () => {
+    const repository = createRepository();
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }, 'manager'))
+      .post('/api/v1/customers')
+      .send({});
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ code: 'FORBIDDEN', message: 'Forbidden.' });
+    expect(repository.create).not.toHaveBeenCalled();
   });
 
   it.each([

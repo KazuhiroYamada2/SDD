@@ -419,3 +419,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Reports 3 GETはstaffを403 `FORBIDDEN`でhandler前に拒否し、manager・adminにはcompany-wide集計を許可する。FrontendはstaffのReports入口・画面を非表示、manager・adminは表示する。
 - Authentication失敗の401、認証済みoperation拒否の403、staff scope外resourceの404という境界を維持する。AuthorizationはAuthenticationが設定したcurrent DB roleの`request.authenticatedUser`を利用し、JWT role claimやAuthorization側のusers再lookupは追加していない。
 - 最終Acceptanceではコード修正および新規E2E追加は不要だった。Backend・Frontend・既存Reports Playwrightの全回帰とbuildが成功したため、T-501を完了とする。正式依存関係上、T-502とT-503は着手可能で、次はT-502とする。
+
+## 2026-09-21 T-502 登録・編集・削除Authorization（部分実装）
+
+- 現存するwrite APIである`POST /api/v1/customers`へ`customer.create`、`POST /api/v1/customers/:customerId/activities`へ`activity.create`を適用した。いずれもapp-level Authentication後、入力validation・resource lookupより前にoperation Authorizationを行う。managerは共通403 `FORBIDDEN / Forbidden.`で拒否し、Repository・Serviceへ到達しない。
+- Customer createはstaffとadminを許可する。staffではrequestの`owner_user_id`より`request.authenticatedUser.id`を優先してBackendで保存値を強制し、adminでは既存requestのowner指定を維持する。既存request validation、201 response、Repository SQLは変更していない。
+- Activity createは既存customer reference取得を再利用し、取得済み`owner_user_id`をT-105の`isCustomerInScope`へ渡す。staff ownとadminを許可し、staff otherとcustomer不存在は同じ404 `CUSTOMER_NOT_FOUND`とする。正常時・scope外・不存在ともcustomer lookupは1回で、scope外・不存在ではuser lookupとactivity createを行わない。活動の`user_id`契約は変更していない。
+- FrontendはmanagerのCustomer登録画面とActivity登録formを非表示にし、顧客一覧・Activity履歴・Reportsのread導線は維持した。staff・adminには既存登録UIを維持する。Backend enforcementをsecurity boundaryとし、JWT decodeやFrontend独自scope判定は追加していない。
+- Customer editと論理削除のproduction API・画面は未実装で、それぞれ正式Task T-203・T-204の対象であるため今回新設していない。既存production write APIへのT-502適用は完了したが、将来のedit/delete適用が残るためT-502は部分完了とする。次の正式TaskはT-203とする。

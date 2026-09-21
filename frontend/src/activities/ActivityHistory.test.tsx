@@ -5,6 +5,10 @@ import { renderAuthenticated } from '../test/render-authenticated';
 
 const customerId = '8a1f2d44-1234-4abc-8def-123456789abc';
 const ownerUserId = 'c0a80101-1234-4abc-8def-123456789abc';
+const authentication = (role: 'staff' | 'manager' | 'admin') => ({
+  accessToken: 'test-access-token',
+  user: { id: ownerUserId, email: `${role}@example.test`, role },
+});
 const activity = {
   id: 'd0a80101-1234-4abc-8def-123456789abc',
   customer_id: customerId,
@@ -30,9 +34,9 @@ describe('ActivityHistory', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />, authentication('staff'));
 
-    expect(await screen.findByText('商談内容')).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: '営業活動履歴一覧' })).toBeInTheDocument();
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/v1/customers/${customerId}/activities`);
     expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer test-access-token');
     expect(screen.getByText('2026-09-24T01:00:00.000Z')).toBeInTheDocument();
@@ -51,7 +55,7 @@ describe('ActivityHistory', () => {
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([activity]) });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />, authentication('staff'));
     await screen.findByText('営業活動履歴はありません。');
     fireEvent.change(screen.getByLabelText('商談内容'), { target: { value: ' 新規商談 ' } });
     fireEvent.click(screen.getByRole('button', { name: '営業活動を登録' }));
@@ -72,7 +76,7 @@ describe('ActivityHistory', () => {
       json: vi.fn().mockResolvedValue({ message: 'Customer was not found.' }),
     }));
 
-    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />, authentication('staff'));
 
     expect(await screen.findByTestId('activity-history-error')).toHaveTextContent('Customer was not found.');
   });
@@ -86,10 +90,26 @@ describe('ActivityHistory', () => {
       });
     vi.stubGlobal('fetch', fetchMock);
 
-    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />);
+    renderAuthenticated(<ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />, authentication('staff'));
     await screen.findByText('営業活動履歴はありません。');
     fireEvent.click(screen.getByRole('button', { name: '営業活動を登録' }));
 
     expect(await screen.findByTestId('activity-registration-error')).toHaveTextContent('User was not found.');
+  });
+
+  it('hides activity registration controls from manager while keeping history visible', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue([activity]),
+    }));
+
+    renderAuthenticated(
+      <ActivityHistory customerId={customerId} ownerUserId={ownerUserId} />,
+      authentication('manager'),
+    );
+
+    expect(await screen.findByRole('list', { name: '営業活動履歴一覧' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '営業活動を登録' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '営業活動を登録' })).not.toBeInTheDocument();
   });
 });

@@ -65,7 +65,7 @@ export const createCustomersRouter = (
     }
   });
 
-  router.post('/', async (request, response) => {
+  router.post('/', authorizeOperation('customer.create'), async (request, response) => {
     const validation = validateCreateCustomer(request.body);
     if (!validation.valid) {
       response.status(400).json({ code: 'VALIDATION_ERROR', message: validation.message });
@@ -78,7 +78,12 @@ export const createCustomersRouter = (
     }
 
     try {
-      const customer = await customerRepository.create(validation.value);
+      const customer = await customerRepository.create({
+        ...validation.value,
+        owner_user_id: request.authenticatedUser!.role === 'staff'
+          ? request.authenticatedUser!.id
+          : validation.value.owner_user_id,
+      });
       response.status(201).json(customer);
     } catch {
       response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create customer.' });

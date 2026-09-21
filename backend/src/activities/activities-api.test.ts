@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
+import { authenticatedRequest, createAuthenticatedTestApp, testUserId } from '../test/authenticated-api.js';
 import { CustomerNotFoundError, UserNotFoundError, type ActivityService } from './activity-service.js';
 
 const customerId = '8a1f2d44-1234-4abc-8def-123456789abc';
@@ -49,7 +49,31 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
       visited_at: activity.visited_at,
       meeting_note: '商談内容',
       next_visit_at: activity.next_visit_at,
-    });
+    }, { id: testUserId, role: 'staff' });
+  });
+
+  it('rejects manager before validation and service processing', async () => {
+    const activityService = createService();
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }, 'manager'))
+      .post(`/api/v1/customers/${customerId}/activities`)
+      .send({});
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ code: 'FORBIDDEN', message: 'Forbidden.' });
+    expect(activityService.execute).not.toHaveBeenCalled();
+  });
+
+  it('lets admin reach activity creation for another owner customer', async () => {
+    const activityService = createService();
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }, 'admin'))
+      .post(`/api/v1/customers/${customerId}/activities`)
+      .send({ user_id: userId, activity_type: 'visit' });
+
+    expect(response.status).toBe(201);
+    expect(activityService.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ customer_id: customerId, user_id: userId }),
+      { id: testUserId, role: 'admin' },
+    );
   });
 
   it.each([
@@ -70,6 +94,19 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
   });
 
   it('returns HTTP 404 when the customer does not exist', async () => {
+    const activityService: ActivityService = {
+      execute: vi.fn().mockRejectedValue(new CustomerNotFoundError()),
+      findByCustomerId: vi.fn(),
+    };
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
+      .post(`/api/v1/customers/${customerId}/activities`)
+      .send({ user_id: userId, activity_type: 'visit' });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });
+  });
+
+  it('uses the same HTTP 404 response when a staff customer is out of scope', async () => {
     const activityService: ActivityService = {
       execute: vi.fn().mockRejectedValue(new CustomerNotFoundError()),
       findByCustomerId: vi.fn(),

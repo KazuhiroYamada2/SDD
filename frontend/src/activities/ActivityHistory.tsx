@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getActivities, registerActivity, type Activity, type ActivityType, type CreateActivityInput } from '../api/activities';
 import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
+import { useAuthentication } from '../auth/AuthContext';
 
 type Props = {
   customerId: string;
@@ -37,6 +38,7 @@ const activityTypeLabel = (activityType: ActivityType) =>
 const dateTimeLabel = (value: string | null) => value ?? '未設定';
 
 export function ActivityHistory({ customerId, ownerUserId }: Props) {
+  const { authentication } = useAuthentication();
   const runAuthenticated = useAuthenticatedApi();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [values, setValues] = useState<FormValues>(() => initialValues(ownerUserId));
@@ -104,10 +106,11 @@ export function ActivityHistory({ customerId, ownerUserId }: Props) {
         </ul>
       )}
 
-      <h2 id="activity-registration-heading">営業活動を登録</h2>
-      {successMessage && <p role="status" data-testid="activity-registration-success">{successMessage}</p>}
-      {submitError && <p role="alert" data-testid="activity-registration-error">{submitError}</p>}
-      <form aria-labelledby="activity-registration-heading" noValidate onSubmit={submit}>
+      {authentication?.user.role !== 'manager' && <>
+        <h2 id="activity-registration-heading">営業活動を登録</h2>
+        {successMessage && <p role="status" data-testid="activity-registration-success">{successMessage}</p>}
+        {submitError && <p role="alert" data-testid="activity-registration-error">{submitError}</p>}
+        <form aria-labelledby="activity-registration-heading" noValidate onSubmit={submit}>
         <div className="form-field">
           <label htmlFor="activity-user-id">担当ユーザーID</label>
           <input id="activity-user-id" name="user_id" value={values.user_id} onChange={(event) => updateValue('user_id', event.target.value)} required />
@@ -132,7 +135,8 @@ export function ActivityHistory({ customerId, ownerUserId }: Props) {
           <input id="activity-next-visit-at" name="next_visit_at" type="datetime-local" value={values.next_visit_at} onChange={(event) => updateValue('next_visit_at', event.target.value)} />
         </div>
         <button type="submit" disabled={isSubmitting}>{isSubmitting ? '営業活動を登録中…' : '営業活動を登録'}</button>
-      </form>
+        </form>
+      </>}
     </section>
   );
 }

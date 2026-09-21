@@ -10,7 +10,7 @@ vi.mock('./api/auth', async (importOriginal) => ({
 }));
 
 const loginMock = vi.mocked(login);
-const renderLoggedInApp = async (role: UserRole = 'manager') => {
+const renderLoggedInApp = async (role: UserRole = 'admin') => {
   loginMock.mockResolvedValue({
     accessToken: 'test-access-token', tokenType: 'Bearer', expiresIn: 1800,
     user: { id: 'test-user-id', email: 'user@example.test', role },
@@ -81,6 +81,22 @@ describe('App', () => {
     await renderLoggedInApp(role);
 
     expect(screen.getByRole('button', { name: '顧客一覧' })).toBeInTheDocument();
+  });
+
+  it('hides Customer registration from manager while keeping read navigation', async () => {
+    await renderLoggedInApp('manager');
+
+    expect(screen.queryByRole('heading', { name: '顧客情報を登録' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('customer-registration-form')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '顧客一覧' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'レポート' })).toBeInTheDocument();
+  });
+
+  it.each<UserRole>(['staff', 'admin'])('keeps Customer registration available for %s', async (role) => {
+    await renderLoggedInApp(role);
+
+    expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
+    expect(screen.getByTestId('customer-registration-form')).toBeInTheDocument();
   });
 
   it('switches to the Customer list and returns to the unchanged registration screen', async () => {

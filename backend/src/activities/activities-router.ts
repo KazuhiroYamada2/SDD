@@ -10,7 +10,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 export const createActivitiesRouter = (activityService: ActivityService | undefined) => {
   const router = Router({ mergeParams: true });
 
-  router.post('/', async (request, response) => {
+  router.post('/', authorizeOperation('activity.create'), async (request, response) => {
     const validation = validateCreateActivity({
       customerId: customerId(request.params),
       body: request.body,
@@ -26,7 +26,7 @@ export const createActivitiesRouter = (activityService: ActivityService | undefi
     }
 
     try {
-      const activity = await activityService.execute(validation.value);
+      const activity = await activityService.execute(validation.value, request.authenticatedUser!);
       response.status(201).json(activity);
     } catch (error) {
       if (error instanceof CustomerNotFoundError) {

@@ -78,6 +78,7 @@ function BusinessApp() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerListState, setCustomerListState] = useState<CustomerListState>(initialCustomerListState);
+  const canCreateCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
@@ -143,7 +144,7 @@ function BusinessApp() {
       <button type="button" onClick={() => setScreen('customerList')}>顧客一覧</button>
       {canViewReports && <button type="button" onClick={() => setScreen('reports')}>レポート</button>}
       <h1>顧客管理システム</h1>
-      <section aria-labelledby="customer-registration-heading" className="customer-registration">
+      {canCreateCustomer && <section aria-labelledby="customer-registration-heading" className="customer-registration">
         <h2 id="customer-registration-heading">顧客情報を登録</h2>
         <p>顧客名と担当ユーザーIDは必須です。</p>
 
@@ -218,7 +219,7 @@ function BusinessApp() {
             {isSubmitting ? '登録中…' : '登録する'}
           </button>
         </form>
-      </section>
+      </section>}
     </main>
   );
 }
