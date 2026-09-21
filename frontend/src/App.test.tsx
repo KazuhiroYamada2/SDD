@@ -275,6 +275,46 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: '編集' })).not.toBeInTheDocument();
   });
 
+  it.each<UserRole>(['staff', 'manager'])('does not show Customer delete to %s', async (role) => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+    await renderLoggedInApp(role);
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+    await screen.findByText('sales@example.com');
+    expect(screen.queryByRole('button', { name: '削除' })).not.toBeInTheDocument();
+  });
+
+  it('lets admin confirm deletion and returns to the Customer list after 204', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, options?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/v1/customers?')) {
+        const listCalls = fetchMock.mock.calls.filter(([called]) => String(called).startsWith('/api/v1/customers?')).length;
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(listCalls > 1
+          ? { ...customerListResponse, items: [], total_count: 0, total_pages: 0 }
+          : customerListResponse) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}` && options?.method === 'DELETE') {
+        return Promise.resolve({ status: 204 });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await renderLoggedInApp('admin');
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+    fireEvent.click(await screen.findByRole('button', { name: '削除' }));
+    expect(screen.getByRole('heading', { name: '顧客を削除' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '削除する' }));
+    expect(await screen.findByText('該当する顧客がありません。')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url, options]) =>
+      String(url) === `/api/v1/customers/${customerRead.id}` && (options as RequestInit | undefined)?.method === 'DELETE')).toBe(true);
+  });
+
   it('keeps authentication and the Backend message for a Customer detail 404', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })

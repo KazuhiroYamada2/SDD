@@ -53,7 +53,12 @@ export type CustomerEditRepository = CustomerReadRepository & {
   updateActiveById(id: string, input: UpdateCustomerInput): Promise<Customer | null>;
 };
 
-type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository & CustomerEditRepository;
+export type CustomerDeleteRepository = CustomerReadRepository & {
+  logicalDeleteActiveById(id: string): Promise<boolean>;
+};
+
+type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository &
+  CustomerEditRepository & CustomerDeleteRepository;
 
 const customerColumns = `id, name, name_kana, email, phone, address, category, owner_user_id,
   created_at, updated_at, deleted_at`;
@@ -159,5 +164,15 @@ export const createCustomerRepository = (database: Queryable): CustomerPersisten
       values,
     );
     return result.rows[0] ?? null;
+  },
+  async logicalDeleteActiveById(id) {
+    const result = await database.query<{ id: string }>(
+      `UPDATE customers
+      SET deleted_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND deleted_at IS NULL
+      RETURNING id`,
+      [id],
+    );
+    return result.rows.length === 1;
   },
 });

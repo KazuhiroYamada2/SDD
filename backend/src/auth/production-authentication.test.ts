@@ -10,6 +10,7 @@ const protectedRequests = [
   ['get', '/api/v1/customers'],
   ['get', `/api/v1/customers/${testUserId}`],
   ['patch', `/api/v1/customers/${testUserId}`],
+  ['delete', `/api/v1/customers/${testUserId}`],
   ['post', `/api/v1/customers/${testUserId}/activities`],
   ['get', `/api/v1/customers/${testUserId}/activities`],
   ['get', '/api/v1/reports/sales-trend'],

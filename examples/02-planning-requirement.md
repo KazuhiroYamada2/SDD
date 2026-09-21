@@ -69,6 +69,14 @@
 - `staff`は自担当顧客だけ編集でき、他担当顧客は不存在と同じHTTP 404 `CUSTOMER_NOT_FOUND`とする。`manager`はoperation-levelでHTTP 403 `FORBIDDEN`、`admin`は全active customerを編集できる。未認証はHTTP 401 `AUTHENTICATION_REQUIRED`とする。
 - Frontendは既存のstate-based navigationを使い、顧客詳細から編集画面へ進む。staffとadminに編集導線を表示し、managerには表示しない。編集画面にowner変更UIを設けず、保存成功後は詳細へ戻って`GET /api/v1/customers/:id`から更新後データを再取得する。キャンセル時は更新せず詳細へ戻る。Frontendの表示制御をBackend Authorizationの代わりにしない。
 
+#### 顧客論理削除
+
+- 顧客削除は`DELETE /api/v1/customers/:id`で提供し、物理削除せず`deleted_at`を設定する。成功時はHTTP 204 No Contentとし、response bodyを返さない。
+- `staff`と`manager`はCustomerの存在確認より前にHTTP 403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`で拒否する。`admin`だけがactive customerを論理削除できる。未認証はHTTP 401 `AUTHENTICATION_REQUIRED`とする。
+- Customer不存在と既に論理削除済みのCustomerは、どちらもHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`とし、公開responseから区別できない。
+- 削除後は通常の一覧・検索から除外し、詳細・編集・再DELETEは同じ404とする。
+- Frontendは既存のstate-based navigationを使い、adminのCustomer detailだけに削除導線を表示する。削除確認画面で削除実行またはキャンセルを選択でき、204成功後はCustomer listへ戻る。staff・managerには削除導線を表示しない。Frontend表示制御をBackend Authorizationの代わりにしない。
+
 ### 2. 営業活動履歴の記録
 
 - 訪問記録の登録

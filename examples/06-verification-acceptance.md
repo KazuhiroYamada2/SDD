@@ -436,3 +436,12 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Frontend関連テストは5 files・68/68 PASS。staff・adminの編集導線と保存、managerの編集導線非表示、detail値の初期表示、owner UIなし、PATCH、保存中表示、成功後のdetail GET再取得、キャンセル時PATCH 0回、error表示、403時のauth state維持を確認した。
 - Customer list/search/detail、Customer create、Reports role guard、Login初期画面、Logout/reloadを含むFrontend全テストは12 files・147/147 PASS。`tsc -b`を含むFrontend buildはPASS。E2E/PlaywrightはT-203の完了条件ではなく、T-207/T-505を先取りしないため未実施。
 - T-203はPASS。T-502はCustomer deleteがT-204待ちのため部分完了。次の正式TaskはT-204とする。
+
+## 2026-09-21 T-204 Customer論理削除・T-502最終検証（PASS）
+
+- Backend関連テストは4 files・39/39 PASS。admin active customerはbodyなし204、staff・managerはlookup/delete query各0回で403、adminの不存在・already deletedは同じ404 `CUSTOMER_NOT_FOUND`、malformed UUIDは400、tokenなしは401を確認した。
+- Repository testで`UPDATE customers SET deleted_at = NOW(), updated_at = NOW()`、`id = $1 AND deleted_at IS NULL`、parameterized SQL、物理DELETE文なしを確認した。stateful API testで削除後のlist/search除外、detail・edit・re-deleteの404を確認した。
+- Customer create/edit/read/search、Activity、Reports、Authorization、Authenticationを含むBackend全テストは39 files・289/289 PASS。Backend buildはPASS。
+- Frontend関連テストは6 files・77/77 PASS。staff・managerの削除導線非表示、adminの削除導線・確認画面・DELETE・204後の一覧遷移、キャンセル時DELETE 0回、API error表示と403時のauth state維持を確認した。
+- 既存Customer create/edit/list/search/detail、Reports role guard、Login初期画面、Logout/reloadを含むFrontend全テストは13 files・156/156 PASS。`tsc -b`を含むFrontend buildはPASS。E2E/Playwrightは未実施。
+- T-204はPASS。Customer create、Activity create、Customer edit、Customer deleteがすべてPASSしたためT-502もPASS・完了。次の正式TaskはT-503とする。

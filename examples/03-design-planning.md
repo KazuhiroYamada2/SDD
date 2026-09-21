@@ -203,6 +203,15 @@ request bodyで許可するfieldは次のとおりとする。
 - middleware/service順序はAuthentication → `authorizeOperation('customer.edit')` → path/body validation → active customer取得 → `isCustomerInScope(authenticatedUser, owner_user_id)` → updateとする。managerはcustomer lookup前に403、staff scope外・customer不存在・logical deletedは同じHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`とする。Repositoryはroleを知らない。
 - FrontendはAppのscreen stateへcustomer editを追加する。Customer detailで取得済みのCustomer read DTOをform初期値に使い、保存時は許可fieldだけをPATCHする。成功後はdetail screenへ戻りproduction `GET /api/v1/customers/:id`を再実行する。キャンセルはPATCHせずdetailへ戻る。staff/adminには編集導線を表示しmanagerには表示しないが、owner一致をFrontendでsecurity判定しない。403を401へ変換せずauth stateを維持する。
 
+## 顧客logical delete API設計
+
+- `DELETE /api/v1/customers/:id`はbodyを受け取らず、成功時はHTTP 204 No Contentを返す。response bodyは返さない。
+- middleware/service順序はAuthentication → `authorizeOperation('customer.delete')` → path UUID validation → active customer取得 → logical deleteとする。staff・managerはpath validationやcustomer lookup前に403、adminだけを許可する。
+- Repositoryはroleを知らず、active customer取得後にparameterized SQLで`deleted_at = NOW(), updated_at = NOW()`を設定する。物理`DELETE`文は使用しない。更新条件へ`id = $1 AND deleted_at IS NULL`を含める。
+- customer不存在と既にlogical deletedのcustomerは、どちらもHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`とする。logical delete queryが対象0件となった場合も同じ404とする。
+- 削除後は既存の通常read/update条件によりlist/searchから除外し、detail・edit・再DELETEを404とする。
+- FrontendはAppのscreen stateへ削除確認画面を追加する。adminのCustomer detailだけに削除導線を表示し、staff・managerには表示しない。確認画面の削除実行はproduction DELETEを呼び、204後は選択customer IDをclearしてCustomer listへ戻る。キャンセルはDELETEせずdetailへ戻る。API errorを既存方式で表示し、403でauth stateを破棄しない。
+
 ## レポートResponse DTO
 
 - 売上推移は`{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "items": [{ "month": "YYYY-MM", "salesAmount": "1200000.00" }] }`を返す。売上がない月もitemsに含め、`salesAmount`は`"0.00"`とする。

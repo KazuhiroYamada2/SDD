@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authorizeOperation } from '../authorization/authorization-middleware.js';
 import type { CustomerRepository } from './customer-repository.js';
 import type { CustomerEditService } from './customer-edit-service.js';
+import type { CustomerDeleteService } from './customer-delete-service.js';
 import {
   CustomerNotFoundError,
   customerNotFoundResponse,
@@ -17,6 +18,7 @@ export const createCustomersRouter = (
   customerRepository: CustomerRepository | undefined,
   customerReadService?: CustomerReadService,
   customerEditService?: CustomerEditService,
+  customerDeleteService?: CustomerDeleteService,
 ) => {
   const router = Router();
 
@@ -120,6 +122,29 @@ export const createCustomersRouter = (
         return;
       }
       response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update customer.' });
+    }
+  });
+
+  router.delete('/:id', authorizeOperation('customer.delete'), async (request, response) => {
+    const validation = validateCustomerId(customerId(request.params));
+    if (!validation.valid) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: validation.message });
+      return;
+    }
+    if (customerDeleteService === undefined) {
+      response.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Database is not configured.' });
+      return;
+    }
+
+    try {
+      await customerDeleteService.deleteById(validation.value, request.authenticatedUser!);
+      response.status(204).send();
+    } catch (error) {
+      if (error instanceof CustomerNotFoundError) {
+        response.status(404).json(customerNotFoundResponse);
+        return;
+      }
+      response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete customer.' });
     }
   });
 

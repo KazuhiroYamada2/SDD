@@ -221,4 +221,19 @@ describe('createCustomerRepository', () => {
     expect(query.mock.calls[0]?.[0]).not.toContain('created_at =');
     expect(query.mock.calls[0]?.[0]).not.toContain('deleted_at =');
   });
+
+  it('logically deletes an active customer without a physical DELETE statement', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: '8a1f2d44-1234-4abc-8def-123456789abc' }] });
+    const repository = createCustomerRepository({ query });
+    await expect(repository.logicalDeleteActiveById('8a1f2d44-1234-4abc-8def-123456789abc')).resolves.toBe(true);
+    const sql = query.mock.calls[0]?.[0] as string;
+    expect(sql).toMatch(/UPDATE customers[\s\S]*SET deleted_at = NOW\(\), updated_at = NOW\(\)/);
+    expect(sql).toContain('WHERE id = $1 AND deleted_at IS NULL');
+    expect(sql.trimStart()).not.toMatch(/^DELETE\s/i);
+  });
+
+  it('reports no logical delete when no active customer row is updated', async () => {
+    const repository = createCustomerRepository({ query: vi.fn().mockResolvedValue({ rows: [] }) });
+    await expect(repository.logicalDeleteActiveById('8a1f2d44-1234-4abc-8def-123456789abc')).resolves.toBe(false);
+  });
 });

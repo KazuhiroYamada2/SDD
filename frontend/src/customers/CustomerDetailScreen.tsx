@@ -7,11 +7,20 @@ type Props = {
   onBack: () => void;
   canEdit?: boolean;
   onEdit?: (customer: Customer) => void;
+  canDelete?: boolean;
+  onDelete?: (customer: Customer) => void;
 };
 
 const optionalValue = (value: string | null) => value ?? '未登録';
 
-export function CustomerDetailScreen({ customerId, onBack, canEdit = false, onEdit }: Props) {
+export function CustomerDetailScreen({
+  customerId,
+  onBack,
+  canEdit = false,
+  onEdit,
+  canDelete = false,
+  onDelete,
+}: Props) {
   const runAuthenticated = useAuthenticatedApi();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +57,7 @@ export function CustomerDetailScreen({ customerId, onBack, canEdit = false, onEd
         {!isLoading && error === '' && customer !== null && (
           <>
           {canEdit && onEdit !== undefined && <button type="button" onClick={() => onEdit(customer)}>編集</button>}
+          {canDelete && onDelete !== undefined && <button type="button" onClick={() => onDelete(customer)}>削除</button>}
           <dl>
             <div><dt>顧客名</dt><dd>{customer.name}</dd></div>
             <div><dt>顧客名（カナ）</dt><dd>{optionalValue(customer.name_kana)}</dd></div>

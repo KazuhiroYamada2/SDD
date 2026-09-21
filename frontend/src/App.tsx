@@ -3,6 +3,7 @@ import { registerCustomer, type CreateCustomerInput, type Customer } from './api
 import { CustomerDetail } from './customers/CustomerDetail';
 import { CustomerDetailScreen } from './customers/CustomerDetailScreen';
 import { CustomerEditScreen } from './customers/CustomerEditScreen';
+import { CustomerDeleteConfirmation } from './customers/CustomerDeleteConfirmation';
 import {
   CustomerList,
   initialCustomerListState,
@@ -25,7 +26,8 @@ type FormValues = {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'customerEdit' | 'reports';
+type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'customerEdit' |
+  'customerDelete' | 'reports';
 
 const initialValues: FormValues = {
   name: '',
@@ -79,10 +81,12 @@ function BusinessApp() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
   const [customerListState, setCustomerListState] = useState<CustomerListState>(initialCustomerListState);
   const canCreateCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
   const canEditCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
+  const canDeleteCustomer = authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -135,6 +139,9 @@ function BusinessApp() {
     return <CustomerDetailScreen customerId={selectedCustomerId} canEdit={canEditCustomer} onEdit={(customer) => {
       setEditingCustomer(customer);
       setScreen('customerEdit');
+    }} canDelete={canDeleteCustomer} onDelete={(customer) => {
+      setDeletingCustomer(customer);
+      setScreen('customerDelete');
     }} onBack={() => {
       setSelectedCustomerId(null);
       setScreen('customerList');
@@ -147,6 +154,21 @@ function BusinessApp() {
       setScreen('customerDetail');
     };
     return <CustomerEditScreen customer={editingCustomer} onCancel={returnToDetail} onSaved={returnToDetail} />;
+  }
+
+  if (screen === 'customerDelete' && selectedCustomerId !== null && deletingCustomer !== null) {
+    return <CustomerDeleteConfirmation
+      customer={deletingCustomer}
+      onCancel={() => {
+        setDeletingCustomer(null);
+        setScreen('customerDetail');
+      }}
+      onDeleted={() => {
+        setDeletingCustomer(null);
+        setSelectedCustomerId(null);
+        setScreen('customerList');
+      }}
+    />;
   }
 
   if (selectedCustomer !== null) {

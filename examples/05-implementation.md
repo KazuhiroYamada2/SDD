@@ -435,3 +435,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - PATCHへ`authorizeOperation('customer.edit')`を適用した。managerはvalidation・customer lookup前に403、staffはactive customer取得後に既存`isCustomerInScope`でownerを判定し、他担当は不存在・logical deletedと同じ404 `CUSTOMER_NOT_FOUND`、adminは全active customerを編集可能とした。staff scope外ではUPDATEを実行しない。
 - FrontendへCustomer edit API clientとstate-based編集画面を追加した。詳細で取得済みのbusiness fieldを初期値にし、staff・adminには編集導線を表示、managerには表示しない。owner変更UIやFrontend owner scope判定は追加していない。保存成功後はdetailへ戻ってproduction GETで再取得し、キャンセルはPATCHせずdetailへ戻る。403は通常API errorとして表示し、auth stateを破棄しない。
 - T-203は完了。T-502はCustomer create、Activity create、Customer editまで完了し、Customer delete AuthorizationがT-204待ちのため部分完了を維持する。DELETE、owner reassignment、T-503～T-505、E2E/Playwrightは実装していない。
+
+## 2026-09-21 T-204 Customer論理削除・T-502完了
+
+- `DELETE /api/v1/customers/:id`をproductionへ追加した。Customer Delete Serviceはactive customerを確認し、Repositoryのparameterized UPDATEで`deleted_at = NOW(), updated_at = NOW()`を設定する。物理DELETEは使用しない。成功時はbodyなしのHTTP 204とし、Customer不存在・既にlogical deleted・更新競合による対象0件は同じ404 `CUSTOMER_NOT_FOUND`とする。
+- DELETEへ`authorizeOperation('customer.delete')`を適用した。staff・managerはUUID validation・customer lookup・delete queryより前に共通403で拒否し、adminだけがactive customerを削除できる。Repositoryにrole判定、Authorization側のJWT再検証・users再lookupは追加していない。
+- FrontendへDELETE API clientと最小の削除確認画面を追加した。adminのCustomer detailだけに削除導線を表示し、staff・managerには表示しない。削除成功後は選択customer IDをclearして既存list stateを保ったCustomer listへ戻る。キャンセルはDELETEを行わずdetailへ戻り、API errorは既存方式で表示する。403でauth stateを破棄しない。
+- 削除後のlist/search除外、detail・edit・re-deleteの404を確認した。既存create/edit/list/search/detail、Activity、Reports、Authentication、Logout/reloadを維持した。E2E/PlaywrightはT-204完了条件外のため実施していない。
+- T-204は完了。Customer create、Activity create、Customer edit、Customer deleteへのAuthorizationがすべて揃ったため、正式Task T-502も完了とする。次の正式TaskはT-503とする。

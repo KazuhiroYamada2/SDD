@@ -87,4 +87,17 @@ describe('CustomerDetailScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: '編集' }));
     expect(onEdit).toHaveBeenCalledWith(customer);
   });
+
+  it('offers the loaded customer to a real delete operation only when allowed', async () => {
+    const onDelete = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(customer) }));
+    renderAuthenticated(<CustomerDetailScreen
+      customerId={customerId}
+      onBack={vi.fn()}
+      canDelete
+      onDelete={onDelete}
+    />);
+    fireEvent.click(await screen.findByRole('button', { name: '削除' }));
+    expect(onDelete).toHaveBeenCalledWith(customer);
+  });
 });

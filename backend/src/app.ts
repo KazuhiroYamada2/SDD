@@ -13,6 +13,7 @@ import { createCustomersRouter } from './customers/customers-router.js';
 import { createCustomerRepository, type CustomerRepository } from './customers/customer-repository.js';
 import { createCustomerReadService, type CustomerReadService } from './customers/customer-read-service.js';
 import { createCustomerEditService, type CustomerEditService } from './customers/customer-edit-service.js';
+import { createCustomerDeleteService, type CustomerDeleteService } from './customers/customer-delete-service.js';
 import { database } from './db.js';
 import { handleForbiddenError } from './authorization/forbidden-error-handler.js';
 import { createCustomerCategoryRepository } from './reports/customer-category-repository.js';
@@ -30,6 +31,7 @@ type AppDependencies = {
   customerRepository?: CustomerRepository;
   customerReadService?: CustomerReadService;
   customerEditService?: CustomerEditService;
+  customerDeleteService?: CustomerDeleteService;
   activityService?: ActivityService;
   salesTrendService?: SalesTrendService;
   customerCategoryService?: CustomerCategoryService;
@@ -55,6 +57,8 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     (productionCustomerRepository === undefined ? undefined : createCustomerReadService(productionCustomerRepository));
   const customerEditService = dependencies.customerEditService ??
     (productionCustomerRepository === undefined ? undefined : createCustomerEditService(productionCustomerRepository));
+  const customerDeleteService = dependencies.customerDeleteService ??
+    (productionCustomerRepository === undefined ? undefined : createCustomerDeleteService(productionCustomerRepository));
   const activityService = dependencies.activityService ??
     (database === undefined
       ? undefined
@@ -78,7 +82,12 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   });
 
   app.use('/api/v1', createAuthenticationMiddleware({ userRepository: authUserRepository, jwtService }));
-  app.use('/api/v1/customers', createCustomersRouter(customerRepository, customerReadService, customerEditService));
+  app.use('/api/v1/customers', createCustomersRouter(
+    customerRepository,
+    customerReadService,
+    customerEditService,
+    customerDeleteService,
+  ));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
   app.use(handleForbiddenError);

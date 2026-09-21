@@ -132,3 +132,14 @@ export const updateCustomer = async (
   const error = await response.json().catch((): ApiError => ({}));
   throw new Error(error.message ?? '顧客情報を更新できませんでした。');
 };
+
+export const deleteCustomer = async (customerId: string, accessToken: string): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${apiBaseUrl}/api/v1/customers/${encodeURIComponent(customerId)}`,
+    accessToken,
+    { method: 'DELETE' },
+  );
+  if (response.status === 204) return;
+  const error = await response.json().catch((): ApiError => ({}));
+  throw new Error(error.message ?? '顧客情報を削除できませんでした。');
+};

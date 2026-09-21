@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthenticationRequiredError } from './authenticated-fetch';
-import { getCustomer, getCustomers, updateCustomer } from './customers';
+import { deleteCustomer, getCustomer, getCustomers, updateCustomer } from './customers';
 
 const response = {
   items: [{
@@ -152,5 +152,26 @@ describe('updateCustomer', () => {
 
     await expect(updateCustomer(response.items[0].id, { name: '更新後' }, 'test-access-token'))
       .rejects.toThrow('Forbidden.');
+  });
+});
+
+describe('deleteCustomer', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('DELETEs the encoded production detail endpoint with Bearer and accepts 204', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(deleteCustomer('customer/id', 'test-access-token')).resolves.toBeUndefined();
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/customers/customer%2Fid');
+    expect(options.method).toBe('DELETE');
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
+  });
+
+  it('uses the Backend message without treating 403 as Authentication failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'FORBIDDEN', message: 'Forbidden.',
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } })));
+    await expect(deleteCustomer(response.items[0].id, 'test-access-token')).rejects.toThrow('Forbidden.');
   });
 });
