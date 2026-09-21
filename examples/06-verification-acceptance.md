@@ -364,3 +364,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Frontend全testは8ファイル・100/100 PASS。Frontend buildの`tsc -b`とVite production buildはPASS。最初のsandbox内buildはVite子processの`spawn EPERM`で停止したため権限付きで同じcommandを再実行し、正常完了した。
 - AuthContext、Reports API client、401/403処理、Login後初期画面、Logout、reloadは変更していない。403でauth stateを破棄しない既存仕様を維持した。Backend、E2E、Playwright、DBは今回変更・実行していない。
 - 第1段階と第2段階によりT-501AはPASS。Activity GET scope Authorizationと未実装customer read APIへの適用・最終回帰が残るため、T-501全体は未完了。
+
+## 2026-09-21 T-501B Activity GET scope Authorization検証（PASS）
+
+- 関連テストは5ファイル・29/29 PASS。staff ownは200と既存business response、staff other ownerとcustomer不存在は同じ404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`、manager・adminはother ownerでも200を確認した。
+- Service testでstaff scope外とcustomer不存在のactivity queryが各0件、staff own・manager・adminの許可時はactivity queryへ到達することを確認した。Reference Repository testでは存在時の`id`・`owner_user_id`取得と不存在時のnullを確認し、各呼出しが1 queryであることを確認した。
+- POST Activityの既存API testを含む関連回帰がPASSし、GETへの`activity.read`適用がPOSTのAuthorization behaviorや`activity.user_id`契約を変更していないことを確認した。Backend全testは31ファイル・166/166 PASS、Backend buildはPASS。
+- Frontend、Reports、Customers、Authentication、E2E、Playwright、DB schema/fixtureは変更・実行していない。T-501BはPASS。未実装customer read APIへの適用・最終回帰が残るためT-501全体は未完了。

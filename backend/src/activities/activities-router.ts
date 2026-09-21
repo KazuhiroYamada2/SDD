@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authorizeOperation } from '../authorization/authorization-middleware.js';
 import { CustomerNotFoundError, UserNotFoundError, type ActivityService } from './activity-service.js';
 import { validateCreateActivity } from './activity-validation.js';
 
@@ -41,7 +42,7 @@ export const createActivitiesRouter = (activityService: ActivityService | undefi
     }
   });
 
-  router.get('/', async (request, response) => {
+  router.get('/', authorizeOperation('activity.read'), async (request, response) => {
     const id = customerId(request.params);
     if (typeof id !== 'string' || !uuidPattern.test(id)) {
       response.status(400).json({ code: 'VALIDATION_ERROR', message: 'customerId must be a UUID.' });
@@ -54,7 +55,7 @@ export const createActivitiesRouter = (activityService: ActivityService | undefi
     }
 
     try {
-      response.status(200).json(await activityService.findByCustomerId(id));
+      response.status(200).json(await activityService.findByCustomerId(id, request.authenticatedUser!));
     } catch (error) {
       if (error instanceof CustomerNotFoundError) {
         response.status(404).json({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });

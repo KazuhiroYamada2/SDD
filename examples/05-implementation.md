@@ -356,3 +356,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Reports screenの描画にも同じrole guardを適用した。staffで内部screen stateがReportsを示してもReports componentを描画せず、既存初期business screenである顧客登録画面を表示する。render中のstate更新や新しいUnauthorized画面は追加していない。
 - App component testでstaffの入口・画面非表示と通常表示時Reports API呼出0件、manager・adminの入口表示とReports画面遷移を確認した。401、403、Logout、reloadの既存処理は変更していない。
 - 第1段階のReports Backend Authorizationと合わせてT-501Aは完了。Activity GET scope Authorization、未実装の顧客一覧・検索・詳細への適用と最終回帰が残るため、T-501全体は未完了。
+
+## 2026-09-21 T-501B Activity GET scope Authorization（完了）
+
+- `GET /api/v1/customers/:customerId/activities`へ共通`authorizeOperation('activity.read')`を適用し、Authentication→operation Authorization→既存customerId validation→Serviceの順とした。POST routeにはwrite Authorizationを適用していない。
+- Activity Reference Repositoryへ、customerの`id`と`owner_user_id`を1 queryで取得する`findCustomerReference`を追加した。既存`customerExists`はPOST用に維持し、Repositoryにはrole・Authorization判定を入れていない。
+- GET Serviceは既存`AuthenticatedUser`を受け取り、取得済みownerをT-105の`isCustomerInScope`へ渡す。customer不存在とstaff scope外のどちらも同じ`CustomerNotFoundError`へ変換し、activity queryを実行しない。manager・adminはownerを問わず許可する。
+- 正常GETはcustomer reference 1 queryとactivities 1 query。認可用の追加customer lookupはない。活動の`user_id`契約、Frontend、Reports、Customers、Authentication、E2E、Playwrightは変更していない。T-501Bは完了。未実装の顧客一覧・検索・詳細への適用と最終回帰が残るためT-501全体は未完了。
