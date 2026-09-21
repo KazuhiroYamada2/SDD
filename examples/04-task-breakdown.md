@@ -43,7 +43,7 @@
 | T-102 | Node.js、Express、TypeScriptのBackend雛形を作成 | 全機能 | T-001 | 高 |
 | T-103 | PostgreSQL接続、マイグレーション、トランザクション基盤を作成 | 全機能 | T-002、T-102 | 高 |
 | T-104 | BackendのLogin APIとAuthentication部品を実装する。入力不正時の400、既存ユーザーのArgon2id password照合、HS256 JWT発行（30分）、Bearer形式・HS256固定・期限の検証、`sub`によるusers存在・`is_active`の各request確認、現在roleを持つ`authenticatedUser`設定、確定した401共通応答とdummy hashによるuser enumeration対策を実装・テストする。production業務APIへの適用はT-111、role別の認可はT-105、Frontend Login画面はT-110、audit_logs永続記録はT-108として分け、初期password設定は含めない | N-03 | T-003、T-102 | 高 |
-| T-105 | 共通認可ミドルウェアと403処理を実装 | F-12〜F-14 | T-003、T-104 | 高 |
+| T-105 | 共通Authorization機構と403処理を実装する。`authenticatedUser`を入力とするrole × operation判定、取得済みcustomerのownerを使う小さなscope policy、403 `FORBIDDEN`共通応答、unit test、Authentication→Authorization順序の共通integration testを含む。T-105A（policy・403 core）とT-105B（共通integration）に分けられる。全production業務APIへの適用、未実装APIの作成、Frontend表示制御は含めない | F-12〜F-14 | T-003、T-104 | 高 |
 | T-106 | 入力検証、エラー形式、リクエストIDの共通処理を実装 | 全機能、N-05 | T-001、T-102 | 高 |
 | T-107 | 顧客情報の暗号化・復号処理と秘密情報の設定を実装 | N-04 | T-004、T-103 | 高 |
 | T-108 | アクセスログと監査ログの記録処理を実装 | N-05 | T-002、T-106 | 高 |
@@ -94,11 +94,11 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
-| T-501 | 閲覧権限をAPIと画面に適用 | F-12 | T-003、T-105 | 高 |
-| T-502 | 編集・削除権限をAPIと画面に適用 | F-13 | T-501 | 高 |
-| T-503 | 管理者によるユーザーとロール変更を実装 | F-14 | T-501 | 高 |
-| T-504 | 権限別の顧客、活動履歴、レポートアクセスを検証 | F-12〜F-14 | T-501〜T-503 | 高 |
-| T-505 | 不正アクセス時の401・403と画面表示をPlaywrightで検証 | F-12〜F-14、N-03 | T-504 | 高 |
+| T-501 | 閲覧権限をAPIと画面に適用する。顧客一覧・検索・詳細、活動履歴一覧、Reports 3種が対象。現行APIの`GET /api/v1/customers/:customerId/activities`とReports 3 GETに適用し、staffの親顧客scope外は不存在と同じ404、staffのReportsは403、manager・adminのReportsは全社・全担当者とする。ユーザー参照はT-503で扱う | F-12 | T-003、T-105 | 高 |
+| T-502 | 登録・編集・削除権限をAPIと画面に適用する。現行APIの`POST /api/v1/customers`ではstaffの保存ownerを認証済み本人へ強制しmanagerを403、adminには既存owner指定を認める。`POST /api/v1/customers/:customerId/activities`ではstaffは自担当顧客のみ、managerは403、adminは全顧客とし、staff scope外は不存在と同じ404にする。将来の顧客編集・論理削除にも適用する。活動の`user_id`の意味は変更しない | F-01、F-02、F-03、F-06、F-13 | T-501 | 高 |
+| T-503 | 管理者によるユーザー参照・role変更APIと権限を実装する。staff・managerの両操作は403とし、ユーザー新規登録やrole以外の情報変更は含めない | F-14 | T-501 | 高 |
+| T-504 | staff・manager・admin別に顧客・活動履歴・ReportsのBackend/APIアクセスを検証する。operationの許可・403、staffの自担当・他担当（不存在と同じ404）、staff Reports 403を含む | F-12〜F-14 | T-501〜T-503 | 高 |
+| T-505 | 401・403とFrontend画面表示をPlaywrightで検証する。画面上の非表示をBackendの認可強制の代わりにしない | F-12〜F-14、N-03 | T-504 | 高 |
 
 ## 非機能実装・検証タスク
 
