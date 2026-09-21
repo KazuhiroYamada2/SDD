@@ -16,6 +16,8 @@ const protectedRequests = [
   ['get', '/api/v1/reports/sales-trend'],
   ['get', '/api/v1/reports/customer-categories'],
   ['get', '/api/v1/reports/staff-performance'],
+  ['get', '/api/v1/users'],
+  ['patch', `/api/v1/users/${testUserId}/role`],
 ] as const;
 
 describe('production Public and Protected API boundary', () => {

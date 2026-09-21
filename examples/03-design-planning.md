@@ -88,7 +88,7 @@ Phase 1では`POST /api/v1/auth/login`と`GET /health`をPublicとし、その�
 | `GET /api/v1/reports/sales-trend?from=YYYY-MM-DD&to=YYYY-MM-DD` | 月単位の売上推移 | F-09、F-12 |
 | `GET /api/v1/reports/customer-categories` | 現在の有効顧客の分類集計 | F-10、F-12 |
 | `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD` | 営業担当者別実績 | F-11、F-12 |
-| `GET /users`、`PATCH /users/:id/role` | ユーザー・権限管理 | F-12〜F-14 |
+| `GET /api/v1/users`、`PATCH /api/v1/users/:id/role` | ユーザー・権限管理 | F-12〜F-14 |
 
 一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。顧客一覧・検索・詳細の確定契約は後述の「顧客read API設計」に従う。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けず、`from`または`to`がquery parameterに存在する場合は値が空でもHTTP 400を返す。期間queryがない場合は現在の有効顧客のスナップショットをHTTP 200で返す。
 
@@ -259,6 +259,16 @@ request bodyで許可するfieldは次のとおりとする。
 | ユーザー管理 | role変更 | 不可 | 不可 | 可 | admin: ユーザーのrole変更 |
 
 ユーザー新規登録とrole以外のユーザー情報変更は現行要件・APIにないため、この表の対象外とする。将来、複数managerごとに担当staffを分ける場合はmanagerとstaffの関係を表すデータモデルを別途設計する。Phase 1ではその関係をschemaに追加しない。
+
+### Users API設計
+
+- `GET /api/v1/users`は`users.read`を適用し、adminだけを許可する。HTTP 200で`[{ "id": "<uuid>", "email": "...", "role": "staff|manager|admin", "active": true }]`を返す。`password_hash`、timestamp等は公開しない。`users.is_active`を`active`へ写し、active・inactiveの両方を`ORDER BY email ASC, id ASC`で取得する。pagination、検索、filterは追加しない。
+- `PATCH /api/v1/users/:id/role`は`users.changeRole`を適用し、adminだけを許可する。Authentication → operation Authorization → UUID/body validation → resource処理の順とし、staff・managerの拒否時はuser lookupとupdateを行わない。bodyはroleだけを持つJSON objectとし、roleは`staff`、`manager`、`admin`のいずれかに限定する。不正時は既存のHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "<入力項目に対応する説明>" }`形式を使う。
+- role変更成功時はHTTP 200で更新後のUser DTOを返す。user不存在はHTTP 404 `{ "code": "USER_NOT_FOUND", "message": "User was not found." }`とする。inactive userもrole変更対象にできる。
+- 認証済みadminが自分自身へ現在と異なるroleを指定した場合はHTTP 409 `{ "code": "SELF_ROLE_CHANGE_NOT_ALLOWED", "message": "An administrator cannot change their own role." }`とする。同じroleの指定はDB updateを行わないno-opとしてHTTP 200を返す。
+- role変更Repositoryはtransactionを開始し、`role = 'admin' AND is_active = TRUE`の行を`id ASC FOR UPDATE`で決定的な順序にlockしてから対象userを`FOR UPDATE`で取得する。active adminを非adminへ変更した結果active adminが0人になる場合はrollbackし、HTTP 409 `{ "code": "LAST_ACTIVE_ADMIN_REQUIRED", "message": "At least one active admin must remain." }`へ変換する。このlock順序により同時降格を直列化する。Repositoryはrequest userのroleを知らず、operation AuthorizationはRouter/Serviceで行う。
+- role変更後もJWTへrole claimを追加しない。次requestのAuthenticationが`users`から現在roleを再取得する既存方式を維持する。
+- Frontendはmemory上の`authentication.user.role`がadminの場合だけユーザー管理入口と画面を描画する。画面はemail、active/inactive、現在role、role select、変更操作を表示し、自分自身のselect・変更操作は無効化できる。成功後は`GET /api/v1/users`を再実行する。409の最後のadmin判定をFrontendへ実装せずBackend messageを表示し、403・409でAuthenticationを破棄しない。React Routerは追加しない。
 
 ## セキュリティ・監査
 

@@ -146,6 +146,15 @@
 - staffによる顧客登録では、requestの`owner_user_id`が別のユーザーを指定していても、保存する`owner_user_id`を認証済み本人のIDにする。互換性のためrequestの`owner_user_id`項目は維持するが、その値をstaffの担当者決定に使用しない。adminは既存request契約に従って担当者を指定でき、既存の担当ユーザー検証を維持する。managerの顧客登録は403とする。活動履歴の登録範囲は活動の`user_id`ではなく親顧客の`owner_user_id`で判定し、活動の`user_id`の意味は変更しない。
 - ユーザーの新規登録とrole以外のユーザー情報変更は、現行の要件・APIに含めず、今回の権限設定の対象外とする。
 
+#### ユーザー参照・role変更
+
+- `GET /api/v1/users`はAuthenticationを必須とし、adminだけが利用できる。staff・managerはHTTP 403 `FORBIDDEN`とする。HTTP 200のresponseは配列とし、各要素は`id`、`email`、`role`、`active`だけを公開する。active・inactiveの両方を含め、`email ASC, id ASC`で安定して並べる。Phase 1ではpagination、検索、filterを設けない。
+- `PATCH /api/v1/users/:id/role`はAuthenticationを必須とし、adminだけが利用できる。staff・managerはvalidationやuser lookupより前にHTTP 403 `FORBIDDEN`とする。requestは`{ "role": "staff|manager|admin" }`だけを受け付け、role以外のfield、role欠落、許可値以外はHTTP 400 `VALIDATION_ERROR`とする。成功時はHTTP 200で更新後の同じUser DTOを返す。inactive userのroleも変更できる。
+- 対象userが存在しない場合はHTTP 404 `{ "code": "USER_NOT_FOUND", "message": "User was not found." }`を返す。
+- adminが自分自身を現在と異なるroleへ変更することは禁止し、HTTP 409 `{ "code": "SELF_ROLE_CHANGE_NOT_ALLOWED", "message": "An administrator cannot change their own role." }`を返す。現在と同じroleの指定はHTTP 200のno-opとし、DB updateを行わない。
+- activeなadminを非adminへ変更する場合、変更後もactive adminが最低1人残ることを必須とする。残らない場合はHTTP 409 `{ "code": "LAST_ACTIVE_ADMIN_REQUIRED", "message": "At least one active admin must remain." }`を返す。inactive adminはactive admin数へ含めない。同時実行でも0人にならないようtransactionとrow lockで保護する。
+- Frontendは既存のstate-based navigationへユーザー管理入口を追加し、staff・managerには非表示、adminには表示する。画面にはemail、active/inactive、現在role、role選択、変更操作を表示し、ユーザー登録やemail・active・passwordの変更は設けない。自分自身のrole変更UIは無効化してよい。変更成功後はUsers一覧を再取得する。最後のactive admin判定はFrontendへ複製せず、409のBackend messageを表示する。401は既存共通処理を使い、403・409でauth stateを破棄しない。
+
 ## 非機能要件
 
 ### パフォーマンス

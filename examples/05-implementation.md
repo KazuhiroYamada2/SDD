@@ -443,3 +443,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - FrontendへDELETE API clientと最小の削除確認画面を追加した。adminのCustomer detailだけに削除導線を表示し、staff・managerには表示しない。削除成功後は選択customer IDをclearして既存list stateを保ったCustomer listへ戻る。キャンセルはDELETEを行わずdetailへ戻り、API errorは既存方式で表示する。403でauth stateを破棄しない。
 - 削除後のlist/search除外、detail・edit・re-deleteの404を確認した。既存create/edit/list/search/detail、Activity、Reports、Authentication、Logout/reloadを維持した。E2E/PlaywrightはT-204完了条件外のため実施していない。
 - T-204は完了。Customer create、Activity create、Customer edit、Customer deleteへのAuthorizationがすべて揃ったため、正式Task T-502も完了とする。次の正式TaskはT-503とする。
+
+## 2026-09-21 T-503 users / role Authorization（完了）
+
+- `GET /api/v1/users`と`PATCH /api/v1/users/:id/role`をproductionへ追加し、共通Authentication後にそれぞれ`users.read`、`users.changeRole`を適用した。staff・managerはvalidation・User Service・Repositoryより前に403、adminだけを許可する。JWT role claimやAuthorization側のuser再lookupは追加していない。
+- Users一覧は`id`、`email`、`role`、`active`だけを公開し、active・inactiveの両方を`email ASC, id ASC`で返す。pagination、検索、filter、password・email・activeの変更、ユーザー新規登録は追加していない。
+- role変更はroleだけのrequestを受け付け、更新後User DTOを200で返す。inactive userも変更でき、user不存在は404 `USER_NOT_FOUND`とする。admin自身の異なるroleへの変更は409 `SELF_ROLE_CHANGE_NOT_ALLOWED`、同一roleはUPDATEなしの200 no-opとした。
+- 最後のactive admin保護はPostgreSQL transaction内でactive admin行を`id ASC FOR UPDATE`により先にlockし、その後に対象userをlock・更新する。並行するrole変更を同じlock順で直列化し、active adminが0人になる降格を409 `LAST_ACTIVE_ADMIN_REQUIRED`としてrollbackする。Repositoryにrequest userのrole判定は置いていない。
+- FrontendへUsers API clientとstate-basedユーザー管理画面を追加した。staff・managerには入口を描画せずadminだけに表示し、email、active/inactive、現在role、role選択、変更操作を提供する。自己role変更UIは無効化し、成功後は一覧を再取得する。409判定はFrontendへ複製せずBackend messageを表示し、403・409ではauth stateを維持する。
+- T-503は完了。T-504/T-505とE2E/Playwrightは先取りしていない。次の正式TaskはT-504とする。

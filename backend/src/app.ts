@@ -23,6 +23,9 @@ import { createSalesTrendRepository } from './reports/sales-trend-repository.js'
 import { createSalesTrendService, type SalesTrendService } from './reports/sales-trend-service.js';
 import { createStaffPerformanceRepository } from './reports/staff-performance-repository.js';
 import { createStaffPerformanceService, type StaffPerformanceService } from './reports/staff-performance-service.js';
+import { createUserRepository } from './users/user-repository.js';
+import { createUserService, type UserService } from './users/user-service.js';
+import { createUsersRouter } from './users/users-router.js';
 
 type AppDependencies = {
   loginService?: LoginService;
@@ -36,6 +39,7 @@ type AppDependencies = {
   salesTrendService?: SalesTrendService;
   customerCategoryService?: CustomerCategoryService;
   staffPerformanceService?: StaffPerformanceService;
+  userService?: UserService;
 };
 
 export const createApp = (dependencies: AppDependencies = {}) => {
@@ -72,6 +76,8 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     (database === undefined ? undefined : createCustomerCategoryService(createCustomerCategoryRepository(database)));
   const staffPerformanceService = dependencies.staffPerformanceService ??
     (database === undefined ? undefined : createStaffPerformanceService(createStaffPerformanceRepository(database)));
+  const userService = dependencies.userService ??
+    (database === undefined ? undefined : createUserService(createUserRepository(database)));
 
   // Auth parses JSON in its own router so malformed login bodies use the auth error DTO.
   app.use('/api/v1/auth', createAuthRouter(loginService));
@@ -90,6 +96,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   ));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
+  app.use('/api/v1/users', createUsersRouter(userService));
   app.use(handleForbiddenError);
 
   return app;

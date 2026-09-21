@@ -13,6 +13,7 @@ import { ReportsPage } from './reports/ReportsPage';
 import { AuthProvider, useAuthentication } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { useAuthenticatedApi } from './auth/useAuthenticatedApi';
+import { UsersManagement } from './users/UsersManagement';
 
 type FormValues = {
   name: string;
@@ -27,7 +28,7 @@ type FormValues = {
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'customerEdit' |
-  'customerDelete' | 'reports';
+  'customerDelete' | 'reports' | 'users';
 
 const initialValues: FormValues = {
   name: '',
@@ -87,6 +88,7 @@ function BusinessApp() {
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
   const canEditCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
   const canDeleteCustomer = authentication?.user.role === 'admin';
+  const canManageUsers = authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -121,6 +123,10 @@ function BusinessApp() {
       setSelectedCustomer(null);
       setScreen('customerRegistration');
     }} />;
+  }
+
+  if (screen === 'users' && canManageUsers) {
+    return <UsersManagement onBack={() => setScreen('customerRegistration')} />;
   }
 
   if (screen === 'customerList') {
@@ -179,6 +185,7 @@ function BusinessApp() {
     <main>
       <button type="button" onClick={() => setScreen('customerList')}>顧客一覧</button>
       {canViewReports && <button type="button" onClick={() => setScreen('reports')}>レポート</button>}
+      {canManageUsers && <button type="button" onClick={() => setScreen('users')}>ユーザー管理</button>}
       <h1>顧客管理システム</h1>
       {canCreateCustomer && <section aria-labelledby="customer-registration-heading" className="customer-registration">
         <h2 id="customer-registration-heading">顧客情報を登録</h2>

@@ -445,3 +445,12 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Frontend関連テストは6 files・77/77 PASS。staff・managerの削除導線非表示、adminの削除導線・確認画面・DELETE・204後の一覧遷移、キャンセル時DELETE 0回、API error表示と403時のauth state維持を確認した。
 - 既存Customer create/edit/list/search/detail、Reports role guard、Login初期画面、Logout/reloadを含むFrontend全テストは13 files・156/156 PASS。`tsc -b`を含むFrontend buildはPASS。E2E/Playwrightは未実施。
 - T-204はPASS。Customer create、Activity create、Customer edit、Customer deleteがすべてPASSしたためT-502もPASS・完了。次の正式TaskはT-503とする。
+
+## 2026-09-21 T-503 users / role Authorization検証（PASS）
+
+- Backend関連テストは5 files・45/45 PASS。tokenなし401、staff・managerのUsers一覧・role変更403とService未到達、adminの一覧200・role変更200、公開4 field、active/inactive、email ASC・id ASC、malformed UUID・missing/invalid role・unknown fieldの400、user不存在404を確認した。
+- admin自身の異なるrole変更は409 `SELF_ROLE_CHANGE_NOT_ALLOWED`、同一roleは200かつUPDATE 0件、最後のactive admin降格は409 `LAST_ACTIVE_ADMIN_REQUIRED`、active adminが複数なら他adminを降格可能、inactive userのrole変更可能を確認した。Repository testでBEGIN、active adminの`ORDER BY id ASC FOR UPDATE`、対象userの`FOR UPDATE`、UPDATE、COMMIT/ROLLBACKの順序と、保護時のUPDATE 0件を確認した。
+- Frontend関連テストは3 files・52/52 PASS。staff・managerのUsers入口非表示、adminの入口・画面、active/inactive表示、self control無効、role変更PATCH、成功後GET再取得、409・403 message表示とauth state維持を確認した。Reports・Customerの既存role表示もApp回帰で維持した。
+- AuthenticationはJWT role claimを追加せず、既存どおり各requestでDB current roleを取得する。role変更対象userの次回requestから現在roleが反映される構成を維持した。
+- Backend全テストは43 files・320/320 PASS、Backend TypeScript buildはPASS。Frontend全テストは15 files・166/166 PASS、`tsc -b`を含むFrontend buildはPASS。最初のsandbox内関連testは子processの`spawn EPERM`で開始できなかったため、同じcommandを制限外で実行して実結果を確認した。
+- T-504/T-505とE2E/Playwrightは未実施。T-503はPASS・完了。次の正式TaskはT-504とする。

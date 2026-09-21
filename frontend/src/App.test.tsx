@@ -83,6 +83,21 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '顧客一覧' })).toBeInTheDocument();
   });
 
+  it.each<UserRole>(['staff', 'manager'])('does not show the Users entry to %s', async (role) => {
+    await renderLoggedInApp(role);
+    expect(screen.queryByRole('button', { name: 'ユーザー管理' })).not.toBeInTheDocument();
+  });
+
+  it('shows the Users entry to admin and opens the management screen', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    })));
+    await renderLoggedInApp('admin');
+    fireEvent.click(screen.getByRole('button', { name: 'ユーザー管理' }));
+    expect(await screen.findByRole('heading', { name: 'ユーザー管理' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+  });
+
   it('hides Customer registration from manager while keeping read navigation', async () => {
     await renderLoggedInApp('manager');
 
