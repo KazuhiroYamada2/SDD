@@ -479,3 +479,18 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - E2E fixtureはusers 4、customers 6、sales_records 8、activities 0を安全guard付きreset後に確認した。Docker CLIは使用せず、`127.0.0.1:55432`へ直接接続した。production DBとschemaは変更していない。
 - production修正はCustomer詳細への既存Activity履歴component接続のみ。関連Frontend test 3 files・58/58、Frontend全test 15 files・166/166、Frontend buildがPASSした。Backend fixture変更の回帰としてBackend全test 43 files・321/321、Backend buildもPASSした。
 - staff・manager・adminのBrowser表示制御、401・403・scope外404、Reports・Users role制御、既存Reports回帰がすべてPASSしたため、T-505はPASS・完了。T-501～T-505のAuthorization一連もPASS・完了と判定する。
+
+## 2026-09-22 T-207 顧客CRUD・一覧・検索Playwright検証（PASS）
+
+| Scenario | 確認内容 | 結果 |
+| --- | --- | --- |
+| 一覧・検索・filter・sort | active Customer 5件の一覧、logical deleted除外、顧客名部分一致、category完全一致、AND条件、`name_asc`・`name_desc`・`created_at_asc`・`created_at_desc`を確認 | PASS |
+| pagination・state保持 | 21件の一時データで20件表示、次へ・前へ、current pageを確認。検索・sort・page size変更時のpage 1 reset、50・100件表示、page移動とDetail往復後の条件維持を確認 | PASS |
+| CRUD連続flow | adminでlistから登録画面へ移動し、create、一覧検索、detail、edit、更新後detail再取得、更新後条件でのsearch、logical delete、一覧・検索からの消失を確認 | PASS |
+
+- 使用roleはadmin。CRUD全操作を一連で検証し、T-505で確認済みのmanager・staff拒否は重複させていない。
+- Chromium先行実行は3/3 PASS。最終実行はChromium 3/3、Firefox 3/3、WebKit 3/3、計9/9 PASSした。実Frontend、Vite proxy、実Backend、Repository、専用PostgreSQLを使用し、Customer APIのmockは使用していない。
+- pagination用Customer 21件はscenario内でAPI作成し、終了時に論理削除した。共通fixture、production DB、schemaは変更していない。Docker CLIは使用せず、`127.0.0.1:55432`へ直接接続した。
+- 既存E2E回帰はAuthorization 12/12 PASS。ReportsはChromium 21/21、WebKit 21/21、Firefox再実行21/21で、browser別の全scenarioがPASSした。Firefox初回の既存smoke 1件は環境負荷による30秒timeoutであり、workers 1の再実行ではPASSした。
+- productionコードは変更していない。Backend/Frontendのunit・component testとbuildはT-505時点の321/321、166/166、両build PASSを維持し、今回は再実行していない。
+- T-207原文の顧客CRUD・一覧・検索を3 browserで証明したため、T-207はPASS・完了と判定する。

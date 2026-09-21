@@ -468,3 +468,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - T-505専用npm scriptはDocker CLIを呼ばず、起動済みの専用PostgreSQL `127.0.0.1:55432`へ既存の安全guard付きresetで直接接続する。PlaywrightのBackend・Frontend起動設定と3 browser設定は既存Reports configを再利用する。
 - production修正後の関連Frontend testは3 files・58/58 PASS。全回帰はBackend 43 files・321/321、Frontend 15 files・166/166、Backend/Frontend buildがPASSした。
 - T-505はChromium先行4/4、最終3 browser各4/4、計12/12 PASS。既存Reports回帰は3 workersでChromium・Firefox・WebKit各21/21、計63/63 PASSした。
+
+## 2026-09-22 T-207 顧客CRUD・一覧・検索Playwright検証（完了）
+
+- 既存Reports・Authorization suiteと分離して、`e2e/customers/customer-crud-list-search.spec.ts`と`playwright.customers.config.ts`を追加した。adminでCustomerのlist、search、category filter、4 sort、pagination、detail、create、edit、logical deleteを実Backend・実PostgreSQLへ接続して検証する。
+- 1 browserあたり3 scenariosとした。1件目は固定fixtureによる一覧・検索・filter・sort、2件目はpaginationと一覧state保持、3件目はcreateからlogical deleteまでの連続業務flowを扱う。T-505で検証済みのrole別403は重複させていない。
+- pagination用Customer 21件はPlaywright request contextから各scenarioの開始時に決定的な名前で作成し、`finally`で論理削除する。共通E2E fixture、production DB、schemaは変更していない。3 browserはworkers 1で順次実行し、テスト間のmutation競合を避けた。
+- Customer一覧GETはBrowser cacheの再検証によりFirefoxで304となる場合があるため、既存Reports E2Eと同じく200または304を許容し、画面の件数・行・stateを引き続き検証する。
+- Chromium先行は3/3 PASS。最終3 browserはChromium・Firefox・WebKit各3/3、計9/9 PASSした。productionコードの不具合は見つからず、修正していない。
+- 既存E2E回帰はAuthorization 12/12 PASS。ReportsはChromium・WebKit各21/21 PASSし、環境負荷でtimeoutしたFirefoxをworkers 1で再実行して21/21 PASSを確認した。

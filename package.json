@@ -12,7 +12,9 @@
     "e2e:reports": "npm run e2e:reports:prepare && playwright test --config=playwright.reports.config.ts",
     "e2e:auth": "npm run e2e:reports:prepare && playwright test --config=playwright.auth.config.ts",
     "e2e:authorization:prepare": "npm --prefix backend run e2e:db:reset",
-    "e2e:authorization": "npm run e2e:authorization:prepare && playwright test --config=playwright.authorization.config.ts"
+    "e2e:authorization": "npm run e2e:authorization:prepare && playwright test --config=playwright.authorization.config.ts",
+    "e2e:customers:prepare": "npm --prefix backend run e2e:db:reset",
+    "e2e:customers": "npm run e2e:customers:prepare && playwright test --config=playwright.customers.config.ts"
   },
   "repository": {
     "type": "git",
