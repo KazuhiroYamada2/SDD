@@ -61,6 +61,7 @@ const toRequest = (values: FormValues): CreateCustomerInput => {
 };
 
 function BusinessApp() {
+  const { authentication } = useAuthentication();
   const runAuthenticated = useAuthenticatedApi();
   const [screen, setScreen] = useState<Screen>('customerRegistration');
   const [values, setValues] = useState<FormValues>(initialValues);
@@ -69,6 +70,7 @@ function BusinessApp() {
   const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -98,7 +100,7 @@ function BusinessApp() {
     }
   };
 
-  if (screen === 'reports') {
+  if (screen === 'reports' && canViewReports) {
     return <ReportsPage onBack={() => {
       setSelectedCustomer(null);
       setScreen('customerRegistration');
@@ -111,7 +113,7 @@ function BusinessApp() {
 
   return (
     <main>
-      <button type="button" onClick={() => setScreen('reports')}>レポート</button>
+      {canViewReports && <button type="button" onClick={() => setScreen('reports')}>レポート</button>}
       <h1>顧客管理システム</h1>
       <section aria-labelledby="customer-registration-heading" className="customer-registration">
         <h2 id="customer-registration-heading">顧客情報を登録</h2>

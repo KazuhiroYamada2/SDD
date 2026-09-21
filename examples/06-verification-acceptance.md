@@ -357,3 +357,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Reportsの既存business API testsはmanager認証で全件PASSし、既存response・validation契約を維持した。adminはcustomer-categories代表経路で200とhandler到達を確認した。tokenなしのproduction Reports代表経路は401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を維持した。
 - production Authentication testはPASS。JWTにroleを追加せず、AuthenticationがRepositoryから取得したcurrent roleでReports Authorizationを通過し、`request.authenticatedUser`とrequestごとのuser lookupの既存証跡を維持した。
 - Backend全testは30ファイル・157/157 PASS。Backend buildはPASS。Frontend Reports表示制御は未実施のためT-501Aは未完了。T-501全体も未完了。
+
+## 2026-09-21 T-501A第2段階 Frontend Reports表示制御検証（PASS）
+
+- App component testは1ファイル・22/22 PASS。staffではReports入口とReports画面がDOMに存在せず、既存顧客登録画面を表示し、通常表示だけではReports APIを呼ばないことを確認した。manager・adminではReports入口を表示し、操作後にReports画面へ遷移することを確認した。
+- Frontend全testは8ファイル・100/100 PASS。Frontend buildの`tsc -b`とVite production buildはPASS。最初のsandbox内buildはVite子processの`spawn EPERM`で停止したため権限付きで同じcommandを再実行し、正常完了した。
+- AuthContext、Reports API client、401/403処理、Login後初期画面、Logout、reloadは変更していない。403でauth stateを破棄しない既存仕様を維持した。Backend、E2E、Playwright、DBは今回変更・実行していない。
+- 第1段階と第2段階によりT-501AはPASS。Activity GET scope Authorizationと未実装customer read APIへの適用・最終回帰が残るため、T-501全体は未完了。

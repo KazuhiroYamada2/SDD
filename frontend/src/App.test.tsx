@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { login } from './api/auth';
+import type { UserRole } from './auth/auth-types';
 
 vi.mock('./api/auth', async (importOriginal) => ({
   ...await importOriginal<typeof import('./api/auth')>(),
@@ -9,13 +10,11 @@ vi.mock('./api/auth', async (importOriginal) => ({
 }));
 
 const loginMock = vi.mocked(login);
-const loginResult = {
-  accessToken: 'test-access-token', tokenType: 'Bearer' as const, expiresIn: 1800 as const,
-  user: { id: 'test-user-id', email: 'user@example.test', role: 'manager' as const },
-};
-
-const renderLoggedInApp = async () => {
-  loginMock.mockResolvedValue(loginResult);
+const renderLoggedInApp = async (role: UserRole = 'manager') => {
+  loginMock.mockResolvedValue({
+    accessToken: 'test-access-token', tokenType: 'Bearer', expiresIn: 1800,
+    user: { id: 'test-user-id', email: 'user@example.test', role },
+  });
   render(<App />);
   fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'user@example.test' } });
   fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'test-only-password' } });
@@ -67,6 +66,26 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: '顧客登録画面に戻る' }));
     expect(screen.getByRole('heading', { name: '顧客管理システム' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
+  });
+
+  it('does not render the Reports entry or screen or call a Reports API for staff', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await renderLoggedInApp('staff');
+
+    expect(screen.queryByRole('button', { name: 'レポート' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'レポート' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('lets admin open the Reports screen', async () => {
+    await renderLoggedInApp('admin');
+
+    fireEvent.click(screen.getByRole('button', { name: 'レポート' }));
+
+    expect(screen.getByRole('heading', { name: 'レポート' })).toBeInTheDocument();
   });
 
   it('shows validation errors without calling the business API', async () => {

@@ -349,3 +349,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 共通Backend API test helperは既定のstaffを維持したままrole指定を可能にし、Reportsの既存business API testsだけを明示的なmanager認証へ移行した。集計・validation・ordering・zero response等の既存assertionは変更していない。
 - Reports Authorization testでstaffの3経路拒否、共通403応答、Service未到達、admin代表経路の200、tokenなし401を確認した。production Authentication testは、current roleと`authenticatedUser`の証跡を維持しつつReports handler到達時のRepository roleをmanagerへ変更した。
 - Frontend Reports表示制御は未実施のためT-501Aは未完了。Activity GET scope、未実装の顧客read APIへの適用、最終回帰も残るためT-501全体も未完了。
+
+## 2026-09-21 T-501A第2段階 Frontend Reports表示制御（完了）
+
+- `App.tsx`でLogin responseからReact memoryに保持している`authentication.user.role`を使用し、manager・adminだけに既存Reports入口を表示する。staffでは入口をDOMへ描画しない。JWT decode、role専用state、Reports API clientのrole判定は追加していない。
+- Reports screenの描画にも同じrole guardを適用した。staffで内部screen stateがReportsを示してもReports componentを描画せず、既存初期business screenである顧客登録画面を表示する。render中のstate更新や新しいUnauthorized画面は追加していない。
+- App component testでstaffの入口・画面非表示と通常表示時Reports API呼出0件、manager・adminの入口表示とReports画面遷移を確認した。401、403、Logout、reloadの既存処理は変更していない。
+- 第1段階のReports Backend Authorizationと合わせてT-501Aは完了。Activity GET scope Authorization、未実装の顧客一覧・検索・詳細への適用と最終回帰が残るため、T-501全体は未完了。
