@@ -320,3 +320,15 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - production app経路でBearerなしのcustomers POST、activities POST/GET、reports 3 GETが401 `AUTHENTICATION_REQUIRED`、不正Bearerも同じ401となることを確認した。BearerなしのLoginはwrong credentialsで401 `AUTHENTICATION_FAILED`、healthは200。短いJWT secretではapp生成失敗を確認した。
 - 有効JWTとactive staff userでbusiness handlerへ到達し、`request.authenticatedUser`がidと現在Repository roleのみを持つこと、role変更が次requestに反映されることを確認した。staff tokenもReportsへAuthentication上は到達し、403は実装していない。既存業務APIのresponse契約テストもBearer付きでPASS。
 - 実DB Login→protected production APIとPlaywright 3ブラウザー63件は今回未実施。T-111全体は未完了。
+## 2026-09-21 T-111第2段階A 実DB・Chromium受入確認（部分完了）
+
+- `.env.e2e` の `NODE_ENV=e2e`、`customer_management_e2e`、`127.0.0.1:55432`、JWT secret設定を値を出力せず確認した。既存scriptのURL guardと接続後DB識別guardを通してreset・seed成功。各結果はusers 3、customers 6、sales_records 8。managerのDB上のroleはmanager、`is_active=true`。
+- T-109 Login smoke 2 / 2 PASS。実DB manager LoginはBearer、1800秒、非空tokenを返し、wrong passwordは401 `AUTHENTICATION_FAILED`。実production appでもBearerなしLogin 200とwrong password 401、Bearerなしhealth 200を確認した。
+- 実production appのsales-trendとcustomer-categoriesは、実Login JWTのBearerありで200と固定fixtureどおりの応答、Bearerなしで401 `AUTHENTICATION_REQUIRED`。customer-categoriesのmalformed Bearerも同じ401。JWTにrole claimがないことを確認した。managerはDB上のactive userとしてrequest時にlookupされる既存middleware経路を通った。JWT全文は出力していない。
+- Chromium Reports E2E 21 / 21 PASS。ST 5 / 5、CC 5 / 5、SP 6 / 6、RP 2 / 2、VL 2 / 2、smoke 1 / 1。CC-05の再訪200/304、RP-02のpending後に実Backendへcontinue、VL-01の不正入力時対象Reports GET 0件のassertionを維持した。Firefox・WebKit・最終63件は未実施。T-111全体は未完了。
+## 2026-09-21 T-111 production Authentication最終受入確認（PASS）
+
+- 第1段階のBackend全テスト26ファイル・130/130 PASS、Backend build PASSを確認済み。第2段階Aの実DB Login smoke 2/2 PASS、Public Login・health PASS、protected Reports APIは有効Bearerで200、Bearerなし・不正Bearerで401 `AUTHENTICATION_REQUIRED` を確認済み。
+- 最終段階ではDocker CLIを使わず、各ブラウザー実行前に既存のguard付きE2E DB resetを実施した。各回とも`customer_management_e2e`でusers 3、customers 6、sales_records 8を確認。Firefox: ST 5/5、CC 5/5、SP 6/6、RP 2/2、VL 2/2、Reports smoke 1/1、計21/21 PASS。WebKitも同じ内訳で21/21 PASS。
+- 前回のChromium 21/21は同じrevisionのBackend・Frontend・E2E・Playwright設定と同じ専用fixtureによる結果で、今回はコード変更がないため再実行しなかった。最終結果はChromium 21/21、Firefox 21/21、WebKit 21/21、合計63/63 PASS。UI manager Login、business API Bearer形式、CC-05の再訪200/304、RP-02のpending後に実Backendへcontinue、VL-01の不正入力時対象Reports GET 0件を維持した。
+- T-111 PASS。Authorization・403は未実装。T-605は今回PASS判定せず、次TaskでAuthentication全体の受入観点を最終確認する。

@@ -320,3 +320,13 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - PublicのLogin routerと`GET /health`の後、業務routerより前に`/api/v1`共通Authentication middlewareを登録した。現在のcustomers、activities、reports APIと今後同じ境界へ登録する業務APIはAuthentication必須。roleによるAuthorization・403は追加していない。
 - 既存Backend業務API testはtest専用secret・有効JWT・active staff userを使う小さなhelperでBearerを付与し、productionと同じ認証境界を通すよう移行した。Public/Protectedのproduction経路テストを追加した。Frontend、Playwright、E2E fixture、DB migrationは変更していない。
 - 今回はBackend wiringとBackend testまで。実DB protected API確認とPlaywright 3ブラウザー63件はT-111第2段階に残るため、T-111全体は未完了。
+## 2026-09-21 T-111第2段階A 実DB・Chromium検証
+
+- 既存E2E専用DB scriptで `customer_management_e2e` をreset・seedし、実BackendのPublic Login・health、実Loginで取得したmanager JWTを使うprotected Reports API、Bearerなし401を確認した。malformed Bearerも401。Docker CLIは使用せず、起動済みPostgreSQLの `127.0.0.1:55432` に直接接続した。
+- 既存Chromium Reports E2E 21件をproduction Authentication middlewareが有効な経路で再実行し、全件PASS。Frontend・Backend production code、E2E helper/spec、DB fixture等の実装変更はない。
+- Firefox・WebKitと最終3ブラウザー63件は第2段階Bに残る。T-111全体は未完了。
+## 2026-09-21 T-111 production業務APIへのAuthentication適用（完了）
+
+- 第1段階で、Publicの`POST /api/v1/auth/login`と`GET /health`の後、Phase 1業務APIの前へ共通Authentication middlewareを登録した。既存DB poolのAuth User RepositoryとJWT Serviceをproductionへ接続し、Backend API testを有効Bearer前提へ移行した。
+- 第2段階Aで、実DB Login、protected Reports APIのBearerあり200・Bearerなし401 `AUTHENTICATION_REQUIRED`、Public Login・health、Chromium Reports 21/21を確認した。
+- 最終段階で、既存の同じ実装・専用fixtureのままFirefox 21/21とWebKit 21/21を確認した。前回Chromium 21/21と合わせて既存Reports E2Eは3ブラウザー63/63 PASS。今回はproduction code、E2E、Playwright設定を変更していない。T-111完了。role別Authorization・403とT-605の最終受入確認は後続Taskとする。
