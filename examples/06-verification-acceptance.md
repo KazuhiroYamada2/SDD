@@ -410,3 +410,13 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - loading、success、0件、API error、現在page表示、staff・manager・adminの一覧・detail導線を維持した。一覧→detail→一覧でquery、category、sort、page、page sizeが保持されることを確認した。Frontend scope後filterはなく、既存Backend Authorizationを使用する。
 - Reports role guard、顧客登録初期画面・登録処理、detail 404時のauth維持、401共通処理、Logout・reloadを含むFrontend全テストは11 files・133/133 PASS。`tsc -b`を含むFrontend buildはPASS。
 - Backend、DB、E2E、Playwrightは変更・実行していない。T-205はPASS。T-501は最終Acceptance待ち。
+
+## 2026-09-21 T-501 閲覧系Authorization 最終Acceptance（PASS）
+
+- T-501原文と実装・既存テストを照合し、Customer一覧・検索・詳細、Activity履歴GET、Reports 3種、Frontend閲覧表示制御が対象どおり揃っていることを確認した。users参照はT-503、write AuthorizationはT-502、網羅的Role Matrix検証はT-504、新規401/403 Browser E2EはT-505、Customer業務E2EはT-207に残している。
+- Customer readはstaffの一覧・検索が自担当のみ、detail ownが200、detail otherが不存在・logical deletedと同じ404 `CUSTOMER_NOT_FOUND`、manager・adminが全active customerを閲覧可能であることを確認した。query・category・owner filter、sort、paginationはstaff security scopeと同じSQL条件へ適用され、Frontend scope後filterはない。
+- Activity GETはstaff ownを許可し、staff otherとcustomer不存在を同じ404としてactivity query 0件で停止し、manager・adminはowner不問で許可することを確認した。Reportsはstaffの3 APIを403 `FORBIDDEN`、manager・adminを許可し、Frontendのstaff非表示・manager/admin表示を確認した。
+- 未認証401 `AUTHENTICATION_REQUIRED`、認証済みoperation拒否403 `FORBIDDEN`、staff scope外404の境界を確認した。JWT role claimとAuthorization側のusers再lookupはなく、AuthenticationがDBから取得したcurrent roleを使用する。
+- Backend全テストは34 files・243/243 PASS、Backend buildはPASS。Frontend全テストは11 files・133/133 PASS、`tsc -b`を含むFrontend buildはPASS。
+- Reports PlaywrightはChromium先行実行が21/21 PASS。専用E2E DBを再初期化した最終3 browser回帰はChromium・Firefox・WebKit各21件、計63/63 PASS。既存manager loginとReports business contractを維持し、新規E2Eは追加していない。
+- 最終Acceptanceでコード修正は不要だった。以上によりT-501はPASS・完了。T-502とT-503は着手可能で、次の正式TaskはT-502とする。

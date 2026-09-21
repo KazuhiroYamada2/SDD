@@ -410,3 +410,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 入力中と適用済みのquery/category、sort、page、page sizeをApp stateで保持する。Customer list→detail→listでselected customer IDだけをclearし、一覧条件とpageを維持して同じ条件で再取得する。React Router、自動検索、Frontend owner filter UIは追加していない。
 - Frontendでrole・ownerによる後filterは行わず、既存Backend Authorizationを使用する。Customer登録初期画面、listのloading・success・zero・error、detail、401/404、Reports role guard、Logout・reloadを維持した。Backend、DB、E2E、Playwrightは変更していない。
 - Backend部分とFrontend部分が揃ったためT-205は完了。T-501はCustomer list/detail/searchの実装が揃い、最終Acceptance待ちとする。
+
+## 2026-09-21 T-501 閲覧系Authorization（完了）
+
+- 正式Task T-501の対象であるCustomer一覧・検索・詳細、Activity履歴GET、Reports 3種、Frontend閲覧表示制御がすべて実装済みであることを最終確認した。users参照は正本どおりT-503に残し、write Authorization、網羅的Role Matrix検証、新規Browser role denial E2Eは追加していない。
+- Customer一覧・検索はstaffのowner scopeをSQL条件へ含め、manager・adminは全active customerを対象とする。Customer詳細は既存scope policyを使い、staffの他担当、customer不存在、logical deletedを同じ404 `CUSTOMER_NOT_FOUND`として扱う。Frontendにはrole・ownerによる後filterを追加していない。
+- Activity GETはstaff ownを許可し、staff scope外とcustomer不存在を同じ404としてactivity query前に停止する。manager・adminはowner不問で許可する。POST ActivityはT-502の責務として変更していない。
+- Reports 3 GETはstaffを403 `FORBIDDEN`でhandler前に拒否し、manager・adminにはcompany-wide集計を許可する。FrontendはstaffのReports入口・画面を非表示、manager・adminは表示する。
+- Authentication失敗の401、認証済みoperation拒否の403、staff scope外resourceの404という境界を維持する。AuthorizationはAuthenticationが設定したcurrent DB roleの`request.authenticatedUser`を利用し、JWT role claimやAuthorization側のusers再lookupは追加していない。
+- 最終Acceptanceではコード修正および新規E2E追加は不要だった。Backend・Frontend・既存Reports Playwrightの全回帰とbuildが成功したため、T-501を完了とする。正式依存関係上、T-502とT-503は着手可能で、次はT-502とする。
