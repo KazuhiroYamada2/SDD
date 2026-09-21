@@ -477,3 +477,13 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Customer一覧GETはBrowser cacheの再検証によりFirefoxで304となる場合があるため、既存Reports E2Eと同じく200または304を許容し、画面の件数・行・stateを引き続き検証する。
 - Chromium先行は3/3 PASS。最終3 browserはChromium・Firefox・WebKit各3/3、計9/9 PASSした。productionコードの不具合は見つからず、修正していない。
 - 既存E2E回帰はAuthorization 12/12 PASS。ReportsはChromium・WebKit各21/21 PASSし、環境負荷でtimeoutしたFirefoxをworkers 1で再実行して21/21 PASSを確認した。
+
+## 2026-09-22 T-601 顧客検索performance/configuration（完了）
+
+- Customer list Repositoryは`deleted_at IS NULL`を共通条件とし、staff owner scope、nameの`ILIKE '%query%'`、category、client指定ownerをANDで追加する。itemsとcountは同じWHERE句・parameterを使い、itemsだけに許可済みsort、`LIMIT`、`OFFSET`を付ける。offsetはServiceで`(page - 1) * page_size`、page size上限は100、total pagesはscope・filter後countから算出する。
+- migrationと実DBにはcustomersのB-tree indexとしてprimary keyのid、name、category、owner_user_id、deleted_atが存在する。03が検索条件用として明記した4列とprimary keyが揃っており、composite indexとpartial indexはない。created_atは03のindex指定対象ではないため追加していない。
+- E2E固定fixture 6件で`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`を実行した。default listはdeleted_at、staff scopeとowner filterはowner_user_id、category filterはcategoryのindex scanを選択した。name部分一致はname indexを使わずdeleted_at index scan後のfilter、created_at sortはdeleted_at index scan後のSortだった。実行時間は0.021～0.108msだが、小規模fixtureの値を本番性能の根拠には使用しない。
+- 前方・後方にwildcardを持つ`ILIKE '%query%'`は通常のB-tree name indexでは効率化できない。データ増加時は`pg_trgm`とGIN/GiSTが候補になるが、正本はextension・index方式を確定しておらず、性能測定はT-602で行うため今回は追加していない。
+- Backendは`pg.Pool`を1つ生成して共有する。現行library既定値はmax 10、min 0、idle timeout 10秒、connection timeout・statement timeout・query timeoutは未設定、max lifetime 0、allowExitOnIdle false。設定値は正本で未定義のため変更していない。
+- application終了時にpoolを閉じる処理がなかったため、`closeDatabase()`を追加した。SIGINT/SIGTERMでは新規HTTP受付を停止した後に`pool.end()`を実行する。transaction clientは既存どおり`finally`でreleaseする。
+- production schema・index・Customer SQLは変更していない。T-601関連は5 files・55/55 PASS、Backend全testは44 files・322/322 PASS、Backend buildはPASSした。FrontendとPlaywrightは変更・実行していない。

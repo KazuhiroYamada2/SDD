@@ -494,3 +494,28 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - 既存E2E回帰はAuthorization 12/12 PASS。ReportsはChromium 21/21、WebKit 21/21、Firefox再実行21/21で、browser別の全scenarioがPASSした。Firefox初回の既存smoke 1件は環境負荷による30秒timeoutであり、workers 1の再実行ではPASSした。
 - productionコードは変更していない。Backend/Frontendのunit・component testとbuildはT-505時点の321/321、166/166、両build PASSを維持し、今回は再実行していない。
 - T-207原文の顧客CRUD・一覧・検索を3 browserで証明したため、T-207はPASS・完了と判定する。
+
+## 2026-09-22 T-601 顧客検索performance/configuration確認（PASS）
+
+| 確認対象 | 実測・確認結果 | 判定 |
+| --- | --- | --- |
+| Customer SQL | active条件、staff scope、name部分一致、category、owner filterをANDで構築。items/countのWHERE一致 | PASS |
+| Pagination | `offset = (page - 1) * page_size`、上限100、itemsだけLIMIT/OFFSET、scope・filter後count、4 sortすべて`id ASC` tie-breaker | PASS |
+| Index | idのunique primary keyと、name・category・owner_user_id・deleted_atの各B-treeをmigrationと実DBで確認 | PASS |
+| Connection pool | `pg.Pool`を共有。max 10、min 0、idle 10秒。connection・statement・query timeoutは未設定 | PASS |
+| Pool終了処理 | SIGINT/SIGTERMでHTTP server停止後に`pool.end()`。transaction clientは`finally`でrelease | PASS |
+
+| Query | E2E fixtureでのplan | Execution Time |
+| --- | --- | ---: |
+| default list | `customers_deleted_at_idx` Index Scan → Sort → Limit | 0.045ms |
+| staff owner scope | `customers_owner_user_id_idx` Index Scan → Sort → Limit | 0.027ms |
+| category filter | `customers_category_idx` Index Scan → Sort → Limit | 0.021ms |
+| owner filter | `customers_owner_user_id_idx` Index Scan → Sort → Limit | 0.022ms |
+| name部分一致 | `customers_deleted_at_idx` Index Scan後にILIKE filter → Sort → Limit | 0.108ms |
+| created_at sort | `customers_deleted_at_idx` Index Scan → Sort → Limit | 0.025ms |
+
+- 上表はcustomers 6件のE2E DBで得たplanner上の事実であり、本番件数での性能を示さない。N-01の本番相当データ・通常負荷時p95 3秒以内はT-602で測定する。
+- `ILIKE '%query%'`に通常のB-tree name indexは利用されなかった。将来のデータ増加時は`pg_trgm`とGIN/GiSTが候補だが、正本に採用条件がなくT-602の測定前であるため今回は追加していない。
+- pool maxやtimeoutの目標値は正本にないため、library既定値を推測で変更していない。接続数はmax 10で有界。transaction release漏れはなく、test/prodで別のpool実装も使用していない。
+- production変更はapplication終了時のpool close追加のみ。schema・index・Customer SQL・paginationは変更していない。関連test 5 files・55/55、Backend全test 44 files・322/322、Backend buildがPASSした。Frontend変更とPlaywright実行はない。
+- index、pagination、connection poolが正本どおり設定され、明確だったpool終了処理のGapも解消したため、T-601はPASS・完了と判定する。
