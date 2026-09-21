@@ -371,3 +371,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Service testでstaff scope外とcustomer不存在のactivity queryが各0件、staff own・manager・adminの許可時はactivity queryへ到達することを確認した。Reference Repository testでは存在時の`id`・`owner_user_id`取得と不存在時のnullを確認し、各呼出しが1 queryであることを確認した。
 - POST Activityの既存API testを含む関連回帰がPASSし、GETへの`activity.read`適用がPOSTのAuthorization behaviorや`activity.user_id`契約を変更していないことを確認した。Backend全testは31ファイル・166/166 PASS、Backend buildはPASS。
 - Frontend、Reports、Customers、Authentication、E2E、Playwright、DB schema/fixtureは変更・実行していない。T-501BはPASS。未実装customer read APIへの適用・最終回帰が残るためT-501全体は未完了。
+
+## 2026-09-21 T-202B Customer list/detail Production API integration検証（PASS）
+
+- T-202A unitを含む影響範囲テストは7 files・64/64 PASS。T-202AのCustomer Repository・Service・validation 3 files・25/25、Customer read API 12/12、既存Customer POST、Production Authentication、Activity GET nested routeがPASSした。
+- `GET /api/v1/customers`はstaffで自担当active customerだけ、manager・adminで全active customerを返し、0件では`items: []`、page 1、page_size 20、total_count 0、total_pages 0を返すことを確認した。
+- `GET /api/v1/customers/:id`はstaff own、manager other、admin otherで200と共通DTOを返した。staff other、customer不存在、logical deletedはHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`で、staff otherと不存在の公開応答が同一であることを確認した。malformed UUIDは400 `{ "code": "VALIDATION_ERROR", "message": "id must be a UUID." }`でService未到達だった。
+- Customer GETはapp-level Authentication後に`customer.read`を通る。tokenなしのlistとdetailは401 `AUTHENTICATION_REQUIRED`で、Production Authenticationのprotected route一覧にも2経路を追加した。既存POST CustomerとActivity GET routeの回帰はPASS。
+- Backend全testは34 files・204/204 PASS。Backend build・TypeScript typecheckはPASS。T-205 query機能、Frontend、E2E、Playwrightは未実施。T-202BはPASS、T-202全体はT-202Cを残して未完了。T-501もCustomer search scope、Frontend、最終Acceptanceを残して未完了。

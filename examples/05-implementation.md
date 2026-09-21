@@ -371,3 +371,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Customer Read Serviceは既存`AuthenticatedUser`とT-105の`customer.read`・`isCustomerInScope`を使用する。staff listだけowner scopeをRepositoryへ渡し、manager・adminはowner scopeなしとする。detailの不存在、logical deleted、staff scope外は同じ`CustomerNotFoundError`と`CUSTOMER_NOT_FOUND / Customer was not found.`へ統一した。
 - Detail path用UUID validationを追加した。T-205固有のquery・category・owner filter・sort・pagination query validationは先取りしていない。Production router、`app.ts`、Frontend、DB schema、migrationは変更しておらず、unrestrictedなCustomer GET APIは存在しない。
 - Customer Repository・Service・validationのunit testを追加し、関連3 files 25 tests、Backend全33 files 190 tests、TypeScript buildのPASSを確認した。T-202Aは完了。Production router/API testとFrontendはT-202の後続段階に残る。
+
+## 2026-09-21 T-202B Customer list/detail Production API integration（完了）
+
+- `GET /api/v1/customers`と`GET /api/v1/customers/:id`をproduction Customer Routerへ追加し、両GETへ個別に`authorizeOperation('customer.read')`を適用した。app-level Authenticationが先に実行され、既存POSTにはread Authorizationを適用していない。
+- production appは既存DB poolから作る同じCustomer Repositoryをcreateとreadで共有し、T-202AのCustomerReadServiceへ接続する。別pool、JWT再検証、users再lookupは追加していない。staff listはServiceからowner scopeをRepositoryへ渡し、manager・adminは全active customer、detailは既存scope policyを使う。
+- detailのUUID validationをHTTP 400 `VALIDATION_ERROR`へ接続した。customer不存在、logical deleted、staff scope外はT-202AのCustomerNotFoundErrorから同じHTTP 404 `CUSTOMER_NOT_FOUND / Customer was not found.`へ変換する。
+- Customer read production API testを追加し、list envelope、staff own scope、manager/admin、0件、detailのstaff own/other、manager/admin、deleted、不存在との404同一性、malformed UUID、tokenなし401を確認した。Production Authenticationの保護対象一覧にもCustomer GET 2経路を追加した。既存Customer POSTとActivity nested routeの回帰も確認した。
+- T-205のquery・category・owner filter・sort・pagination request parsingは実装していない。Frontend、Reports、Activities production code、DB、E2E、Playwrightは変更していない。T-202Bは完了。Frontend list/detailのT-202Cが残るためT-202全体は未完了。T-501もCustomer search scopeとFrontend・最終Acceptanceが残り未完了。

@@ -7,6 +7,8 @@ import { testBearerHeader, testJwtService, testUserId } from '../test/authentica
 const required = { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication required.' };
 const protectedRequests = [
   ['post', '/api/v1/customers'],
+  ['get', '/api/v1/customers'],
+  ['get', `/api/v1/customers/${testUserId}`],
   ['post', `/api/v1/customers/${testUserId}/activities`],
   ['get', `/api/v1/customers/${testUserId}/activities`],
   ['get', '/api/v1/reports/sales-trend'],

@@ -11,6 +11,7 @@ import { createJwtService, type JwtService } from './auth/jwt-service.js';
 import { createLoginService, type LoginService } from './auth/login-service.js';
 import { createCustomersRouter } from './customers/customers-router.js';
 import { createCustomerRepository, type CustomerRepository } from './customers/customer-repository.js';
+import { createCustomerReadService, type CustomerReadService } from './customers/customer-read-service.js';
 import { database } from './db.js';
 import { handleForbiddenError } from './authorization/forbidden-error-handler.js';
 import { createCustomerCategoryRepository } from './reports/customer-category-repository.js';
@@ -26,6 +27,7 @@ type AppDependencies = {
   authUserRepository?: AuthUserRepository;
   jwtService?: JwtService;
   customerRepository?: CustomerRepository;
+  customerReadService?: CustomerReadService;
   activityService?: ActivityService;
   salesTrendService?: SalesTrendService;
   customerCategoryService?: CustomerCategoryService;
@@ -45,8 +47,10 @@ export const createApp = (dependencies: AppDependencies = {}) => {
       userRepository: authUserRepository,
       issueAccessToken: jwtService.issueAccessToken,
     }));
-  const customerRepository = dependencies.customerRepository ??
-    (database === undefined ? undefined : createCustomerRepository(database));
+  const productionCustomerRepository = database === undefined ? undefined : createCustomerRepository(database);
+  const customerRepository = dependencies.customerRepository ?? productionCustomerRepository;
+  const customerReadService = dependencies.customerReadService ??
+    (productionCustomerRepository === undefined ? undefined : createCustomerReadService(productionCustomerRepository));
   const activityService = dependencies.activityService ??
     (database === undefined
       ? undefined
@@ -70,7 +74,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   });
 
   app.use('/api/v1', createAuthenticationMiddleware({ userRepository: authUserRepository, jwtService }));
-  app.use('/api/v1/customers', createCustomersRouter(customerRepository));
+  app.use('/api/v1/customers', createCustomersRouter(customerRepository, customerReadService));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
   app.use(handleForbiddenError);
