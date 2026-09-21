@@ -452,3 +452,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 最後のactive admin保護はPostgreSQL transaction内でactive admin行を`id ASC FOR UPDATE`により先にlockし、その後に対象userをlock・更新する。並行するrole変更を同じlock順で直列化し、active adminが0人になる降格を409 `LAST_ACTIVE_ADMIN_REQUIRED`としてrollbackする。Repositoryにrequest userのrole判定は置いていない。
 - FrontendへUsers API clientとstate-basedユーザー管理画面を追加した。staff・managerには入口を描画せずadminだけに表示し、email、active/inactive、現在role、role選択、変更操作を提供する。自己role変更UIは無効化し、成功後は一覧を再取得する。409判定はFrontendへ複製せずBackend messageを表示し、403・409ではauth stateを維持する。
 - T-503は完了。T-504/T-505とE2E/Playwrightは先取りしていない。次の正式TaskはT-504とする。
+
+## 2026-09-21 T-504 Backend/API Role Matrix検証（完了）
+
+- T-501/T-502で実装済みのCustomer read/create/edit/delete、Activity GET/POST、Reports 3 APIを、staff・manager・adminのRole Matrixとして既存API testとAuthorization testで横断検証した。Users APIはT-504原文の対象外とし、Backend全testによる回帰だけを維持した。
+- Customerはstaffのlist/search own scope、detail/edit own許可・other 404、create許可、delete 403、managerのread許可・create/edit/delete 403、adminの全操作許可を確認した。Activityはstaff ownのGET/POST許可・other 404、managerのGET許可・POST 403、adminのGET/POST許可を確認した。
+- Reports Authorization testをmanager・adminそれぞれが3 APIすべてのhandlerへ到達するmatrixへ拡張した。staffは3 APIすべてvalidation・Service前に403となる既存証跡を維持する。productionコードの不具合はなく、変更していない。
+- 未認証401、operation-level拒否403、staff scope外と不存在の同一404、operation拒否時のresource lookup・update・Service未到達を確認した。FrontendとPlaywrightはT-505を先取りしないため変更・実行していない。T-504は完了し、T-505が着手可能となった。

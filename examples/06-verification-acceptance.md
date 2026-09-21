@@ -454,3 +454,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - AuthenticationはJWT role claimを追加せず、既存どおり各requestでDB current roleを取得する。role変更対象userの次回requestから現在roleが反映される構成を維持した。
 - Backend全テストは43 files・320/320 PASS、Backend TypeScript buildはPASS。Frontend全テストは15 files・166/166 PASS、`tsc -b`を含むFrontend buildはPASS。最初のsandbox内関連testは子processの`spawn EPERM`で開始できなかったため、同じcommandを制限外で実行して実結果を確認した。
 - T-504/T-505とE2E/Playwrightは未実施。T-503はPASS・完了。次の正式TaskはT-504とする。
+
+## 2026-09-21 T-504 Backend/API Role Matrix検証（PASS）
+
+- Customer readはstaffのlist/searchが自担当のみ、detail ownが200・otherが不存在と同じ404、manager・adminがlist/search/detail 200。createはstaff/adminが201・managerが403、editはstaff own/adminが200・staff otherが404・managerが403、deleteはstaff/managerが403・adminが204でPASSした。
+- Activity GETはstaff ownが200・otherが不存在と同じ404、manager・adminが200。Activity POSTはstaff own/adminが201・staff otherが不存在と同じ404・managerが403でPASSした。scope外と不存在ではbusiness query/createへ進まない既存Service証跡も確認した。
+- Reports 3 APIはstaffが3/3で403かつvalidation・Service未到達、managerが3/3で200、adminが3/3で200となりPASSした。admin全3経路の明示的証跡を補うためReports Authorization testだけを拡張し、productionコードは変更していない。
+- 未認証は401 `AUTHENTICATION_REQUIRED`、operation-level拒否は403 `FORBIDDEN`、staff scope外customerは不存在と同じ404 `CUSTOMER_NOT_FOUND`でPASSした。Authentication → operation Authorization → validation/resource lookup → scope Authorization → business processingの順序を維持し、operation拒否では不要なlookup・updateを実行しない。
+- T-504関連Backend testは14 files・150/150 PASS。Backend全testは43 files・321/321 PASS。Backend TypeScript buildはPASS。Frontend変更・test/buildとPlaywrightはT-504範囲外のため未実施。T-504はPASS・完了、T-505は着手可能。

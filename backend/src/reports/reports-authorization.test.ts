@@ -28,17 +28,26 @@ describe('production Reports Authorization', () => {
     expect(getStaffPerformance).not.toHaveBeenCalled();
   });
 
-  it('lets admin reach a Reports handler', async () => {
+  it.each(['manager', 'admin'] as const)('lets %s reach all three Reports handlers', async (role) => {
+    const getSalesTrend = vi.fn().mockResolvedValue({ items: [] });
     const getCustomerCategories = vi.fn().mockResolvedValue({ items: [] });
+    const getStaffPerformance = vi.fn().mockResolvedValue({ items: [] });
     const app = createAuthenticatedTestApp({
+      salesTrendService: { getSalesTrend },
       customerCategoryService: { getCustomerCategories },
-    }, 'admin');
+      staffPerformanceService: { getStaffPerformance },
+    }, role);
 
-    const response = await authenticatedRequest(app).get('/api/v1/reports/customer-categories');
+    const responses = await Promise.all([
+      authenticatedRequest(app).get('/api/v1/reports/sales-trend?from=2026-01-01&to=2026-01-31'),
+      authenticatedRequest(app).get('/api/v1/reports/customer-categories'),
+      authenticatedRequest(app).get('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-01-31'),
+    ]);
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ items: [] });
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200]);
+    expect(getSalesTrend).toHaveBeenCalledOnce();
     expect(getCustomerCategories).toHaveBeenCalledOnce();
+    expect(getStaffPerformance).toHaveBeenCalledOnce();
   });
 
   it('returns Authentication 401 before Reports Authorization when no token is sent', async () => {
