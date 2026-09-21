@@ -57,6 +57,48 @@ describe('App', () => {
     expect(screen.getByLabelText('担当ユーザーID')).toHaveAttribute('data-testid', 'owner-user-id-input');
   });
 
+  it.each<UserRole>(['staff', 'manager', 'admin'])('shows the Customer list entry for %s', async (role) => {
+    await renderLoggedInApp(role);
+
+    expect(screen.getByRole('button', { name: '顧客一覧' })).toBeInTheDocument();
+  });
+
+  it('switches to the Customer list and returns to the unchanged registration screen', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        items: [{
+          id: '8a1f2d44-1234-4abc-8def-123456789abc', name: '株式会社サンプル', name_kana: null,
+          email: null, phone: null, address: null, category: 'A',
+          owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+          created_at: '2026-09-21T00:00:00.000Z', updated_at: '2026-09-21T00:00:00.000Z', deleted_at: null,
+        }],
+        page: 1, page_size: 20, total_count: 1, total_pages: 1,
+      }),
+    }));
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    expect(await screen.findByRole('cell', { name: '株式会社サンプル' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客登録画面に戻る' }));
+    expect(screen.getByRole('heading', { name: '顧客情報を登録' })).toBeInTheDocument();
+  });
+
+  it('keeps authentication when the Customer list receives a 403', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      json: vi.fn().mockResolvedValue({ code: 'FORBIDDEN', message: 'Forbidden.' }),
+    }));
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Forbidden.');
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'ログイン' })).not.toBeInTheDocument();
+  });
+
   it('switches to the report screen and returns to the customer registration screen', async () => {
     await renderLoggedInApp();
 

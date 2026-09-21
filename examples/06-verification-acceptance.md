@@ -379,3 +379,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - `GET /api/v1/customers/:id`はstaff own、manager other、admin otherで200と共通DTOを返した。staff other、customer不存在、logical deletedはHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`で、staff otherと不存在の公開応答が同一であることを確認した。malformed UUIDは400 `{ "code": "VALIDATION_ERROR", "message": "id must be a UUID." }`でService未到達だった。
 - Customer GETはapp-level Authentication後に`customer.read`を通る。tokenなしのlistとdetailは401 `AUTHENTICATION_REQUIRED`で、Production Authenticationのprotected route一覧にも2経路を追加した。既存POST CustomerとActivity GET routeの回帰はPASS。
 - Backend全testは34 files・204/204 PASS。Backend build・TypeScript typecheckはPASS。T-205 query機能、Frontend、E2E、Playwrightは未実施。T-202BはPASS、T-202全体はT-202Cを残して未完了。T-501もCustomer search scope、Frontend、最終Acceptanceを残して未完了。
+
+## 2026-09-21 T-202C第1段階 Customer list Frontend検証（PASS）
+
+- 関連テストはAPI client、Customer list component、Appの3 files・33/33 PASS。`GET /api/v1/customers`へのBearer付与、query parameterなし、pagination envelopeのparse、共通Authentication 401 errorへの接続を確認した。
+- staff・manager・adminの顧客一覧入口表示、state-based navigation、顧客名・分類のsuccess表示、loading、0件、API errorを確認した。staff向けmock responseに別ownerのitemを含めても表示されることから、Frontendでowner後filterを行っていないことを確認した。403では認証状態とLogoutを維持する。
+- App回帰でLogin後の顧客登録初期画面と登録処理、staffのReports非表示、manager・adminのReports表示を維持した。Frontend全テストは10 files・111/111 PASS。`tsc -b`を含むFrontend buildはPASS。sandbox内buildはVite子processの`spawn EPERM`で停止したため、同じcommandを制限外で再実行して正常完了した。
+- Backend、E2E、Playwrightは変更・実行していない。T-205の検索・filter・sort・paginationとCustomer detail導線は未実装。T-202Cは未完了、T-202全体も未完了。

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
+import { CustomerList } from './customers/CustomerList';
 import { ReportsPage } from './reports/ReportsPage';
 import { AuthProvider, useAuthentication } from './auth/AuthContext';
 import { Login } from './auth/Login';
@@ -18,7 +19,7 @@ type FormValues = {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-type Screen = 'customerRegistration' | 'reports';
+type Screen = 'customerRegistration' | 'customerList' | 'reports';
 
 const initialValues: FormValues = {
   name: '',
@@ -107,12 +108,17 @@ function BusinessApp() {
     }} />;
   }
 
+  if (screen === 'customerList') {
+    return <CustomerList onBack={() => setScreen('customerRegistration')} />;
+  }
+
   if (selectedCustomer !== null) {
     return <CustomerDetail customer={selectedCustomer} onBack={() => setSelectedCustomer(null)} />;
   }
 
   return (
     <main>
+      <button type="button" onClick={() => setScreen('customerList')}>顧客一覧</button>
       {canViewReports && <button type="button" onClick={() => setScreen('reports')}>レポート</button>}
       <h1>顧客管理システム</h1>
       <section aria-labelledby="customer-registration-heading" className="customer-registration">

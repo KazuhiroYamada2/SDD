@@ -379,3 +379,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - detailのUUID validationをHTTP 400 `VALIDATION_ERROR`へ接続した。customer不存在、logical deleted、staff scope外はT-202AのCustomerNotFoundErrorから同じHTTP 404 `CUSTOMER_NOT_FOUND / Customer was not found.`へ変換する。
 - Customer read production API testを追加し、list envelope、staff own scope、manager/admin、0件、detailのstaff own/other、manager/admin、deleted、不存在との404同一性、malformed UUID、tokenなし401を確認した。Production Authenticationの保護対象一覧にもCustomer GET 2経路を追加した。既存Customer POSTとActivity nested routeの回帰も確認した。
 - T-205のquery・category・owner filter・sort・pagination request parsingは実装していない。Frontend、Reports、Activities production code、DB、E2E、Playwrightは変更していない。T-202Bは完了。Frontend list/detailのT-202Cが残るためT-202全体は未完了。T-501もCustomer search scopeとFrontend・最終Acceptanceが残り未完了。
+
+## 2026-09-21 T-202C第1段階 Customer list Frontend（部分実装）
+
+- 既存Customer API clientへ`GET /api/v1/customers`を追加し、共通`authenticatedFetch`でBearerを付与する。T-205のquery parameterは送信しない。Customer型をBackendの共通read DTO 11 fieldへ合わせ、list pagination envelope型を追加した。
+- `CustomerList` componentを追加し、取得中、顧客名・分類の一覧、0件、API errorを表示する。staffを含めFrontendでownerやlogical deleteによる後filterは行わず、Backend Authorization済みのitemsを表示する。詳細のダミー操作は置かず、詳細取得と導線はT-202C第2段階へ残した。
+- `App.tsx`の既存state-based navigationへ全role共通の顧客一覧入口と登録画面へ戻る遷移を追加した。Login後の初期画面、顧客登録、staffのReports非表示、manager・adminのReports表示は維持する。React Router、検索・filter・sort・pagination、Frontend独自の401/403処理は追加していない。
+- API client、一覧component、Appのテストを追加・更新した。Backend、E2E、Playwrightは変更していない。T-202Cは部分実装、T-202全体は未完了。
