@@ -1,6 +1,5 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
 import type { SalesTrendService } from './sales-trend-service.js';
 
 const salesTrend = {
@@ -20,7 +19,7 @@ const createService = (): SalesTrendService => ({
 describe('GET /api/v1/reports/sales-trend', () => {
   it('returns the sales trend response DTO', async () => {
     const salesTrendService = createService();
-    const response = await request(createApp({ salesTrendService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ salesTrendService }))
       .get('/api/v1/reports/sales-trend?from=2026-01-15&to=2026-03-10');
 
     expect(response.status).toBe(200);
@@ -36,7 +35,7 @@ describe('GET /api/v1/reports/sales-trend', () => {
     ['/api/v1/reports/sales-trend?from=2026-03-01&to=2026-02-28', 'from must be on or before to.'],
   ])('returns HTTP 400 for %s', async (uri, message) => {
     const salesTrendService = createService();
-    const response = await request(createApp({ salesTrendService })).get(uri);
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ salesTrendService })).get(uri);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ code: 'VALIDATION_ERROR', message });
@@ -44,7 +43,7 @@ describe('GET /api/v1/reports/sales-trend', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await request(createApp())
+    const response = await authenticatedRequest(createAuthenticatedTestApp())
       .get('/api/v1/reports/sales-trend?from=2026-01-01&to=2026-01-31');
 
     expect(response.status).toBe(503);
@@ -55,7 +54,7 @@ describe('GET /api/v1/reports/sales-trend', () => {
     const salesTrendService: SalesTrendService = {
       getSalesTrend: vi.fn().mockRejectedValue(new Error('database unavailable')),
     };
-    const response = await request(createApp({ salesTrendService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ salesTrendService }))
       .get('/api/v1/reports/sales-trend?from=2026-01-01&to=2026-01-31');
 
     expect(response.status).toBe(500);

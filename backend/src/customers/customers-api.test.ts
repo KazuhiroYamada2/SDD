@@ -1,6 +1,5 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
 import type { CustomerRepository } from './customer-repository.js';
 
 const ownerUserId = 'c0a80101-1234-4abc-8def-123456789abc';
@@ -26,7 +25,7 @@ const createRepository = (): CustomerRepository => ({
 describe('POST /api/v1/customers', () => {
   it('registers a valid customer and returns HTTP 201', async () => {
     const repository = createRepository();
-    const response = await request(createApp({ customerRepository: repository }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }))
       .post('/api/v1/customers')
       .send({
         name: ' 株式会社サンプル ',
@@ -62,7 +61,7 @@ describe('POST /api/v1/customers', () => {
     [{ name: '株式会社サンプル', owner_user_id: ownerUserId, phone: 1234 }, 'phone must be a string.'],
   ])('returns HTTP 400 for invalid input', async (body, message) => {
     const repository = createRepository();
-    const response = await request(createApp({ customerRepository: repository }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }))
       .post('/api/v1/customers')
       .send(body);
 
@@ -75,7 +74,7 @@ describe('POST /api/v1/customers', () => {
     const repository: CustomerRepository = {
       create: vi.fn().mockRejectedValue(new Error('database unavailable')),
     };
-    const response = await request(createApp({ customerRepository: repository }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerRepository: repository }))
       .post('/api/v1/customers')
       .send({ name: '株式会社サンプル', owner_user_id: ownerUserId });
 
@@ -87,7 +86,7 @@ describe('POST /api/v1/customers', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await request(createApp())
+    const response = await authenticatedRequest(createAuthenticatedTestApp())
       .post('/api/v1/customers')
       .send({ name: '株式会社サンプル', owner_user_id: ownerUserId });
 

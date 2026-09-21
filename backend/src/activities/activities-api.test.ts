@@ -1,6 +1,5 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
 import { CustomerNotFoundError, UserNotFoundError, type ActivityService } from './activity-service.js';
 
 const customerId = '8a1f2d44-1234-4abc-8def-123456789abc';
@@ -25,7 +24,7 @@ const createService = (): ActivityService => ({
 describe('POST /api/v1/customers/:customerId/activities', () => {
   it('records a visit, meeting note, and next visit schedule', async () => {
     const activityService = createService();
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .post(`/api/v1/customers/${customerId}/activities`)
       .send({
         user_id: userId,
@@ -61,7 +60,7 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
     ['invalid meeting note', customerId, { user_id: userId, activity_type: 'meeting', meeting_note: 1 }, 'meeting_note must be a string.'],
   ])('returns HTTP 400 for %s', async (_caseName, id, body, message) => {
     const activityService = createService();
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .post(`/api/v1/customers/${id}/activities`)
       .send(body);
 
@@ -75,7 +74,7 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
       execute: vi.fn().mockRejectedValue(new CustomerNotFoundError()),
       findByCustomerId: vi.fn(),
     };
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .post(`/api/v1/customers/${customerId}/activities`)
       .send({ user_id: userId, activity_type: 'visit' });
 
@@ -88,7 +87,7 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
       execute: vi.fn().mockRejectedValue(new UserNotFoundError()),
       findByCustomerId: vi.fn(),
     };
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .post(`/api/v1/customers/${customerId}/activities`)
       .send({ user_id: userId, activity_type: 'visit' });
 
@@ -101,7 +100,7 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
       execute: vi.fn().mockRejectedValue(new Error('database unavailable')),
       findByCustomerId: vi.fn(),
     };
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .post(`/api/v1/customers/${customerId}/activities`)
       .send({ user_id: userId, activity_type: 'visit' });
 
@@ -110,7 +109,7 @@ describe('POST /api/v1/customers/:customerId/activities', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await request(createApp())
+    const response = await authenticatedRequest(createAuthenticatedTestApp())
       .post(`/api/v1/customers/${customerId}/activities`)
       .send({ user_id: userId, activity_type: 'visit' });
 

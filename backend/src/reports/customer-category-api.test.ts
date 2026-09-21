@@ -1,6 +1,5 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
 import type { CustomerCategoryService } from './customer-category-service.js';
 
 const customerCategories = {
@@ -17,7 +16,7 @@ const createService = (): CustomerCategoryService => ({
 describe('GET /api/v1/reports/customer-categories', () => {
   it('returns customer category counts as JSON numbers without period parameters', async () => {
     const customerCategoryService = createService();
-    const response = await request(createApp({ customerCategoryService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerCategoryService }))
       .get('/api/v1/reports/customer-categories');
 
     expect(response.status).toBe(200);
@@ -34,7 +33,7 @@ describe('GET /api/v1/reports/customer-categories', () => {
     '?to=',
   ])('returns HTTP 400 when period parameter is supplied: %s', async (query) => {
     const customerCategoryService = createService();
-    const response = await request(createApp({ customerCategoryService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerCategoryService }))
       .get(`/api/v1/reports/customer-categories${query}`);
 
     expect(response.status).toBe(400);
@@ -47,7 +46,7 @@ describe('GET /api/v1/reports/customer-categories', () => {
 
   it('does not apply the period-only rejection to other query parameters', async () => {
     const customerCategoryService = createService();
-    const response = await request(createApp({ customerCategoryService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerCategoryService }))
       .get('/api/v1/reports/customer-categories?foo=bar');
 
     expect(response.status).toBe(200);
@@ -55,7 +54,7 @@ describe('GET /api/v1/reports/customer-categories', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await request(createApp()).get('/api/v1/reports/customer-categories');
+    const response = await authenticatedRequest(createAuthenticatedTestApp()).get('/api/v1/reports/customer-categories');
 
     expect(response.status).toBe(503);
     expect(response.body).toEqual({ code: 'SERVICE_UNAVAILABLE', message: 'Database is not configured.' });
@@ -65,7 +64,7 @@ describe('GET /api/v1/reports/customer-categories', () => {
     const customerCategoryService: CustomerCategoryService = {
       getCustomerCategories: vi.fn().mockRejectedValue(new Error('database unavailable')),
     };
-    const response = await request(createApp({ customerCategoryService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ customerCategoryService }))
       .get('/api/v1/reports/customer-categories');
 
     expect(response.status).toBe(500);

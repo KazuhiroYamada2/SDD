@@ -4,7 +4,10 @@ import { createActivityReferenceRepository } from './activities/activity-referen
 import { createActivityRepository } from './activities/activity-repository.js';
 import { createCreateActivityService, type ActivityService } from './activities/activity-service.js';
 import { createAuthUserRepository } from './auth/auth-user-repository.js';
+import type { AuthUserRepository } from './auth/auth-user-repository.js';
 import { createAuthRouter } from './auth/auth-router.js';
+import { createAuthenticationMiddleware } from './auth/authentication-middleware.js';
+import { createJwtService, type JwtService } from './auth/jwt-service.js';
 import { createLoginService, type LoginService } from './auth/login-service.js';
 import { createCustomersRouter } from './customers/customers-router.js';
 import { createCustomerRepository, type CustomerRepository } from './customers/customer-repository.js';
@@ -19,6 +22,8 @@ import { createStaffPerformanceService, type StaffPerformanceService } from './r
 
 type AppDependencies = {
   loginService?: LoginService;
+  authUserRepository?: AuthUserRepository;
+  jwtService?: JwtService;
   customerRepository?: CustomerRepository;
   activityService?: ActivityService;
   salesTrendService?: SalesTrendService;
@@ -28,8 +33,17 @@ type AppDependencies = {
 
 export const createApp = (dependencies: AppDependencies = {}) => {
   const app = express();
+  const authUserRepository = dependencies.authUserRepository ??
+    (database === undefined ? {
+      findByEmail: async () => null,
+      findById: async () => null,
+    } : createAuthUserRepository(database));
+  const jwtService = dependencies.jwtService ?? createJwtService();
   const loginService = dependencies.loginService ??
-    (database === undefined ? undefined : createLoginService({ userRepository: createAuthUserRepository(database) }));
+    (database === undefined ? undefined : createLoginService({
+      userRepository: authUserRepository,
+      issueAccessToken: jwtService.issueAccessToken,
+    }));
   const customerRepository = dependencies.customerRepository ??
     (database === undefined ? undefined : createCustomerRepository(database));
   const activityService = dependencies.activityService ??
@@ -54,6 +68,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     response.status(200).json({ status: 'ok' });
   });
 
+  app.use('/api/v1', createAuthenticationMiddleware({ userRepository: authUserRepository, jwtService }));
   app.use('/api/v1/customers', createCustomersRouter(customerRepository));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));

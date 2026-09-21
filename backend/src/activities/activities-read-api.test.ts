@@ -1,6 +1,5 @@
-import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../app.js';
+import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
 import { CustomerNotFoundError, type ActivityService } from './activity-service.js';
 
 const customerId = '8a1f2d44-1234-4abc-8def-123456789abc';
@@ -37,7 +36,7 @@ const createService = (): ActivityService => ({
 describe('GET /api/v1/customers/:customerId/activities', () => {
   it('returns a customer activity history in newest-first order', async () => {
     const activityService = createService();
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .get(`/api/v1/customers/${customerId}/activities`);
 
     expect(response.status).toBe(200);
@@ -53,7 +52,7 @@ describe('GET /api/v1/customers/:customerId/activities', () => {
 
   it('returns HTTP 400 for an invalid customer id', async () => {
     const activityService = createService();
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .get('/api/v1/customers/not-a-uuid/activities');
 
     expect(response.status).toBe(400);
@@ -66,7 +65,7 @@ describe('GET /api/v1/customers/:customerId/activities', () => {
       execute: vi.fn(),
       findByCustomerId: vi.fn().mockRejectedValue(new CustomerNotFoundError()),
     };
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .get(`/api/v1/customers/${customerId}/activities`);
 
     expect(response.status).toBe(404);
@@ -78,7 +77,7 @@ describe('GET /api/v1/customers/:customerId/activities', () => {
       execute: vi.fn(),
       findByCustomerId: vi.fn().mockRejectedValue(new Error('database unavailable')),
     };
-    const response = await request(createApp({ activityService }))
+    const response = await authenticatedRequest(createAuthenticatedTestApp({ activityService }))
       .get(`/api/v1/customers/${customerId}/activities`);
 
     expect(response.status).toBe(500);
@@ -86,7 +85,7 @@ describe('GET /api/v1/customers/:customerId/activities', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await request(createApp())
+    const response = await authenticatedRequest(createAuthenticatedTestApp())
       .get(`/api/v1/customers/${customerId}/activities`);
 
     expect(response.status).toBe(503);

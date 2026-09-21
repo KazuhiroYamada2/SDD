@@ -314,3 +314,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Reports smokeで、business APIへのAuthorizationが非空のBearer形式であることを追加確認する。token全文は出力しない。
 - storageStateや永続storageは使用していない。Frontend・Backend production code、DB schema/migrationは変更していない。
 - 起動済みの専用PostgreSQLへ `127.0.0.1:55432` で直接接続してreset・seedし、T-109 Login smoke 2件とReports E2E 3ブラウザー63件のPASSを確認した。UI manager Login、Login API 200、business APIのBearer形式も確認済み。T-110は完了。production業務APIのAuthentication適用はT-111、role認可は後続Taskとする。
+## 2026-09-21 T-111 production Authentication第1段階（部分実装）
+
+- `backend/src/app.ts` で既存DB poolからAuth User Repositoryを作成し、Login ServiceとAuthentication middlewareへ共有する。JWT Serviceもapp生成時に作成し、同じServiceをLoginのtoken発行とmiddlewareの検証へ渡す。JWT secretの不足・空白・32 UTF-8 bytes未満を拒否する既存仕様は維持した。
+- PublicのLogin routerと`GET /health`の後、業務routerより前に`/api/v1`共通Authentication middlewareを登録した。現在のcustomers、activities、reports APIと今後同じ境界へ登録する業務APIはAuthentication必須。roleによるAuthorization・403は追加していない。
+- 既存Backend業務API testはtest専用secret・有効JWT・active staff userを使う小さなhelperでBearerを付与し、productionと同じ認証境界を通すよう移行した。Public/Protectedのproduction経路テストを追加した。Frontend、Playwright、E2E fixture、DB migrationは変更していない。
+- 今回はBackend wiringとBackend testまで。実DB protected API確認とPlaywright 3ブラウザー63件はT-111第2段階に残るため、T-111全体は未完了。

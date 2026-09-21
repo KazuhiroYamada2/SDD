@@ -314,3 +314,9 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - T-109 Login smoke: 2 / 2 PASS。実Login APIのsuccess 200、Bearer、1800秒、manager、非空tokenと、wrong password 401 `AUTHENTICATION_FAILED` を確認した。
 - Reports E2E: Chromium先行 21 / 21 PASS。続く3ブラウザー実行はChromium 21 / 21、Firefox 21 / 21、WebKit 21 / 21、Total 63 / 63 PASS。各scenarioで実UI manager LoginのPOST 200と顧客登録画面への遷移を確認し、代表smokeでbusiness API requestの非空Bearer形式を確認した。token全文は出力していない。
 - ST 5件、CC 5件、SP 6件、RP 2件、VL 2件、Reports smoke 1件の既存業務assertionが各ブラウザーでPASS。CC-05の再訪GET 200/304、RP-02のpending後に実Backendへcontinue、VL-01の不正入力時Reports API GET 0件を維持した。Frontend・Backend production codeは変更せず、production業務APIはPublic、Authorizationは未実装。T-110 PASS。
+## 2026-09-21 T-111 production Authentication第1段階の検証（部分完了）
+
+- Backend全テスト26ファイル・130件PASS、`npm run build` PASS。
+- production app経路でBearerなしのcustomers POST、activities POST/GET、reports 3 GETが401 `AUTHENTICATION_REQUIRED`、不正Bearerも同じ401となることを確認した。BearerなしのLoginはwrong credentialsで401 `AUTHENTICATION_FAILED`、healthは200。短いJWT secretではapp生成失敗を確認した。
+- 有効JWTとactive staff userでbusiness handlerへ到達し、`request.authenticatedUser`がidと現在Repository roleのみを持つこと、role変更が次requestに反映されることを確認した。staff tokenもReportsへAuthentication上は到達し、403は実装していない。既存業務APIのresponse契約テストもBearer付きでPASS。
+- 実DB Login→protected production APIとPlaywright 3ブラウザー63件は今回未実施。T-111全体は未完了。
