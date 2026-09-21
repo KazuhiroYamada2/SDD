@@ -12,6 +12,7 @@ import { createLoginService, type LoginService } from './auth/login-service.js';
 import { createCustomersRouter } from './customers/customers-router.js';
 import { createCustomerRepository, type CustomerRepository } from './customers/customer-repository.js';
 import { database } from './db.js';
+import { handleForbiddenError } from './authorization/forbidden-error-handler.js';
 import { createCustomerCategoryRepository } from './reports/customer-category-repository.js';
 import { createCustomerCategoryService, type CustomerCategoryService } from './reports/customer-category-service.js';
 import { createReportsRouter } from './reports/reports-router.js';
@@ -72,6 +73,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   app.use('/api/v1/customers', createCustomersRouter(customerRepository));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
+  app.use(handleForbiddenError);
 
   return app;
 };

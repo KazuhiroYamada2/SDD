@@ -345,3 +345,8 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - 新規unit testは2ファイル・16/16 PASS。9操作×staff/manager/adminの全matrix、staff own/other、manager/adminのcustomer scope、未知role・operationの拒否、operation拒否時の`ForbiddenError`、403のstatus・code・messageと公開応答に内部理由がないことを確認した。
 - Backend全testは28ファイル・146/146 PASS。Backend buildはPASS。
 - policyはDB・Express非依存。production business APIへのAuthorization適用、scope外404の生成、staff顧客登録時のowner強制、Authentication→Authorization共通integration、Frontend・Playwrightは今回未実施。T-105AはPASS、T-105全体は未完了。
+
+## 2026-09-21 T-105B Authentication→Authorization共通integration検証（PASS）
+
+- T-105A unit testを再実行し、2ファイル・16/16 PASS。T-105Bの新規integration testは1ファイル・6/6 PASS。テスト専用経路でAuthenticationをAuthorizationより先に実行し、tokenなしは401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`、有効staff tokenのReports read拒否は共通error handler経由で403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`、有効manager・admin tokenはhandler到達を確認した。managerのcustomer create拒否も403。同じJWTでDB側roleをstaffからmanagerへ変更すると次requestの判定が変わり、user lookupはAuthenticationによる各request1回だけだった。
+- Backend全testは29ファイル・152/152 PASS。Backend buildはPASS。T-105共通Authorization機構はPASS。production業務APIへのAuthorization適用、customer scope外404、staff顧客登録時のowner強制、Frontend・Playwrightは未実施で、T-501/T-502/T-503以降の対象とする。

@@ -336,3 +336,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `backend/src/authorization/authorization-policy.ts`に、既存`AuthenticatedUser`と`UserRole`を使う9操作のRole × Operation判定・拒否時の`ForbiddenError`送出と、取得済みcustomerの`owner_user_id`を受け取るscope判定を追加した。未知role・operationは許可しない。staffは自担当顧客のみ、manager・adminは全顧客をscope内とする。活動履歴も親customerのownerで同じpolicyを再利用できる。
 - `backend/src/authorization/forbidden-error.ts`にHTTP 403、`FORBIDDEN`、`Forbidden.`の共通coreを追加した。公開応答へrole・owner・operation等の内部理由を含めない。
 - policyと403 coreのunit testを追加した。DB・Express・Repositoryへの依存、404生成、production routerへの適用、staff顧客登録時のowner強制は追加していない。T-105全体は未完了で、Authentication→Authorization共通integrationはT-105B、業務APIへの適用はT-501/T-502/T-503に残る。
+
+## 2026-09-21 T-105B Authentication→Authorization共通integration（完了）
+
+- `backend/src/authorization/authorization-middleware.ts`に、呼出側から`AuthorizationOperation`を受け取り、Authenticationが設定した`request.authenticatedUser`をT-105Aの`assertOperationAllowed`へ渡す`authorizeOperation`を追加した。JWT・Bearerの解析、users再検索、scope lookupは行わない。
+- `backend/src/authorization/forbidden-error-handler.ts`に、`ForbiddenError`だけをHTTP 403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`へ変換し、その他のerrorを次へ渡す共通handlerを追加した。`app.ts`では既存業務routerの後へこのhandlerを登録したが、customers・activities・reports routerにAuthorization middlewareは登録していない。
+- テスト専用Express routeで実Authentication middleware→`authorizeOperation`→handlerの順序、tokenなし401、staffのReports operation拒否403、manager・adminの許可、現在roleの反映とrequestごとのuser lookupを確認した。T-105AとT-105BによりT-105共通機構は完了。production業務APIへの閲覧・登録等の具体適用とscope外404・staff顧客登録owner強制はT-501/T-502/T-503に残る。
