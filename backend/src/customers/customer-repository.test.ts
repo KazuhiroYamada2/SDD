@@ -96,6 +96,80 @@ describe('createCustomerRepository', () => {
     expect(query).toHaveBeenNthCalledWith(2, expect.any(String), []);
   });
 
+  it('applies search, filters, security scope, pagination, and count with the same parameterized WHERE', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total_count: '0' }] });
+    const repository = createCustomerRepository({ query });
+
+    await repository.list({
+      ownerScopeUserId: '11111111-1111-4111-8111-111111111111',
+      query: 'Sample',
+      category: 'A',
+      ownerUserId: '22222222-2222-4222-8222-222222222222',
+      sort: 'created_at_desc',
+      limit: 50,
+      offset: 100,
+    });
+
+    const itemSql = query.mock.calls[0]?.[0] as string;
+    const countSql = query.mock.calls[1]?.[0] as string;
+    const sharedWhere = /WHERE deleted_at IS NULL AND owner_user_id = \$1 AND name ILIKE \$2 AND category = \$3 AND owner_user_id = \$4/;
+    expect(itemSql).toMatch(sharedWhere);
+    expect(countSql).toMatch(sharedWhere);
+    expect(itemSql).toMatch(/ORDER BY created_at DESC, id ASC[\s\S]*LIMIT \$5 OFFSET \$6/);
+    expect(query).toHaveBeenNthCalledWith(1, expect.any(String), [
+      '11111111-1111-4111-8111-111111111111',
+      '%Sample%',
+      'A',
+      '22222222-2222-4222-8222-222222222222',
+      50,
+      100,
+    ]);
+    expect(query).toHaveBeenNthCalledWith(2, expect.any(String), [
+      '11111111-1111-4111-8111-111111111111',
+      '%Sample%',
+      'A',
+      '22222222-2222-4222-8222-222222222222',
+    ]);
+  });
+
+  it.each([
+    ['name_asc', 'name ASC, id ASC'],
+    ['name_desc', 'name DESC, id ASC'],
+    ['created_at_asc', 'created_at ASC, id ASC'],
+    ['created_at_desc', 'created_at DESC, id ASC'],
+  ] as const)('uses stable ordering for %s', async (sort, expectedOrder) => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total_count: 0 }] });
+
+    await createCustomerRepository({ query }).list({ sort, limit: 20, offset: 0 });
+
+    expect(query.mock.calls[0]?.[0]).toContain(`ORDER BY ${expectedOrder}`);
+  });
+
+  it('keeps the client owner filter separate from the staff security scope', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ total_count: 0 }] });
+
+    await createCustomerRepository({ query }).list({
+      ownerScopeUserId: '11111111-1111-4111-8111-111111111111',
+      ownerUserId: '22222222-2222-4222-8222-222222222222',
+      limit: 20,
+      offset: 0,
+    });
+
+    expect(query.mock.calls[0]?.[0]).toMatch(/owner_user_id = \$1 AND owner_user_id = \$2/);
+    expect(query.mock.calls[0]?.[1]).toEqual([
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+      20,
+      0,
+    ]);
+  });
+
   it('retrieves one active customer in a single parameterized query', async () => {
     const customer = {
       id: '8a1f2d44-1234-4abc-8def-123456789abc',

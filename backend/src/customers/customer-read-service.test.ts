@@ -66,7 +66,12 @@ describe('createCustomerReadService list', () => {
       total_count: 1,
       total_pages: 1,
     });
-    expect(repository.list).toHaveBeenCalledWith({ ownerScopeUserId: staff.id, limit: 20, offset: 0 });
+    expect(repository.list).toHaveBeenCalledWith({
+      ownerScopeUserId: staff.id,
+      sort: 'name_asc',
+      limit: 20,
+      offset: 0,
+    });
   });
 
   it.each(['manager', 'admin'] as const)('returns all active customers for %s without an owner scope', async (role) => {
@@ -79,7 +84,7 @@ describe('createCustomerReadService list', () => {
     const result = await service.list({ id: staff.id, role });
 
     expect(result.items.map(({ id }) => id)).toEqual([own.id, other.id]);
-    expect(repository.list).toHaveBeenCalledWith({ limit: 20, offset: 0 });
+    expect(repository.list).toHaveBeenCalledWith({ sort: 'name_asc', limit: 20, offset: 0 });
   });
 
   it.each(['staff', 'manager', 'admin'] as const)('excludes logically deleted customers for %s', async (role) => {
@@ -87,6 +92,50 @@ describe('createCustomerReadService list', () => {
     const result = await createCustomerReadService(repository).list({ id: staff.id, role });
 
     expect(result).toEqual({ items: [], page: 1, page_size: 20, total_count: 0, total_pages: 0 });
+  });
+
+  it('passes filters, sort, and pagination to the repository and calculates metadata', async () => {
+    const list = vi.fn().mockResolvedValue({ items: [customer()], totalCount: 101 });
+    const repository: CustomerReadRepository = { list, findActiveById: vi.fn() };
+
+    const result = await createCustomerReadService(repository).list(staff, {
+      page: 3,
+      pageSize: 50,
+      query: 'Sample',
+      category: 'A',
+      ownerUserId: otherOwnerId,
+      sort: 'created_at_desc',
+    });
+
+    expect(list).toHaveBeenCalledWith({
+      ownerScopeUserId: staff.id,
+      query: 'Sample',
+      category: 'A',
+      ownerUserId: otherOwnerId,
+      sort: 'created_at_desc',
+      limit: 50,
+      offset: 100,
+    });
+    expect(result).toMatchObject({ page: 3, page_size: 50, total_count: 101, total_pages: 3 });
+  });
+
+  it.each(['manager', 'admin'] as const)('applies a client owner filter without a security scope for %s', async (role) => {
+    const list = vi.fn().mockResolvedValue({ items: [], totalCount: 0 });
+    const repository: CustomerReadRepository = { list, findActiveById: vi.fn() };
+
+    await createCustomerReadService(repository).list({ id: staff.id, role }, {
+      page: 1,
+      pageSize: 20,
+      ownerUserId: otherOwnerId,
+      sort: 'name_asc',
+    });
+
+    expect(list).toHaveBeenCalledWith({
+      ownerUserId: otherOwnerId,
+      sort: 'name_asc',
+      limit: 20,
+      offset: 0,
+    });
   });
 });
 

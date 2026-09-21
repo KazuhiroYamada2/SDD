@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { CustomerSort } from './customer-read-types.js';
 
 export type Customer = {
   id: string;
@@ -26,6 +27,10 @@ export type CustomerRepository = {
 
 export type CustomerListCriteria = {
   ownerScopeUserId?: string;
+  query?: string;
+  category?: string;
+  ownerUserId?: string;
+  sort?: CustomerSort;
   limit: number;
   offset: number;
 };
@@ -44,6 +49,13 @@ type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository
 
 const customerColumns = `id, name, name_kana, email, phone, address, category, owner_user_id,
   created_at, updated_at, deleted_at`;
+
+const orderBy: Record<CustomerSort, string> = {
+  name_asc: 'name ASC, id ASC',
+  name_desc: 'name DESC, id ASC',
+  created_at_asc: 'created_at ASC, id ASC',
+  created_at_desc: 'created_at DESC, id ASC',
+};
 
 export const createCustomerRepository = (database: Queryable): CustomerPersistenceRepository => ({
   async create(input) {
@@ -69,27 +81,37 @@ export const createCustomerRepository = (database: Queryable): CustomerPersisten
     return result.rows[0]!;
   },
   async list(criteria) {
-    const ownerFilter = criteria.ownerScopeUserId === undefined
-      ? { clause: '', values: [] as unknown[] }
-      : { clause: ' AND owner_user_id = $1', values: [criteria.ownerScopeUserId] as unknown[] };
-    const limitParameter = ownerFilter.values.length + 1;
+    const clauses = ['deleted_at IS NULL'];
+    const values: unknown[] = [];
+    const addCondition = (columnExpression: string, value: unknown) => {
+      values.push(value);
+      clauses.push(`${columnExpression} $${values.length}`);
+    };
+
+    if (criteria.ownerScopeUserId !== undefined) addCondition('owner_user_id =', criteria.ownerScopeUserId);
+    if (criteria.query !== undefined) addCondition('name ILIKE', `%${criteria.query}%`);
+    if (criteria.category !== undefined) addCondition('category =', criteria.category);
+    if (criteria.ownerUserId !== undefined) addCondition('owner_user_id =', criteria.ownerUserId);
+
+    const limitParameter = values.length + 1;
     const offsetParameter = limitParameter + 1;
-    const whereClause = `WHERE deleted_at IS NULL${ownerFilter.clause}`;
+    const whereClause = `WHERE ${clauses.join(' AND ')}`;
+    const sort = criteria.sort ?? 'name_asc';
 
     const [itemsResult, countResult] = await Promise.all([
       database.query<Customer>(
         `SELECT ${customerColumns}
         FROM customers
         ${whereClause}
-        ORDER BY name ASC, id ASC
+        ORDER BY ${orderBy[sort]}
         LIMIT $${limitParameter} OFFSET $${offsetParameter}`,
-        [...ownerFilter.values, criteria.limit, criteria.offset],
+        [...values, criteria.limit, criteria.offset],
       ),
       database.query<{ total_count: string | number }>(
         `SELECT COUNT(*) AS total_count
         FROM customers
         ${whereClause}`,
-        ownerFilter.values,
+        values,
       ),
     ]);
 

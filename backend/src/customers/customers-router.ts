@@ -6,7 +6,7 @@ import {
   customerNotFoundResponse,
   type CustomerReadService,
 } from './customer-read-service.js';
-import { validateCustomerId } from './customer-read-validation.js';
+import { validateCustomerId, validateCustomerListQuery } from './customer-read-validation.js';
 import { validateCreateCustomer } from './customer-validation.js';
 
 const customerId = (params: unknown): string | undefined =>
@@ -19,13 +19,21 @@ export const createCustomersRouter = (
   const router = Router();
 
   router.get('/', authorizeOperation('customer.read'), async (request, response) => {
+    const validation = validateCustomerListQuery(request.query);
+    if (!validation.valid) {
+      response.status(400).json({ code: 'VALIDATION_ERROR', message: validation.message });
+      return;
+    }
+
     if (customerReadService === undefined) {
       response.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Database is not configured.' });
       return;
     }
 
     try {
-      response.status(200).json(await customerReadService.list(request.authenticatedUser!));
+      response.status(200).json(
+        await customerReadService.list(request.authenticatedUser!, validation.value),
+      );
     } catch {
       response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve customers.' });
     }

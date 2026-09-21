@@ -394,3 +394,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - staff・manager・adminでdetail導線を確認した。Frontendにowner一致判定を追加せず、owner ID・deleted日時・Activity履歴をread detailへ表示・取得しない。登録成功後の既存Customer detailとActivity履歴、Customer listのloading・success・zero・error、Reports role guard、Login後初期画面、Logout・reloadの回帰を維持した。
 - Frontend全テストは11 files・126/126 PASS。`tsc -b`を含むFrontend buildはPASS。Backend、E2E、Playwrightは変更・実行していない。T-205機能は未実装。
 - T-202CはPASS。T-202A/B/Cが揃い、T-202はPASS。Browser E2Eは正式な後続T-207で行う。T-501はT-205 search scopeと最終Acceptanceを残して未完了。
+
+## 2026-09-21 T-205 Customer検索・filter・sort・pagination Backend部分検証（PASS）
+
+- Customer validation・Repository・Read Service・production APIの関連テストは4 files・76/76 PASS。page/page_sizeの指定不正9ケース、invalid sort、invalid owner UUIDが正本どおり400 `VALIDATION_ERROR`となり、Repositoryへ到達しないことを確認した。
+- queryの部分一致・大文字小文字非区別・trim・空文字、categoryの完全一致・trim・空文字、owner完全一致、複数filter AND、logical delete除外を確認した。staff security owner scopeとclient owner filterは別SQL条件でANDされ、他owner指定は200の0件。manager・adminはsecurity owner scopeなしでclient filterを適用する。
+- `name_asc`、`name_desc`、`created_at_asc`、`created_at_desc`の4 sortと各`id ASC` tie-breaker、既定`name_asc`を確認した。page/page_size、offset、scope・filter適用後のtotal_count・total_pages、最終page超過の200空items、0件metadataを確認した。items/countは同じparameterized WHEREを使用する。
+- queryなしのT-202互換動作と、Customer detail・POST、Activity、Reports、Authenticationを含むBackend全テストは34 files・243/243 PASS。Backend TypeScript buildはPASS。
+- Frontend、DB schema/migration、E2E、Playwrightは変更・実行していない。T-205 Backend部分はPASS、Frontend残のためT-205全体は未完了。T-501も最終Acceptanceを残して未完了。

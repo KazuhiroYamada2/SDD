@@ -394,3 +394,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - read detail専用の`CustomerDetailScreen`を追加し、loading、顧客名・カナ・メール・電話・住所・分類、404を含むAPI errorを表示する。Frontend独自のscope判定、owner ID・deleted日時の表示、Activity取得は追加していない。登録成功後の既存`CustomerDetail`とActivity履歴は変更せず維持した。
 - staff・manager・admin共通のdetail導線を追加した。既存の顧客登録初期画面、登録成功後detail、Customer list、Reports role guard、Logout・reloadを維持する。検索・filter・sort・paginationは実装していない。Backend、E2E、Playwrightは変更していない。
 - T-202A、T-202B、T-202C第1・第2段階が揃ったためT-202は完了。顧客CRUD・一覧・検索のPlaywrightは正式な後続T-207、検索・filter・sort・paginationはT-205に残る。T-501はT-205のsearch scopeと最終Acceptanceが残るため未完了。
+
+## 2026-09-21 T-205 Customer検索・filter・sort・pagination Backend部分（部分実装）
+
+- `GET /api/v1/customers`へ`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`のquery validationを接続した。pageは既定1・1以上、page_sizeは既定20・1～100、sortは4許可値と既定`name_asc`、ownerはUUID形式とし、正本の`VALIDATION_ERROR` messageを使用する。query/categoryはtrimし、空文字をfilterなしとする。
+- Customer Read Serviceはpage・page sizeからlimit/offsetを作り、client filter・sortと、staffだけの`ownerScopeUserId = authenticatedUser.id`を別criteriaとしてRepositoryへ渡す。manager・adminにsecurity owner scopeは付けず、client owner filterは通常filterとして渡す。
+- Customer Repositoryはlogical delete除外、case-insensitive name部分一致、category完全一致、client owner filter、security owner scopeをparameterized SQLの同一WHEREへANDし、items queryとcount queryで共有する。全件取得後filterは行わない。4 sortはallowlistからSQLへ対応させ、常に`id ASC`をtie-breakerとする。
+- query parameterなしではpage 1、page_size 20、name ASC・id ASCを維持する。Customer detail、POST、Activity、Reports、Authentication、Frontend、DB schema/migration、E2E、Playwrightは変更していない。
+- T-205 Backend部分は完了。Frontendの検索・filter・sort・pagination UIが残るためT-205全体は部分実装。T-501もCustomer search Frontendと最終Acceptanceが残るため未完了。

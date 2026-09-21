@@ -22,6 +22,24 @@ export type CustomerListResponse = {
   total_pages: number;
 };
 
+export const customerSortValues = [
+  'name_asc',
+  'name_desc',
+  'created_at_asc',
+  'created_at_desc',
+] as const;
+
+export type CustomerSort = typeof customerSortValues[number];
+
+export type CustomerListQuery = {
+  page: number;
+  pageSize: number;
+  query?: string;
+  category?: string;
+  ownerUserId?: string;
+  sort: CustomerSort;
+};
+
 export const toCustomerReadDto = (customer: Customer): CustomerReadDto => ({
   id: customer.id,
   name: customer.name,
