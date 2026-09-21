@@ -26,6 +26,7 @@ export const createManagerAuthenticatedTestApp = (dependencies: Parameters<typeo
 export const authenticatedRequest = (app: ReturnType<typeof createApp>) => ({
   get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${token}`),
   post: (path: string) => request(app).post(path).set('Authorization', `Bearer ${token}`),
+  patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${token}`),
 });
 
 export const testBearerHeader = () => `Bearer ${token}`;

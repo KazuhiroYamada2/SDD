@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
 import { CustomerDetailScreen } from './customers/CustomerDetailScreen';
+import { CustomerEditScreen } from './customers/CustomerEditScreen';
 import {
   CustomerList,
   initialCustomerListState,
@@ -24,7 +25,7 @@ type FormValues = {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'reports';
+type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'customerEdit' | 'reports';
 
 const initialValues: FormValues = {
   name: '',
@@ -77,9 +78,11 @@ function BusinessApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [customerListState, setCustomerListState] = useState<CustomerListState>(initialCustomerListState);
   const canCreateCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
+  const canEditCustomer = authentication?.user.role === 'staff' || authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -129,10 +132,21 @@ function BusinessApp() {
   }
 
   if (screen === 'customerDetail' && selectedCustomerId !== null) {
-    return <CustomerDetailScreen customerId={selectedCustomerId} onBack={() => {
+    return <CustomerDetailScreen customerId={selectedCustomerId} canEdit={canEditCustomer} onEdit={(customer) => {
+      setEditingCustomer(customer);
+      setScreen('customerEdit');
+    }} onBack={() => {
       setSelectedCustomerId(null);
       setScreen('customerList');
     }} />;
+  }
+
+  if (screen === 'customerEdit' && selectedCustomerId !== null && editingCustomer !== null) {
+    const returnToDetail = () => {
+      setEditingCustomer(null);
+      setScreen('customerDetail');
+    };
+    return <CustomerEditScreen customer={editingCustomer} onCancel={returnToDetail} onSaved={returnToDetail} />;
   }
 
   if (selectedCustomer !== null) {

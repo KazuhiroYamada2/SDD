@@ -182,6 +182,27 @@ sortは指定field・方向を第1条件、`customers.id ASC`を常に第2条件
 - `items: []`はエラーにせず「該当する顧客がありません」等、既存UI文言規約に合わせた通常の0件状態を表示する。400・404・500・network errorと既存401処理は既存Frontend error handlingを再利用し、新しいglobal error frameworkを作らない。
 - `owner_user_id` filterはBackend capabilityとしてT-205で実装するが、T-503のusers参照APIがない段階ではFrontendにUUID手入力欄またはowner選択UIを作らない。users一覧を安全に取得できる段階で必要性を再評価する。
 
+## 顧客edit API設計
+
+`PATCH /api/v1/customers/:id`は部分更新を行い、HTTP 200で更新後のCustomer read共通DTOを返す。pathの`id`は既存UUID validationを使い、形式不正はHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "id must be a UUID." }`とする。
+
+request bodyで許可するfieldは次のとおりとする。
+
+| field | JSON型 | validation・更新規則 |
+| --- | --- | --- |
+| `name` | string | trim後に空でないこと。`null`不可。顧客登録と同じvalidationを使う |
+| `name_kana` | string \| null | stringはtrimする。空文字または`null`はDBの`null`へ更新する |
+| `email` | string \| null | stringはtrimし、非空なら顧客登録と同じemail形式を検証する。空文字または`null`はDBの`null`へ更新する |
+| `phone` | string \| null | stringはtrimする。空文字または`null`はDBの`null`へ更新する |
+| `address` | string \| null | stringはtrimする。空文字または`null`はDBの`null`へ更新する |
+| `category` | string \| null | stringはtrimする。空文字または`null`はDBの`null`へ更新する |
+
+- `id`、`owner_user_id`、`created_at`、`updated_at`、`deleted_at`およびその他の未知fieldは許可しない。これらを含む場合はHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "Request body contains an unknown or non-editable field." }`を返す。
+- request bodyがJSON objectでない場合は既存契約の`Request body must be a JSON object.`、空objectの場合は`At least one editable customer field is required.`を使用する。各fieldの型・形式errorは既存のHTTP 400 `VALIDATION_ERROR`形式と顧客登録messageを再利用する。
+- 省略fieldはUPDATE対象に含めず現在値を維持する。Repositoryは許可済みfieldだけからparameterized UPDATEを構築し、`owner_user_id`をUPDATE列へ含めない。`created_at`は変更せず、`updated_at = NOW()`とし、`deleted_at IS NULL`を更新条件へ含める。更新後の全Customer read DTO列を`RETURNING`で返す。
+- middleware/service順序はAuthentication → `authorizeOperation('customer.edit')` → path/body validation → active customer取得 → `isCustomerInScope(authenticatedUser, owner_user_id)` → updateとする。managerはcustomer lookup前に403、staff scope外・customer不存在・logical deletedは同じHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`とする。Repositoryはroleを知らない。
+- FrontendはAppのscreen stateへcustomer editを追加する。Customer detailで取得済みのCustomer read DTOをform初期値に使い、保存時は許可fieldだけをPATCHする。成功後はdetail screenへ戻りproduction `GET /api/v1/customers/:id`を再実行する。キャンセルはPATCHせずdetailへ戻る。staff/adminには編集導線を表示しmanagerには表示しないが、owner一致をFrontendでsecurity判定しない。403を401へ変換せずauth stateを維持する。
+
 ## レポートResponse DTO
 
 - 売上推移は`{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "items": [{ "month": "YYYY-MM", "salesAmount": "1200000.00" }] }`を返す。売上がない月もitemsに含め、`salesAmount`は`"0.00"`とする。

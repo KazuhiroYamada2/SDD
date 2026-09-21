@@ -78,4 +78,13 @@ describe('CustomerDetailScreen', () => {
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('offers the loaded customer to a real edit operation only when allowed', async () => {
+    const onEdit = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(customer) }));
+    renderAuthenticated(<CustomerDetailScreen customerId={customerId} onBack={vi.fn()} canEdit onEdit={onEdit} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '編集' }));
+    expect(onEdit).toHaveBeenCalledWith(customer);
+  });
 });

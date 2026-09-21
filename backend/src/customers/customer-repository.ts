@@ -16,6 +16,10 @@ export type Customer = {
 };
 
 export type CreateCustomerInput = Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>;
+export type UpdateCustomerInput = Partial<Pick<
+  Customer,
+  'name' | 'name_kana' | 'email' | 'phone' | 'address' | 'category'
+>>;
 
 export type Queryable = {
   query<Result>(sql: string, values: readonly unknown[]): Promise<{ rows: Result[] }>;
@@ -45,7 +49,11 @@ export type CustomerReadRepository = {
   findActiveById(id: string): Promise<Customer | null>;
 };
 
-type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository;
+export type CustomerEditRepository = CustomerReadRepository & {
+  updateActiveById(id: string, input: UpdateCustomerInput): Promise<Customer | null>;
+};
+
+type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository & CustomerEditRepository;
 
 const customerColumns = `id, name, name_kana, email, phone, address, category, owner_user_id,
   created_at, updated_at, deleted_at`;
@@ -126,6 +134,29 @@ export const createCustomerRepository = (database: Queryable): CustomerPersisten
       FROM customers
       WHERE id = $1 AND deleted_at IS NULL`,
       [id],
+    );
+    return result.rows[0] ?? null;
+  },
+  async updateActiveById(id, input) {
+    const columnByField: Record<keyof UpdateCustomerInput, string> = {
+      name: 'name',
+      name_kana: 'name_kana',
+      email: 'email',
+      phone: 'phone',
+      address: 'address',
+      category: 'category',
+    };
+    const entries = Object.entries(input) as [keyof UpdateCustomerInput, string | null][];
+    const values: unknown[] = entries.map(([, value]) => value);
+    const assignments = entries.map(([field], index) => `${columnByField[field]} = $${index + 1}`);
+    values.push(id);
+
+    const result = await database.query<Customer>(
+      `UPDATE customers
+      SET ${assignments.join(', ')}, updated_at = NOW()
+      WHERE id = $${values.length} AND deleted_at IS NULL
+      RETURNING ${customerColumns}`,
+      values,
     );
     return result.rows[0] ?? null;
   },

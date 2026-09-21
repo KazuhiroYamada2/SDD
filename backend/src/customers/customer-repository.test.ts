@@ -201,4 +201,24 @@ describe('createCustomerRepository', () => {
 
     await expect(repository.findActiveById('8a1f2d44-1234-4abc-8def-123456789abc')).resolves.toBeNull();
   });
+
+  it('updates only supplied editable fields with a parameterized active-customer query', async () => {
+    const updated = {
+      id: '8a1f2d44-1234-4abc-8def-123456789abc', name: 'After', name_kana: null,
+      email: null, phone: null, address: null, category: 'A',
+      owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+      created_at: new Date('2026-09-01T00:00:00.000Z'), updated_at: new Date('2026-09-02T00:00:00.000Z'), deleted_at: null,
+    };
+    const query = vi.fn().mockResolvedValue({ rows: [updated] });
+    const repository = createCustomerRepository({ query });
+
+    await expect(repository.updateActiveById(updated.id, { name: 'After', category: 'A' })).resolves.toEqual(updated);
+    expect(query).toHaveBeenCalledWith(
+      expect.stringMatching(/SET name = \$1, category = \$2, updated_at = NOW\(\)[\s\S]*WHERE id = \$3 AND deleted_at IS NULL/),
+      ['After', 'A', updated.id],
+    );
+    expect(query.mock.calls[0]?.[0]).not.toContain('owner_user_id =');
+    expect(query.mock.calls[0]?.[0]).not.toContain('created_at =');
+    expect(query.mock.calls[0]?.[0]).not.toContain('deleted_at =');
+  });
 });

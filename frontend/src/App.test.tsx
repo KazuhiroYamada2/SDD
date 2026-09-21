@@ -233,6 +233,48 @@ describe('App', () => {
     expect(await screen.findByText('sales@example.com')).toBeInTheDocument();
   });
 
+  it.each<UserRole>(['staff', 'admin'])('lets %s edit a customer and refetch detail after save', async (role) => {
+    const updated = { ...customerRead, name: '更新後顧客' };
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, options?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/v1/customers?')) return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) });
+      if (url === `/api/v1/customers/${customerRead.id}` && options?.method === 'PATCH') {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(updated) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}`) {
+        const detailCalls = fetchMock.mock.calls.filter(([calledUrl, calledOptions]) =>
+          String(calledUrl) === url && (calledOptions as RequestInit | undefined)?.method !== 'PATCH').length;
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(detailCalls > 1 ? updated : customerRead) });
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await renderLoggedInApp(role);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+    fireEvent.click(await screen.findByRole('button', { name: '編集' }));
+    expect(screen.getByRole('heading', { name: '顧客情報を編集' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('担当ユーザーID')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('顧客名'), { target: { value: '更新後顧客' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存する' }));
+
+    expect(await screen.findByText('更新後顧客')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url, options]) =>
+      String(url) === `/api/v1/customers/${customerRead.id}` && (options as RequestInit | undefined)?.method === 'PATCH')).toBe(true);
+  });
+
+  it('does not show Customer edit to manager', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+    await renderLoggedInApp('manager');
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+    await screen.findByText('sales@example.com');
+    expect(screen.queryByRole('button', { name: '編集' })).not.toBeInTheDocument();
+  });
+
   it('keeps authentication and the Backend message for a Customer detail 404', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })

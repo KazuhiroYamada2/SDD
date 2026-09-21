@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthenticationRequiredError } from './authenticated-fetch';
-import { getCustomer, getCustomers } from './customers';
+import { getCustomer, getCustomers, updateCustomer } from './customers';
 
 const response = {
   items: [{
@@ -123,5 +123,34 @@ describe('getCustomer', () => {
 
     await expect(getCustomer(response.items[0].id, 'test-access-token'))
       .rejects.toBeInstanceOf(AuthenticationRequiredError);
+  });
+});
+
+describe('updateCustomer', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('PATCHes the encoded production detail endpoint with Bearer and editable fields only', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response.items[0]), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(updateCustomer('customer/id', { name: '更新後', category: null }, 'test-access-token'))
+      .resolves.toEqual(response.items[0]);
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/customers/customer%2Fid');
+    expect(options.method).toBe('PATCH');
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
+    expect(JSON.parse(String(options.body))).toEqual({ name: '更新後', category: null });
+  });
+
+  it('keeps a 403 as a normal API error rather than an authentication error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'FORBIDDEN', message: 'Forbidden.',
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } })));
+
+    await expect(updateCustomer(response.items[0].id, { name: '更新後' }, 'test-access-token'))
+      .rejects.toThrow('Forbidden.');
   });
 });

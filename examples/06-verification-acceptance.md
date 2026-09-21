@@ -428,3 +428,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Frontend関連テストは2 files・41/41 PASS。managerではCustomer登録画面とActivity登録formを表示せず、staff・adminでは登録UIを維持する。managerの顧客一覧・Activity履歴・Reports表示、既存Customer登録・401処理も維持した。
 - Backend全テストは34 files・251/251 PASS、Backend buildはPASS。Frontend全テストは11 files・137/137 PASS、`tsc -b`を含むFrontend buildはPASS。PlaywrightはT-502の今回の完了条件ではなく、T-504/T-505を先取りしないため未実施。
 - 既存production write APIへの適用はPASS。Customer edit API・画面はT-203、論理削除API・画面はT-204が未実装であり、それらへのT-502適用が残るためT-502全体は部分完了。次の正式TaskはT-203とする。
+
+## 2026-09-21 T-203 顧客編集API・編集画面検証（PASS）
+
+- Backend関連テストは5 files・47/47 PASS。staff own 200、staff other 404、manager 403、admin other owner 200、customer不存在・logical deleted 404、malformed UUID 400、tokenなし401を確認した。manager拒否時はcustomer lookup・UPDATEとも0回、staff scope外はUPDATE 0回。scope外と不存在は同じ`CUSTOMER_NOT_FOUND / Customer was not found.`を返す。
+- 部分更新で未指定fieldをUPDATE対象へ含めず、nullable fieldの`null` clear、`name`の`null`拒否、空body・未知field・`owner_user_id`の400拒否、parameterized SQL、`updated_at = NOW()`、active customer条件を確認した。既存create/read/search、Activity、Reports、Authenticationを含むBackend全テストは37 files・275/275 PASS。Backend buildはPASS。
+- Frontend関連テストは5 files・68/68 PASS。staff・adminの編集導線と保存、managerの編集導線非表示、detail値の初期表示、owner UIなし、PATCH、保存中表示、成功後のdetail GET再取得、キャンセル時PATCH 0回、error表示、403時のauth state維持を確認した。
+- Customer list/search/detail、Customer create、Reports role guard、Login初期画面、Logout/reloadを含むFrontend全テストは12 files・147/147 PASS。`tsc -b`を含むFrontend buildはPASS。E2E/PlaywrightはT-203の完了条件ではなく、T-207/T-505を先取りしないため未実施。
+- T-203はPASS。T-502はCustomer deleteがT-204待ちのため部分完了。次の正式TaskはT-204とする。

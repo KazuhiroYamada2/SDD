@@ -59,6 +59,16 @@
 - T-205のFrontendは顧客名検索、category filter、4種類のsort、page size 20・50・100、前へ・次へ、現在page表示を一覧画面へ追加する。「検索」操作でqueryとcategoryを適用し、検索実行、sort変更、page size変更時はpageを1へ戻す。ページ移動では現在の条件を維持する。0件はエラーにせず「該当する顧客がありません」等の通常状態として表示する。
 - `owner_user_id` filterはBackend API capabilityとして実装するが、T-503のusers参照APIがない段階ではFrontendへUUID手入力欄やowner選択UIを設けない。usersを安全に一覧取得できるようになった後にowner filter UIの必要性を再評価する。
 
+#### 顧客編集
+
+- 顧客編集は`PATCH /api/v1/customers/:id`で提供し、HTTP 200で更新後のCustomer read共通DTOを返す。
+- 編集可能fieldは`name`、`name_kana`、`email`、`phone`、`address`、`category`とする。`id`、`owner_user_id`、`created_at`、`updated_at`、`deleted_at`は編集できない。担当者変更機能とowner変更UIは、別途仕様が確定するまで追加しない。
+- PATCHは部分更新とし、省略したfieldは現在値を維持する。`name_kana`、`email`、`phone`、`address`、`category`は`null`で値を消去できる。DB上NOT NULLの`name`へ`null`は指定できない。文字列の型・長さ・email形式等は同じfieldの顧客登録validationを再利用し、PATCHを理由に緩和しない。任意fieldの空文字は既存登録契約と同様、trim後に`null`として扱う。
+- 空のJSON objectはHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "At least one editable customer field is required." }`とする。未知fieldまたは編集不可fieldを含むrequestはHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "Request body contains an unknown or non-editable field." }`とする。新しいerror形式は作らない。
+- 更新時に`created_at`を変更せず、`updated_at`を更新する。論理削除済み顧客は通常resourceとして扱わない。
+- `staff`は自担当顧客だけ編集でき、他担当顧客は不存在と同じHTTP 404 `CUSTOMER_NOT_FOUND`とする。`manager`はoperation-levelでHTTP 403 `FORBIDDEN`、`admin`は全active customerを編集できる。未認証はHTTP 401 `AUTHENTICATION_REQUIRED`とする。
+- Frontendは既存のstate-based navigationを使い、顧客詳細から編集画面へ進む。staffとadminに編集導線を表示し、managerには表示しない。編集画面にowner変更UIを設けず、保存成功後は詳細へ戻って`GET /api/v1/customers/:id`から更新後データを再取得する。キャンセル時は更新せず詳細へ戻る。Frontendの表示制御をBackend Authorizationの代わりにしない。
+
 ### 2. 営業活動履歴の記録
 
 - 訪問記録の登録

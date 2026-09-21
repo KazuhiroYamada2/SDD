@@ -24,6 +24,11 @@ export type Customer = {
   deleted_at: string | null;
 };
 
+export type UpdateCustomerInput = Partial<Pick<
+  Customer,
+  'name' | 'name_kana' | 'email' | 'phone' | 'address' | 'category'
+>>;
+
 export type CustomerListResponse = {
   items: Customer[];
   page: number;
@@ -106,4 +111,24 @@ export const getCustomer = async (customerId: string, accessToken: string): Prom
 
   const error = await response.json().catch((): ApiError => ({}));
   throw new Error(error.message ?? '顧客情報を取得できませんでした。');
+};
+
+export const updateCustomer = async (
+  customerId: string,
+  input: UpdateCustomerInput,
+  accessToken: string,
+): Promise<Customer> => {
+  const response = await authenticatedFetch(
+    `${apiBaseUrl}/api/v1/customers/${encodeURIComponent(customerId)}`,
+    accessToken,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
+
+  if (response.ok) return response.json() as Promise<Customer>;
+  const error = await response.json().catch((): ApiError => ({}));
+  throw new Error(error.message ?? '顧客情報を更新できませんでした。');
 };

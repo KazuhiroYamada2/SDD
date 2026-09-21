@@ -60,7 +60,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | --- | --- | --- | --- | --- |
 | T-201 | 顧客登録APIと登録画面を実装 | F-01 | T-103、T-106、T-107 | 高 |
 | T-202 | `GET /api/v1/customers`一覧APIと`GET /api/v1/customers/:id`詳細API、一覧画面、詳細へのstate-based導線と一覧へ戻る操作を実装する。既存顧客登録成功応答と同じCustomer read共通DTOを使用し、一覧はpagination envelopeを返す。T-501の閲覧scopeを同時適用し、staff一覧は自担当だけ、staffの他担当詳細は不存在と同じ404、manager・adminは全顧客とする。論理削除済み顧客は一覧から除外し詳細を404とし、unrestrictedなproduction GET APIを作らない | F-05、F-12 | T-201、T-105 | 高 |
-| T-203 | 顧客編集APIと編集画面を実装 | F-02 | T-202、T-105、T-107 | 高 |
+| T-203 | `PATCH /api/v1/customers/:id`の部分更新APIとstate-based編集画面を実装する。編集可能fieldは`name`、`name_kana`、`email`、`phone`、`address`、`category`に限定し、owner変更は含めない。T-502の`customer.edit`を同時適用し、staffは自担当のみ、managerはlookup前に403、adminは全active customer、staff scope外・不存在・logical deletedは同じ404とする。保存後はdetail APIから再取得し、キャンセルは更新せず詳細へ戻る | F-02、F-13 | T-202、T-105、T-107 | 高 |
 | T-204 | 顧客論理削除APIと削除確認画面を実装 | F-03 | T-203、T-105 | 高 |
 | T-205 | T-202の`GET /api/v1/customers`へ顧客名query、category・owner_user_id filter、4種類の安定sort、page/page_sizeとmetadataを実装し、一覧画面へ検索操作、category、sort、20・50・100件、前後page、0件表示を追加する。条件はANDとし、staffのowner security scopeをSQLへ同時適用する。owner_user_idはBackend API capabilityに留め、T-503前にUUID手入力またはowner選択UIを追加しない | F-04、F-05、F-12 | T-202 | 高 |
 | T-206 | 顧客情報の入力エラー、重複、権限エラーを実装 | F-01〜F-05 | T-201〜T-205 | 高 |
@@ -95,7 +95,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
 | T-501 | 閲覧権限をAPIと画面に適用する。顧客一覧・検索・詳細、活動履歴一覧、Reports 3種が対象。現行APIの`GET /api/v1/customers/:customerId/activities`とReports 3 GETに適用し、staffの親顧客scope外は不存在と同じ404、staffのReportsは403、manager・adminのReportsは全社・全担当者とする。顧客一覧・詳細はT-202、検索はT-205のAPI実装と同時に適用し、staffの一覧・検索はowner scopeをSQL条件へ含め、staffの他担当詳細は`CUSTOMER_NOT_FOUND`とする。Reports、Activity GET、Customer list/detail/searchが揃った後にT-501を最終判定する。ユーザー参照はT-503で扱う | F-12 | T-003、T-105 | 高 |
-| T-502 | 登録・編集・削除権限をAPIと画面に適用する。現行APIの`POST /api/v1/customers`ではstaffの保存ownerを認証済み本人へ強制しmanagerを403、adminには既存owner指定を認める。`POST /api/v1/customers/:customerId/activities`ではstaffは自担当顧客のみ、managerは403、adminは全顧客とし、staff scope外は不存在と同じ404にする。将来の顧客編集・論理削除にも適用する。活動の`user_id`の意味は変更しない | F-01、F-02、F-03、F-06、F-13 | T-501 | 高 |
+| T-502 | 登録・編集・削除権限をAPIと画面に適用する。`POST /api/v1/customers`ではstaffの保存ownerを認証済み本人へ強制しmanagerを403、adminには既存owner指定を認める。`POST /api/v1/customers/:customerId/activities`ではstaffは自担当顧客のみ、managerは403、adminは全顧客とし、staff scope外は不存在と同じ404にする。T-203の`PATCH /api/v1/customers/:id`ではstaffは自担当のみ、managerはlookup前に403、adminは全active customerとし、owner変更を認めない。顧客論理削除はT-204実装時に適用する。活動の`user_id`の意味は変更しない | F-01、F-02、F-03、F-06、F-13 | T-501 | 高 |
 | T-503 | 管理者によるユーザー参照・role変更APIと権限を実装する。staff・managerの両操作は403とし、ユーザー新規登録やrole以外の情報変更は含めない | F-14 | T-501 | 高 |
 | T-504 | staff・manager・admin別に顧客・活動履歴・ReportsのBackend/APIアクセスを検証する。operationの許可・403、staffの自担当・他担当（不存在と同じ404）、staff Reports 403を含む | F-12〜F-14 | T-501〜T-503 | 高 |
 | T-505 | 401・403とFrontend画面表示をPlaywrightで検証する。画面上の非表示をBackendの認可強制の代わりにしない | F-12〜F-14、N-03 | T-504 | 高 |

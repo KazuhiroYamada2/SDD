@@ -427,3 +427,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Activity createは既存customer reference取得を再利用し、取得済み`owner_user_id`をT-105の`isCustomerInScope`へ渡す。staff ownとadminを許可し、staff otherとcustomer不存在は同じ404 `CUSTOMER_NOT_FOUND`とする。正常時・scope外・不存在ともcustomer lookupは1回で、scope外・不存在ではuser lookupとactivity createを行わない。活動の`user_id`契約は変更していない。
 - FrontendはmanagerのCustomer登録画面とActivity登録formを非表示にし、顧客一覧・Activity履歴・Reportsのread導線は維持した。staff・adminには既存登録UIを維持する。Backend enforcementをsecurity boundaryとし、JWT decodeやFrontend独自scope判定は追加していない。
 - Customer editと論理削除のproduction API・画面は未実装で、それぞれ正式Task T-203・T-204の対象であるため今回新設していない。既存production write APIへのT-502適用は完了したが、将来のedit/delete適用が残るためT-502は部分完了とする。次の正式TaskはT-203とする。
+
+## 2026-09-21 T-203 顧客編集API・編集画面（完了）
+
+- `PATCH /api/v1/customers/:id`をproductionへ追加した。`name`、`name_kana`、`email`、`phone`、`address`、`category`だけを部分更新し、省略fieldは維持する。任意fieldは`null`またはtrim後空文字でclearできる。`owner_user_id`を含む編集不可・未知field、空body、requiredの`name`への`null`は既存形式の400 `VALIDATION_ERROR`とする。
+- Repositoryは許可済みfieldだけからparameterized UPDATEを構築し、`owner_user_id`・`created_at`・`deleted_at`を更新対象に含めない。active customerだけを更新して`updated_at`を更新し、更新後のCustomer read DTOを200で返す。Repositoryにrole判定は追加していない。
+- PATCHへ`authorizeOperation('customer.edit')`を適用した。managerはvalidation・customer lookup前に403、staffはactive customer取得後に既存`isCustomerInScope`でownerを判定し、他担当は不存在・logical deletedと同じ404 `CUSTOMER_NOT_FOUND`、adminは全active customerを編集可能とした。staff scope外ではUPDATEを実行しない。
+- FrontendへCustomer edit API clientとstate-based編集画面を追加した。詳細で取得済みのbusiness fieldを初期値にし、staff・adminには編集導線を表示、managerには表示しない。owner変更UIやFrontend owner scope判定は追加していない。保存成功後はdetailへ戻ってproduction GETで再取得し、キャンセルはPATCHせずdetailへ戻る。403は通常API errorとして表示し、auth stateを破棄しない。
+- T-203は完了。T-502はCustomer create、Activity create、Customer editまで完了し、Customer delete AuthorizationがT-204待ちのため部分完了を維持する。DELETE、owner reassignment、T-503～T-505、E2E/Playwrightは実装していない。
