@@ -363,3 +363,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Activity Reference Repositoryへ、customerの`id`と`owner_user_id`を1 queryで取得する`findCustomerReference`を追加した。既存`customerExists`はPOST用に維持し、Repositoryにはrole・Authorization判定を入れていない。
 - GET Serviceは既存`AuthenticatedUser`を受け取り、取得済みownerをT-105の`isCustomerInScope`へ渡す。customer不存在とstaff scope外のどちらも同じ`CustomerNotFoundError`へ変換し、activity queryを実行しない。manager・adminはownerを問わず許可する。
 - 正常GETはcustomer reference 1 queryとactivities 1 query。認可用の追加customer lookupはない。活動の`user_id`契約、Frontend、Reports、Customers、Authentication、E2E、Playwrightは変更していない。T-501Bは完了。未実装の顧客一覧・検索・詳細への適用と最終回帰が残るためT-501全体は未完了。
+
+## 2026-09-21 T-202A Customer list/detail Backend core（完了）
+
+- 既存Customer永続化型とは別に、登録成功応答と同じ11 fieldを持つCustomer read DTOとlist pagination envelope型を追加した。Repositoryの`Date`はService境界でISO 8601文字列へ変換し、HTTP公開型がRepository entityへ直接依存しない構成とした。
+- Customer Read Repositoryへ、通常read用のlistとdetail取得を追加した。listは`deleted_at IS NULL`、既定の`name ASC, id ASC`、20件をSQLで適用し、staff用owner scopeを任意の検索条件として受け取る。scope適用後のcountも同じ条件で取得する。detailは`id`と`deleted_at IS NULL`を1 queryで確認する。Repositoryはrole・AuthenticatedUser・Authorization policyを参照しない。
+- Customer Read Serviceは既存`AuthenticatedUser`とT-105の`customer.read`・`isCustomerInScope`を使用する。staff listだけowner scopeをRepositoryへ渡し、manager・adminはowner scopeなしとする。detailの不存在、logical deleted、staff scope外は同じ`CustomerNotFoundError`と`CUSTOMER_NOT_FOUND / Customer was not found.`へ統一した。
+- Detail path用UUID validationを追加した。T-205固有のquery・category・owner filter・sort・pagination query validationは先取りしていない。Production router、`app.ts`、Frontend、DB schema、migrationは変更しておらず、unrestrictedなCustomer GET APIは存在しない。
+- Customer Repository・Service・validationのunit testを追加し、関連3 files 25 tests、Backend全33 files 190 tests、TypeScript buildのPASSを確認した。T-202Aは完了。Production router/API testとFrontendはT-202の後続段階に残る。
