@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
+import { CustomerDetailScreen } from './customers/CustomerDetailScreen';
 import { CustomerList } from './customers/CustomerList';
 import { ReportsPage } from './reports/ReportsPage';
 import { AuthProvider, useAuthentication } from './auth/AuthContext';
@@ -19,7 +20,7 @@ type FormValues = {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-type Screen = 'customerRegistration' | 'customerList' | 'reports';
+type Screen = 'customerRegistration' | 'customerList' | 'customerDetail' | 'reports';
 
 const initialValues: FormValues = {
   name: '',
@@ -71,6 +72,7 @@ function BusinessApp() {
   const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
@@ -109,7 +111,20 @@ function BusinessApp() {
   }
 
   if (screen === 'customerList') {
-    return <CustomerList onBack={() => setScreen('customerRegistration')} />;
+    return <CustomerList
+      onBack={() => setScreen('customerRegistration')}
+      onSelectCustomer={(customerId) => {
+        setSelectedCustomerId(customerId);
+        setScreen('customerDetail');
+      }}
+    />;
+  }
+
+  if (screen === 'customerDetail' && selectedCustomerId !== null) {
+    return <CustomerDetailScreen customerId={selectedCustomerId} onBack={() => {
+      setSelectedCustomerId(null);
+      setScreen('customerList');
+    }} />;
   }
 
   if (selectedCustomer !== null) {

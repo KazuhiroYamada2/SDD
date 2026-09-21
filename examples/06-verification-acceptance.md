@@ -386,3 +386,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - staff・manager・adminの顧客一覧入口表示、state-based navigation、顧客名・分類のsuccess表示、loading、0件、API errorを確認した。staff向けmock responseに別ownerのitemを含めても表示されることから、Frontendでowner後filterを行っていないことを確認した。403では認証状態とLogoutを維持する。
 - App回帰でLogin後の顧客登録初期画面と登録処理、staffのReports非表示、manager・adminのReports表示を維持した。Frontend全テストは10 files・111/111 PASS。`tsc -b`を含むFrontend buildはPASS。sandbox内buildはVite子processの`spawn EPERM`で停止したため、同じcommandを制限外で再実行して正常完了した。
 - Backend、E2E、Playwrightは変更・実行していない。T-205の検索・filter・sort・paginationとCustomer detail導線は未実装。T-202Cは未完了、T-202全体も未完了。
+
+## 2026-09-21 T-202C第2段階 Customer detail Frontend検証（PASS）
+
+- 関連テストはCustomer API client、Customer list、read detail、App、既存Activity履歴の5 files・52/52 PASS。detail clientのBearer、queryなし、customer IDのURL encode、200 DTO、404 message、共通Authentication 401への接続を確認した。
+- 一覧→選択ID→production detail再取得→一覧のstate-based導線、detail loading・success・404・500・network errorを確認した。404 `CUSTOMER_NOT_FOUND / Customer was not found.`では認証状態とLogoutを維持し、Loginへ遷移しない。401だけは既存共通処理でLoginへ戻る。
+- staff・manager・adminでdetail導線を確認した。Frontendにowner一致判定を追加せず、owner ID・deleted日時・Activity履歴をread detailへ表示・取得しない。登録成功後の既存Customer detailとActivity履歴、Customer listのloading・success・zero・error、Reports role guard、Login後初期画面、Logout・reloadの回帰を維持した。
+- Frontend全テストは11 files・126/126 PASS。`tsc -b`を含むFrontend buildはPASS。Backend、E2E、Playwrightは変更・実行していない。T-205機能は未実装。
+- T-202CはPASS。T-202A/B/Cが揃い、T-202はPASS。Browser E2Eは正式な後続T-207で行う。T-501はT-205 search scopeと最終Acceptanceを残して未完了。

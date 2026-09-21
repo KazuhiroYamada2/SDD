@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../auth/AuthContext';
 import { testAuthentication } from '../test/render-authenticated';
@@ -18,12 +18,12 @@ const customer = {
   deleted_at: null,
 };
 
-const renderList = () => render(
+const renderList = (onSelectCustomer = vi.fn()) => render(
   <AuthProvider initialAuthentication={{
     ...testAuthentication,
     user: { ...testAuthentication.user, role: 'staff' },
   }}>
-    <CustomerList onBack={vi.fn()} />
+    <CustomerList onBack={vi.fn()} onSelectCustomer={onSelectCustomer} />
   </AuthProvider>,
 );
 
@@ -47,6 +47,21 @@ describe('CustomerList', () => {
     expect(screen.getByRole('cell', { name: '株式会社サンプル' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '重点顧客' })).toBeInTheDocument();
     expect(screen.queryByText('other-owner-id')).not.toBeInTheDocument();
+  });
+
+  it('uses the selected customer ID for the real detail operation', async () => {
+    const onSelectCustomer = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        items: [customer], page: 1, page_size: 20, total_count: 1, total_pages: 1,
+      }),
+    }));
+    renderList(onSelectCustomer);
+
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+
+    expect(onSelectCustomer).toHaveBeenCalledWith(customer.id);
   });
 
   it('shows loading while the list request is pending', () => {

@@ -34,6 +34,26 @@ const customer = {
   owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
 };
 
+const customerRead = {
+  ...customer,
+  name_kana: 'カブシキガイシャサンプル',
+  email: 'sales@example.com',
+  phone: '03-1234-5678',
+  address: '東京都千代田区',
+  category: 'A',
+  created_at: '2026-09-21T00:00:00.000Z',
+  updated_at: '2026-09-21T00:00:00.000Z',
+  deleted_at: null,
+};
+
+const customerListResponse = {
+  items: [customerRead],
+  page: 1,
+  page_size: 20,
+  total_count: 1,
+  total_pages: 1,
+};
+
 const authenticationRequired = () => new Response(JSON.stringify({
   code: 'AUTHENTICATION_REQUIRED', message: 'Authentication required.',
 }), { status: 401, headers: { 'Content-Type': 'application/json' } });
@@ -97,6 +117,80 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Forbidden.');
     expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'ログイン' })).not.toBeInTheDocument();
+  });
+
+  it('navigates list to production detail by ID and returns to a refetched list', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/v1/customers') {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+
+    expect(await screen.findByText('sales@example.com')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/customers',
+      `/api/v1/customers/${customerRead.id}`,
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧へ戻る' }));
+    expect(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/customers',
+      `/api/v1/customers/${customerRead.id}`,
+      '/api/v1/customers',
+    ]);
+  });
+
+  it.each<UserRole>(['manager', 'admin'])('lets %s navigate from the list to Customer detail', async (role) => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+    await renderLoggedInApp(role);
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+
+    expect(await screen.findByText('sales@example.com')).toBeInTheDocument();
+  });
+
+  it('keeps authentication and the Backend message for a Customer detail 404', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: vi.fn().mockResolvedValue({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' }),
+      }));
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Customer was not found.');
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'ログイン' })).not.toBeInTheDocument();
+  });
+
+  it('returns to Login through the common flow for a Customer detail Authentication 401', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
+      .mockResolvedValueOnce(authenticationRequired()));
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('再度ログインしてください。');
   });
 
   it('switches to the report screen and returns to the customer registration screen', async () => {

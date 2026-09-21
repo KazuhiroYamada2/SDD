@@ -386,3 +386,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `CustomerList` componentを追加し、取得中、顧客名・分類の一覧、0件、API errorを表示する。staffを含めFrontendでownerやlogical deleteによる後filterは行わず、Backend Authorization済みのitemsを表示する。詳細のダミー操作は置かず、詳細取得と導線はT-202C第2段階へ残した。
 - `App.tsx`の既存state-based navigationへ全role共通の顧客一覧入口と登録画面へ戻る遷移を追加した。Login後の初期画面、顧客登録、staffのReports非表示、manager・adminのReports表示は維持する。React Router、検索・filter・sort・pagination、Frontend独自の401/403処理は追加していない。
 - API client、一覧component、Appのテストを追加・更新した。Backend、E2E、Playwrightは変更していない。T-202Cは部分実装、T-202全体は未完了。
+
+## 2026-09-21 T-202C第2段階 Customer detail Frontend（完了）
+
+- Customer API clientへ`GET /api/v1/customers/:id`を追加し、customer IDをURL encodeして共通`authenticatedFetch`でBearerを付与する。404はBackendの公開messageをそのまま通常errorとして扱い、401は既存の共通再認証処理へ渡す。
+- Customer listの各行へ実動作を持つ詳細操作を追加した。Appのstate-based navigationで選択customer IDだけを保持し、一覧objectを代用せずproduction detail APIから再取得する。詳細から一覧へ戻る際はIDをclearし、現在のT-202構成では一覧を再取得する。
+- read detail専用の`CustomerDetailScreen`を追加し、loading、顧客名・カナ・メール・電話・住所・分類、404を含むAPI errorを表示する。Frontend独自のscope判定、owner ID・deleted日時の表示、Activity取得は追加していない。登録成功後の既存`CustomerDetail`とActivity履歴は変更せず維持した。
+- staff・manager・admin共通のdetail導線を追加した。既存の顧客登録初期画面、登録成功後detail、Customer list、Reports role guard、Logout・reloadを維持する。検索・filter・sort・paginationは実装していない。Backend、E2E、Playwrightは変更していない。
+- T-202A、T-202B、T-202C第1・第2段階が揃ったためT-202は完了。顧客CRUD・一覧・検索のPlaywrightは正式な後続T-207、検索・filter・sort・paginationはT-205に残る。T-501はT-205のsearch scopeと最終Acceptanceが残るため未完了。

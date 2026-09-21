@@ -64,3 +64,17 @@ export const getCustomers = async (accessToken: string): Promise<CustomerListRes
   const error = await response.json().catch((): ApiError => ({}));
   throw new Error(error.message ?? '顧客一覧を取得できませんでした。');
 };
+
+export const getCustomer = async (customerId: string, accessToken: string): Promise<Customer> => {
+  const response = await authenticatedFetch(
+    `${apiBaseUrl}/api/v1/customers/${encodeURIComponent(customerId)}`,
+    accessToken,
+  );
+
+  if (response.ok) {
+    return response.json() as Promise<Customer>;
+  }
+
+  const error = await response.json().catch((): ApiError => ({}));
+  throw new Error(error.message ?? '顧客情報を取得できませんでした。');
+};

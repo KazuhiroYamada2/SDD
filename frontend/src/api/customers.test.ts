@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthenticationRequiredError } from './authenticated-fetch';
-import { getCustomers } from './customers';
+import { getCustomer, getCustomers } from './customers';
 
 const response = {
   items: [{
@@ -48,5 +48,44 @@ describe('getCustomers', () => {
     }), { status: 401, headers: { 'Content-Type': 'application/json' } })));
 
     await expect(getCustomers('test-access-token')).rejects.toBeInstanceOf(AuthenticationRequiredError);
+  });
+});
+
+describe('getCustomer', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('requests the encoded production detail endpoint with Bearer and parses the DTO', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response.items[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getCustomer('customer/id', 'test-access-token')).resolves.toEqual(response.items[0]);
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/customers/customer%2Fid');
+    expect(url).not.toContain('?');
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
+  });
+
+  it('uses the Backend message for a Customer not found response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'CUSTOMER_NOT_FOUND',
+      message: 'Customer was not found.',
+    }), { status: 404, headers: { 'Content-Type': 'application/json' } })));
+
+    await expect(getCustomer(response.items[0].id, 'test-access-token'))
+      .rejects.toThrow('Customer was not found.');
+  });
+
+  it('passes the contracted Authentication 401 to the common authentication flow', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'AUTHENTICATION_REQUIRED',
+      message: 'Authentication required.',
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } })));
+
+    await expect(getCustomer(response.items[0].id, 'test-access-token'))
+      .rejects.toBeInstanceOf(AuthenticationRequiredError);
   });
 });

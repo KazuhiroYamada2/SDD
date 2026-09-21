@@ -4,9 +4,10 @@ import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
 
 type Props = {
   onBack: () => void;
+  onSelectCustomer: (customerId: string) => void;
 };
 
-export function CustomerList({ onBack }: Props) {
+export function CustomerList({ onBack, onSelectCustomer }: Props) {
   const runAuthenticated = useAuthenticatedApi();
   const [customers, setCustomers] = useState<CustomerListResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +52,7 @@ export function CustomerList({ onBack }: Props) {
               <tr>
                 <th scope="col">顧客名</th>
                 <th scope="col">分類</th>
+                <th scope="col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -58,6 +60,13 @@ export function CustomerList({ onBack }: Props) {
                 <tr key={customer.id}>
                   <td>{customer.name}</td>
                   <td>{customer.category ?? '未分類'}</td>
+                  <td>
+                    <button
+                      type="button"
+                      aria-label={`${customer.name}の詳細を表示`}
+                      onClick={() => onSelectCustomer(customer.id)}
+                    >詳細</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
