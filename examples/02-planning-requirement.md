@@ -41,6 +41,24 @@
 - 顧客情報の検索・フィルタリング
 - 顧客情報の一覧表示
 
+#### 顧客一覧・検索・詳細
+
+- 顧客一覧は`GET /api/v1/customers`、顧客詳細は`GET /api/v1/customers/:id`で提供する。一覧と検索は別APIに分けず、一覧APIのquery parameterで検索・フィルタリング・ソート・ページングを行う。
+- 一覧・詳細で返すCustomer read共通DTOは、既存の顧客登録成功応答と同じ`id`、`name`、`name_kana`、`email`、`phone`、`address`、`category`、`owner_user_id`、`created_at`、`updated_at`、`deleted_at`とする。`name`を顧客の主表示名とする。日時は既存JSON応答と同じISO 8601文字列、任意項目と`deleted_at`は値がない場合`null`とする。DBの内部列を追加公開せず、一覧と詳細でfield setを分けない。
+- 顧客詳細の成功時はHTTP 200でCustomer read共通DTO 1件を返す。
+- 顧客一覧はHTTP 200で`items`、`page`、`page_size`、`total_count`、`total_pages`を持つenvelopeを返す。`items`は現在pageのCustomer read共通DTO、`total_count`は権限scope・検索・filter適用後の全件数、`total_pages`は`ceil(total_count / page_size)`とする。0件時は`items: []`、`total_pages: 0`とする。
+- `page`は既定値1、1以上の整数とする。`page_size`は既定値20、1以上100以下の整数とする。最終pageを超えた場合もHTTP 200とし、`items: []`および要求された`page`と適用済みmetadataを返す。
+- `sort`は`name_asc`、`name_desc`、`created_at_asc`、`created_at_desc`だけを許可し、既定値は`name_asc`とする。いずれも同値時は`id`昇順を第2 sort条件として安定した順序を保証する。
+- `query`は顧客の主表示名である`name`だけを対象に、大文字小文字を区別しない部分一致検索を行う。前後空白を除去し、空文字になった場合はquery filterなしとして扱う。email、電話番号、住所、ID等を横断検索しない。
+- `category`は前後空白を除去した完全一致filterとし、空文字はfilterなしとして扱う。categoryは自由入力値であり、該当値が存在しない場合はHTTP 200で0件を返す。
+- `owner_user_id`はUUID形式の完全一致filterとする。形式が正しく該当userまたは顧客が存在しない場合はHTTP 200で0件を返す。形式不正はHTTP 400とする。
+- `query`、`category`、`owner_user_id`はANDで組み合わせる。staffではさらに`customers.owner_user_id = authenticatedUser.id`をsecurity scopeとしてANDするため、他者の`owner_user_id`を指定しても他者の顧客を返さず、0件になり得る。これは403ではない。managerとadminにはownerによるsecurity filterを設けない。
+- `page`または`page_size`が0、負数、非整数、数値として解釈不能の場合、`page_size`が101以上の場合、`sort`が許可値以外の場合、`owner_user_id`がUUID形式でない場合は、既存のHTTP 400 `{ "code": "VALIDATION_ERROR", "message": "<入力項目に対応する説明>" }`形式を返す。
+- 論理削除済み顧客はroleを問わず通常の一覧・検索から除外し、詳細では存在しないものとして扱う。顧客自体が存在しない場合、staffが他staff担当顧客を指定した場合、論理削除済み顧客を指定した場合は、すべてHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`を返す。
+- T-202のFrontendは既存のstate-based screen switchingを維持して顧客一覧と詳細を提供する。一覧の最小表示は顧客名、category、詳細へ進む操作とし、選択したcustomer idで詳細APIを呼ぶ。詳細から一覧へ戻る操作を提供し、後続のT-205で検索・ページ状態を追加した後も戻る際に一覧状態を保持できる構成とする。ownerの氏名・emailを取得するAPIや`owner_user_id`の技術値を一覧へ追加表示しない。
+- T-205のFrontendは顧客名検索、category filter、4種類のsort、page size 20・50・100、前へ・次へ、現在page表示を一覧画面へ追加する。「検索」操作でqueryとcategoryを適用し、検索実行、sort変更、page size変更時はpageを1へ戻す。ページ移動では現在の条件を維持する。0件はエラーにせず「該当する顧客がありません」等の通常状態として表示する。
+- `owner_user_id` filterはBackend API capabilityとして実装するが、T-503のusers参照APIがない段階ではFrontendへUUID手入力欄やowner選択UIを設けない。usersを安全に一覧取得できるようになった後にowner filter UIの必要性を再評価する。
+
 ### 2. 営業活動履歴の記録
 
 - 訪問記録の登録

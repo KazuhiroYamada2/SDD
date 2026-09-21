@@ -90,7 +90,97 @@ Phase 1では`POST /api/v1/auth/login`と`GET /health`をPublicとし、その�
 | `GET /api/v1/reports/staff-performance?from=YYYY-MM-DD&to=YYYY-MM-DD` | 営業担当者別実績 | F-11、F-12 |
 | `GET /users`、`PATCH /users/:id/role` | ユーザー・権限管理 | F-12〜F-14 |
 
-一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。`page_size`の上限は100とする。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けず、`from`または`to`がquery parameterに存在する場合は値が空でもHTTP 400を返す。期間queryがない場合は現在の有効顧客のスナップショットをHTTP 200で返す。
+一覧APIは`page`、`page_size`、`query`、`category`、`owner_user_id`、`sort`を受け付ける。顧客一覧・検索・詳細の確定契約は後述の「顧客read API設計」に従う。売上推移および営業担当者別実績APIは`from`、`to`を`YYYY-MM-DD`形式で必須とし、期間外のデータを集計しない。顧客分類集計APIは期間を受け付けず、`from`または`to`がquery parameterに存在する場合は値が空でもHTTP 400を返す。期間queryがない場合は現在の有効顧客のスナップショットをHTTP 200で返す。
+
+## 顧客read API設計
+
+### Customer read共通DTO
+
+既存の`POST /api/v1/customers`成功応答で公開済みのfield setを一覧・詳細で共用する。新しいbusiness fieldやDB内部fieldを追加せず、一覧用summaryと詳細用DTOへ分けない。
+
+| field | JSON型 | 内容 |
+| --- | --- | --- |
+| `id` | string（UUID） | customer ID |
+| `name` | string | 顧客の主表示名 |
+| `name_kana` | string \| null | 顧客名カナ |
+| `email` | string \| null | メールアドレス |
+| `phone` | string \| null | 電話番号 |
+| `address` | string \| null | 住所 |
+| `category` | string \| null | 顧客分類 |
+| `owner_user_id` | string（UUID） | 担当user ID |
+| `created_at` | string（ISO 8601） | 登録日時 |
+| `updated_at` | string（ISO 8601） | 更新日時 |
+| `deleted_at` | string（ISO 8601）\| null | 論理削除日時。通常readでは有効顧客だけを返すため`null` |
+
+`GET /api/v1/customers/:id`はHTTP 200でCustomer read共通DTO 1件を返す。`GET /api/v1/customers`は次のenvelopeを返す。
+
+```json
+{
+  "items": [
+    {
+      "id": "8a1f2d44-1234-4abc-8def-123456789abc",
+      "name": "株式会社サンプル",
+      "name_kana": "カブシキガイシャサンプル",
+      "email": "sales@example.com",
+      "phone": "03-1234-5678",
+      "address": "東京都千代田区",
+      "category": "既存顧客",
+      "owner_user_id": "c0a80101-1234-4abc-8def-123456789abc",
+      "created_at": "2026-09-13T00:00:00.000Z",
+      "updated_at": "2026-09-13T00:00:00.000Z",
+      "deleted_at": null
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total_count": 123,
+  "total_pages": 7
+}
+```
+
+`total_count`はAuthorization scope、query、filter適用後の全件数とし、`total_pages = ceil(total_count / page_size)`とする。0件は`items: []`、`total_count: 0`、`total_pages: 0`を返す。要求pageが最終pageを超えても404にせずHTTP 200とし、空の`items`、要求された`page`、適用された`page_size`、実際の`total_count`と`total_pages`を返す。
+
+### Query validation・検索・sort
+
+| parameter | default | validation・挙動 |
+| --- | --- | --- |
+| `page` | `1` | 1以上の整数 |
+| `page_size` | `20` | 1以上100以下の整数。APIは範囲内の任意整数を許可する |
+| `query` | filterなし | trim後、`customers.name`へのcase-insensitive partial match。trim後空文字はfilterなし |
+| `category` | filterなし | trim後、`customers.category`への完全一致。trim後空文字はfilterなし |
+| `owner_user_id` | filterなし | UUID形式の完全一致。UUIDとして正しく対象がない場合は0件 |
+| `sort` | `name_asc` | `name_asc`、`name_desc`、`created_at_asc`、`created_at_desc`だけを許可 |
+
+`name`はschemaと既存Customer APIに存在する顧客の主表示名であり、`query`の対象をemail、phone、address、ID等へ広げない。categoryにはmaster制約がないため、存在しない値はHTTP 200の0件とする。`query`、`category`、`owner_user_id`はANDで結合し、staffのowner security scopeもANDする。
+
+sortは指定field・方向を第1条件、`customers.id ASC`を常に第2条件として安定させ、DBの自然順に依存しない。Frontendのpage size選択肢は20、50、100とする。
+
+不正queryは既存validation error形式を再利用し、HTTP 400 `{ "code": "VALIDATION_ERROR", "message": "<入力項目に対応する説明>" }`を返す。実装時のmessageは次を使用する。
+
+| 条件 | message |
+| --- | --- |
+| `page`が0、負数、非整数、数値として解釈不能 | `page must be a positive integer.` |
+| `page_size`が0、負数、非整数、101以上、数値として解釈不能 | `page_size must be an integer between 1 and 100.` |
+| `sort`が許可値以外 | `sort must be one of name_asc, name_desc, created_at_asc, created_at_desc.` |
+| `owner_user_id`がUUID形式でない | `owner_user_id must be a UUID.` |
+
+### logical delete・Authorization・Repository責務
+
+- list/search queryは常に`customers.deleted_at IS NULL`を適用する。detailも`deleted_at IS NULL`のcustomerだけを取得対象とする。削除済みcustomerはadminを含む全roleで通常readから取得できない。
+- list/searchではstaffの`owner_user_id = authenticatedUser.id`をServiceがsecurity検索条件へ変換し、Repositoryへ渡す。Repositoryはroleや`AuthenticatedUser`を知らず、受け取ったowner scope・query・filter・sort・paginationだけでparameterized SQLとscope適用後のcount queryを構築する。manager/adminにはowner security scopeを渡さない。全件取得後のFrontendまたはService filteringは禁止する。
+- clientの`owner_user_id` filterとsecurity scopeは別に保持してANDする。staffが他者のIDを指定した場合もscopeを緩めず0件を返し、403にはしない。
+- detailはcustomerを1回取得し、存在と`deleted_at IS NULL`を確認した後、取得済み`owner_user_id`と`request.authenticatedUser`をT-105の`isCustomerInScope`へ渡す。Repositoryへrole判定を入れない。
+- customer不存在、logical deleted customer、staff scope外は、すべてHTTP 404 `{ "code": "CUSTOMER_NOT_FOUND", "message": "Customer was not found." }`を返す。理由やowner情報を公開応答へ含めない。
+- T-202でlist/detail APIを作る同じ実装単位にT-501のscopeを適用し、unrestrictedなproduction GET APIを作らない。T-205の検索・filter・sort・paginationもstaff scope込みで実装する。05・06では機能実装とT-501の証跡を分けて記録する。
+
+### Frontend state設計
+
+- React Routerを追加せず、既存のApp stateによるscreen切替を維持する。T-202はCustomer list screenを追加し、一覧には最低限`name`、`category`、詳細操作を表示する。ownerの氏名・emailを取得するAPIや、技術値である`owner_user_id`の一覧表示を追加しない。
+- 詳細操作ではcustomer idをApp stateへ保持して`GET /api/v1/customers/:id`を呼び、Customer read共通DTOを表示する。既存CustomerDetailを安全に再利用できる場合は利用し、登録直後専用の前提と衝突する場合は責務を分ける。詳細から一覧へ戻る操作を設け、T-205で検索条件等が加わった後も一覧stateを保持する。
+- T-205は`query`入力、category filter、sort select、page size 20・50・100、前へ・次へ、現在pageを一覧へ追加する。query/categoryは「検索」操作で適用する。検索、sort変更、page size変更はpageを1へ戻し、ページ移動は現在条件を維持する。
+- sort表示は「顧客名 昇順」「顧客名 降順」「登録日時 昇順」「登録日時 降順」とし、それぞれAPI値`name_asc`、`name_desc`、`created_at_asc`、`created_at_desc`へ対応させる。
+- `items: []`はエラーにせず「該当する顧客がありません」等、既存UI文言規約に合わせた通常の0件状態を表示する。400・404・500・network errorと既存401処理は既存Frontend error handlingを再利用し、新しいglobal error frameworkを作らない。
+- `owner_user_id` filterはBackend capabilityとしてT-205で実装するが、T-503のusers参照APIがない段階ではFrontendにUUID手入力欄またはowner選択UIを作らない。users一覧を安全に取得できる段階で必要性を再評価する。
 
 ## レポートResponse DTO
 
