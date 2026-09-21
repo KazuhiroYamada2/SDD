@@ -32,6 +32,21 @@ export type CustomerListResponse = {
   total_pages: number;
 };
 
+export type CustomerListSort =
+  | 'name_asc'
+  | 'name_desc'
+  | 'created_at_asc'
+  | 'created_at_desc';
+
+export type CustomerListParameters = {
+  page: number;
+  page_size: 20 | 50 | 100;
+  query?: string;
+  category?: string;
+  owner_user_id?: string;
+  sort: CustomerListSort;
+};
+
 type ApiError = {
   code?: string;
   message?: string;
@@ -54,8 +69,22 @@ export const registerCustomer = async (input: CreateCustomerInput, accessToken: 
   throw new Error(error.message ?? '顧客情報を登録できませんでした。');
 };
 
-export const getCustomers = async (accessToken: string): Promise<CustomerListResponse> => {
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/customers`, accessToken);
+export const getCustomers = async (
+  accessToken: string,
+  parameters?: CustomerListParameters,
+): Promise<CustomerListResponse> => {
+  const search = new URLSearchParams();
+  if (parameters !== undefined) {
+    search.set('page', String(parameters.page));
+    search.set('page_size', String(parameters.page_size));
+    if (parameters.query?.trim()) search.set('query', parameters.query.trim());
+    if (parameters.category?.trim()) search.set('category', parameters.category.trim());
+    if (parameters.owner_user_id !== undefined) search.set('owner_user_id', parameters.owner_user_id);
+    search.set('sort', parameters.sort);
+  }
+  const queryString = search.toString();
+  const url = `${apiBaseUrl}/api/v1/customers${queryString === '' ? '' : `?${queryString}`}`;
+  const response = await authenticatedFetch(url, accessToken);
 
   if (response.ok) {
     return response.json() as Promise<CustomerListResponse>;

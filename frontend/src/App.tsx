@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { registerCustomer, type CreateCustomerInput, type Customer } from './api/customers';
 import { CustomerDetail } from './customers/CustomerDetail';
 import { CustomerDetailScreen } from './customers/CustomerDetailScreen';
-import { CustomerList } from './customers/CustomerList';
+import {
+  CustomerList,
+  initialCustomerListState,
+  type CustomerListState,
+} from './customers/CustomerList';
 import { ReportsPage } from './reports/ReportsPage';
 import { AuthProvider, useAuthentication } from './auth/AuthContext';
 import { Login } from './auth/Login';
@@ -73,6 +77,7 @@ function BusinessApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerListState, setCustomerListState] = useState<CustomerListState>(initialCustomerListState);
   const canViewReports = authentication?.user.role === 'manager' || authentication?.user.role === 'admin';
 
   const updateValue = (field: keyof FormValues, value: string) => {
@@ -113,6 +118,8 @@ function BusinessApp() {
   if (screen === 'customerList') {
     return <CustomerList
       onBack={() => setScreen('customerRegistration')}
+      listState={customerListState}
+      setListState={setCustomerListState}
       onSelectCustomer={(customerId) => {
         setSelectedCustomerId(customerId);
         setScreen('customerDetail');

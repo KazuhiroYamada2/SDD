@@ -402,3 +402,11 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - `name_asc`、`name_desc`、`created_at_asc`、`created_at_desc`の4 sortと各`id ASC` tie-breaker、既定`name_asc`を確認した。page/page_size、offset、scope・filter適用後のtotal_count・total_pages、最終page超過の200空items、0件metadataを確認した。items/countは同じparameterized WHEREを使用する。
 - queryなしのT-202互換動作と、Customer detail・POST、Activity、Reports、Authenticationを含むBackend全テストは34 files・243/243 PASS。Backend TypeScript buildはPASS。
 - Frontend、DB schema/migration、E2E、Playwrightは変更・実行していない。T-205 Backend部分はPASS、Frontend残のためT-205全体は未完了。T-501も最終Acceptanceを残して未完了。
+
+## 2026-09-21 T-205 Customer検索・filter・sort・pagination Frontend検証（PASS）
+
+- Customer API client、Customer list、Customer detail、Appの関連テストは4 files・55/55 PASS。query stringの安全な生成、Bearer維持、page/page_size/query/category/sort、空filter省略、Frontendから`owner_user_id`を送信しないことを確認した。
+- query/category入力だけではrequestせず「検索」で適用してpage 1へ戻ること、sort・page size変更でもpage 1へ戻ることを確認した。前へ・次へでは検索条件・category・sort・page sizeを維持し、先頭pageの前へと最終pageの次へが無効になることを確認した。
+- loading、success、0件、API error、現在page表示、staff・manager・adminの一覧・detail導線を維持した。一覧→detail→一覧でquery、category、sort、page、page sizeが保持されることを確認した。Frontend scope後filterはなく、既存Backend Authorizationを使用する。
+- Reports role guard、顧客登録初期画面・登録処理、detail 404時のauth維持、401共通処理、Logout・reloadを含むFrontend全テストは11 files・133/133 PASS。`tsc -b`を含むFrontend buildはPASS。
+- Backend、DB、E2E、Playwrightは変更・実行していない。T-205はPASS。T-501は最終Acceptance待ち。

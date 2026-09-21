@@ -122,7 +122,7 @@ describe('App', () => {
   it('navigates list to production detail by ID and returns to a refetched list', async () => {
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === '/api/v1/customers') {
+      if (url.startsWith('/api/v1/customers?')) {
         return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) });
       }
       if (url === `/api/v1/customers/${customerRead.id}`) {
@@ -138,17 +138,71 @@ describe('App', () => {
 
     expect(await screen.findByText('sales@example.com')).toBeInTheDocument();
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      '/api/v1/customers',
+      '/api/v1/customers?page=1&page_size=20&sort=name_asc',
       `/api/v1/customers/${customerRead.id}`,
     ]);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客一覧へ戻る' }));
     expect(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' })).toBeInTheDocument();
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      '/api/v1/customers',
+      '/api/v1/customers?page=1&page_size=20&sort=name_asc',
       `/api/v1/customers/${customerRead.id}`,
-      '/api/v1/customers',
+      '/api/v1/customers?page=1&page_size=20&sort=name_asc',
     ]);
+  });
+
+  it('preserves search, sort, page size, and page across a detail round trip', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === `/api/v1/customers/${customerRead.id}`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
+      }
+      const parameters = new URL(url, 'https://example.test').searchParams;
+      const page = Number(parameters.get('page'));
+      const pageSize = Number(parameters.get('page_size'));
+      return Promise.resolve({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          ...customerListResponse,
+          page,
+          page_size: pageSize,
+          total_count: 60,
+          total_pages: 2,
+        }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await renderLoggedInApp('staff');
+
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
+    await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' });
+    fireEvent.change(screen.getByLabelText('顧客名'), { target: { value: 'Sample' } });
+    fireEvent.change(screen.getByLabelText('分類'), { target: { value: 'A' } });
+    fireEvent.click(screen.getByRole('button', { name: '検索' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    fireEvent.change(screen.getByLabelText('並び順'), { target: { value: 'created_at_desc' } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    fireEvent.change(screen.getByLabelText('表示件数'), { target: { value: '50' } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    fireEvent.click(screen.getByRole('button', { name: '次へ' }));
+    expect(await screen.findByLabelText('現在のページ')).toHaveTextContent('2 / 2ページ');
+
+    fireEvent.click(screen.getByRole('button', { name: '株式会社サンプルの詳細を表示' }));
+    expect(await screen.findByText('sales@example.com')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '顧客一覧へ戻る' }));
+
+    expect(await screen.findByLabelText('現在のページ')).toHaveTextContent('2 / 2ページ');
+    expect(screen.getByLabelText('顧客名')).toHaveValue('Sample');
+    expect(screen.getByLabelText('分類')).toHaveValue('A');
+    expect(screen.getByLabelText('並び順')).toHaveValue('created_at_desc');
+    expect(screen.getByLabelText('表示件数')).toHaveValue('50');
+    const lastListUrl = [...fetchMock.mock.calls]
+      .reverse()
+      .map(([url]) => String(url))
+      .find((url) => url.includes('/api/v1/customers?'))!;
+    expect(Object.fromEntries(new URL(lastListUrl, 'https://example.test').searchParams)).toMatchObject({
+      page: '2', page_size: '50', query: 'Sample', category: 'A', sort: 'created_at_desc',
+    });
   });
 
   it.each<UserRole>(['manager', 'admin'])('lets %s navigate from the list to Customer detail', async (role) => {

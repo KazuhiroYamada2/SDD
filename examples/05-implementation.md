@@ -402,3 +402,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Customer Repositoryはlogical delete除外、case-insensitive name部分一致、category完全一致、client owner filter、security owner scopeをparameterized SQLの同一WHEREへANDし、items queryとcount queryで共有する。全件取得後filterは行わない。4 sortはallowlistからSQLへ対応させ、常に`id ASC`をtie-breakerとする。
 - query parameterなしではpage 1、page_size 20、name ASC・id ASCを維持する。Customer detail、POST、Activity、Reports、Authentication、Frontend、DB schema/migration、E2E、Playwrightは変更していない。
 - T-205 Backend部分は完了。Frontendの検索・filter・sort・pagination UIが残るためT-205全体は部分実装。T-501もCustomer search Frontendと最終Acceptanceが残るため未完了。
+
+## 2026-09-21 T-205 Customer検索・filter・sort・pagination Frontend（完了）
+
+- Customer list API clientを検索条件対応へ拡張し、`URLSearchParams`で`page`、`page_size`、trim後に非空の`query`・`category`、`sort`を安全に送信する。既存`authenticatedFetch`を維持する。`owner_user_id`はBackend API capabilityとして型に保持するが、Frontend UIからは渡さない。
+- Customer listへ顧客名入力、category入力、「検索」操作、4種類のsort、20・50・100件のpage size、前へ・次へ、現在page・total count表示を追加した。query/category入力だけではrequestせず、検索時、sort変更時、page size変更時はpage 1へ戻す。page移動では適用済み条件を維持する。
+- 入力中と適用済みのquery/category、sort、page、page sizeをApp stateで保持する。Customer list→detail→listでselected customer IDだけをclearし、一覧条件とpageを維持して同じ条件で再取得する。React Router、自動検索、Frontend owner filter UIは追加していない。
+- Frontendでrole・ownerによる後filterは行わず、既存Backend Authorizationを使用する。Customer登録初期画面、listのloading・success・zero・error、detail、401/404、Reports role guard、Logout・reloadを維持した。Backend、DB、E2E、Playwrightは変更していない。
+- Backend部分とFrontend部分が揃ったためT-205は完了。T-501はCustomer list/detail/searchの実装が揃い、最終Acceptance待ちとする。

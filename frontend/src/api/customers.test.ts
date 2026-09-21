@@ -41,6 +41,42 @@ describe('getCustomers', () => {
     expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
   });
 
+  it('builds the supported list query safely and keeps Bearer', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getCustomers('test-access-token', {
+      page: 2,
+      page_size: 50,
+      query: '  株式会社 サンプル  ',
+      category: '  重点顧客  ',
+      sort: 'created_at_desc',
+    });
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/customers?page=2&page_size=50&query=%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE+%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB&category=%E9%87%8D%E7%82%B9%E9%A1%A7%E5%AE%A2&sort=created_at_desc');
+    expect(url).not.toContain('owner_user_id');
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer test-access-token');
+  });
+
+  it('omits empty filters while sending page and sort controls', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getCustomers('test-access-token', {
+      page: 1,
+      page_size: 20,
+      query: '   ',
+      category: '',
+      sort: 'name_asc',
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/customers?page=1&page_size=20&sort=name_asc');
+  });
+
   it('passes the contracted Authentication 401 to the common authentication flow', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       code: 'AUTHENTICATION_REQUIRED',
