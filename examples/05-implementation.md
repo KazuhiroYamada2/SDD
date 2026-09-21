@@ -342,3 +342,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `backend/src/authorization/authorization-middleware.ts`に、呼出側から`AuthorizationOperation`を受け取り、Authenticationが設定した`request.authenticatedUser`をT-105Aの`assertOperationAllowed`へ渡す`authorizeOperation`を追加した。JWT・Bearerの解析、users再検索、scope lookupは行わない。
 - `backend/src/authorization/forbidden-error-handler.ts`に、`ForbiddenError`だけをHTTP 403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`へ変換し、その他のerrorを次へ渡す共通handlerを追加した。`app.ts`では既存業務routerの後へこのhandlerを登録したが、customers・activities・reports routerにAuthorization middlewareは登録していない。
 - テスト専用Express routeで実Authentication middleware→`authorizeOperation`→handlerの順序、tokenなし401、staffのReports operation拒否403、manager・adminの許可、現在roleの反映とrequestごとのuser lookupを確認した。T-105AとT-105BによりT-105共通機構は完了。production業務APIへの閲覧・登録等の具体適用とscope外404・staff顧客登録owner強制はT-501/T-502/T-503に残る。
+
+## 2026-09-21 T-501A第1段階 Reports Backend Authorization（部分実装）
+
+- Reports Routerの3 GETより前に共通`authorizeOperation('reports.read')`を1回登録した。Authentication成功後、staffはvalidation・Serviceより前に403 `FORBIDDEN`、manager・adminは既存handlerへ到達する。Reports Service・Repository、`app.ts`は変更していない。
+- 共通Backend API test helperは既定のstaffを維持したままrole指定を可能にし、Reportsの既存business API testsだけを明示的なmanager認証へ移行した。集計・validation・ordering・zero response等の既存assertionは変更していない。
+- Reports Authorization testでstaffの3経路拒否、共通403応答、Service未到達、admin代表経路の200、tokenなし401を確認した。production Authentication testは、current roleと`authenticatedUser`の証跡を維持しつつReports handler到達時のRepository roleをmanagerへ変更した。
+- Frontend Reports表示制御は未実施のためT-501Aは未完了。Activity GET scope、未実装の顧客read APIへの適用、最終回帰も残るためT-501全体も未完了。

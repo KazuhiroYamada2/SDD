@@ -350,3 +350,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 
 - T-105A unit testを再実行し、2ファイル・16/16 PASS。T-105Bの新規integration testは1ファイル・6/6 PASS。テスト専用経路でAuthenticationをAuthorizationより先に実行し、tokenなしは401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`、有効staff tokenのReports read拒否は共通error handler経由で403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`、有効manager・admin tokenはhandler到達を確認した。managerのcustomer create拒否も403。同じJWTでDB側roleをstaffからmanagerへ変更すると次requestの判定が変わり、user lookupはAuthenticationによる各request1回だけだった。
 - Backend全testは29ファイル・152/152 PASS。Backend buildはPASS。T-105共通Authorization機構はPASS。production業務APIへのAuthorization適用、customer scope外404、staff顧客登録時のowner強制、Frontend・Playwrightは未実施で、T-501/T-502/T-503以降の対象とする。
+
+## 2026-09-21 T-501A第1段階 Reports Backend Authorization検証（PASS）
+
+- Reports関連とproduction Authenticationの対象テストは5ファイル・40/40 PASS。staffのsales-trend、customer-categories、staff-performanceは3/3でHTTP 403 `{ "code": "FORBIDDEN", "message": "Forbidden." }`となり、validation・Serviceへ到達しないことを確認した。
+- Reportsの既存business API testsはmanager認証で全件PASSし、既存response・validation契約を維持した。adminはcustomer-categories代表経路で200とhandler到達を確認した。tokenなしのproduction Reports代表経路は401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を維持した。
+- production Authentication testはPASS。JWTにroleを追加せず、AuthenticationがRepositoryから取得したcurrent roleでReports Authorizationを通過し、`request.authenticatedUser`とrequestごとのuser lookupの既存証跡を維持した。
+- Backend全testは30ファイル・157/157 PASS。Backend buildはPASS。Frontend Reports表示制御は未実施のためT-501Aは未完了。T-501全体も未完了。

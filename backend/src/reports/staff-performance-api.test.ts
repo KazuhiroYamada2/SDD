@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authenticatedRequest, createAuthenticatedTestApp } from '../test/authenticated-api.js';
+import { authenticatedRequest, createManagerAuthenticatedTestApp } from '../test/authenticated-api.js';
 import type { StaffPerformanceService } from './staff-performance-service.js';
 
 const staffPerformance = {
@@ -20,7 +20,7 @@ const createService = (): StaffPerformanceService => ({
 describe('GET /api/v1/reports/staff-performance', () => {
   it('returns the staff performance response DTO', async () => {
     const staffPerformanceService = createService();
-    const response = await authenticatedRequest(createAuthenticatedTestApp({ staffPerformanceService }))
+    const response = await authenticatedRequest(createManagerAuthenticatedTestApp({ staffPerformanceService }))
       .get('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-03-31');
 
     expect(response.status).toBe(200);
@@ -38,7 +38,7 @@ describe('GET /api/v1/reports/staff-performance', () => {
     ['/api/v1/reports/staff-performance?from=2026-03-01&to=2026-02-28', 'from must be on or before to.'],
   ])('returns HTTP 400 for %s', async (uri, message) => {
     const staffPerformanceService = createService();
-    const response = await authenticatedRequest(createAuthenticatedTestApp({ staffPerformanceService })).get(uri);
+    const response = await authenticatedRequest(createManagerAuthenticatedTestApp({ staffPerformanceService })).get(uri);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ code: 'VALIDATION_ERROR', message });
@@ -46,7 +46,7 @@ describe('GET /api/v1/reports/staff-performance', () => {
   });
 
   it('returns HTTP 503 when the database is not configured', async () => {
-    const response = await authenticatedRequest(createAuthenticatedTestApp())
+    const response = await authenticatedRequest(createManagerAuthenticatedTestApp())
       .get('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-01-31');
 
     expect(response.status).toBe(503);
@@ -57,7 +57,7 @@ describe('GET /api/v1/reports/staff-performance', () => {
     const staffPerformanceService: StaffPerformanceService = {
       getStaffPerformance: vi.fn().mockRejectedValue(new Error('database unavailable')),
     };
-    const response = await authenticatedRequest(createAuthenticatedTestApp({ staffPerformanceService }))
+    const response = await authenticatedRequest(createManagerAuthenticatedTestApp({ staffPerformanceService }))
       .get('/api/v1/reports/staff-performance?from=2026-01-01&to=2026-01-31');
 
     expect(response.status).toBe(500);

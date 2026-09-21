@@ -49,7 +49,7 @@ describe('production Public and Protected API boundary', () => {
     expect(response.body).toEqual(required);
   });
 
-  it('sets authenticatedUser from the current repository role and lets staff reach a business handler', async () => {
+  it('sets authenticatedUser from the current repository role and lets manager reach a Reports handler', async () => {
     let role: 'staff' | 'manager' = 'staff';
     const repository: AuthUserRepository = {
       findByEmail: async () => null,
@@ -68,12 +68,12 @@ describe('production Public and Protected API boundary', () => {
     expect(staff.status).toBe(200);
     expect(staff.body).toEqual({ id: testUserId, role: 'staff' });
     expect(staff.body).not.toHaveProperty('email');
+    role = 'manager';
     const report = await request(app).get('/api/v1/reports/customer-categories')
       .set('Authorization', testBearerHeader());
     expect(report.status).toBe(200);
     expect(report.body).toEqual({ items: [] });
 
-    role = 'manager';
     const manager = await request(app).get('/api/v1/auth-probe').set('Authorization', testBearerHeader());
     expect(manager.body).toEqual({ id: testUserId, role: 'manager' });
     expect(repository.findById).toHaveBeenCalledWith(testUserId);

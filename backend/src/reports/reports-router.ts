@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authorizeOperation } from '../authorization/authorization-middleware.js';
 import type { CustomerCategoryService } from './customer-category-service.js';
 import type { SalesTrendService } from './sales-trend-service.js';
 import type { StaffPerformanceService } from './staff-performance-service.js';
@@ -10,6 +11,8 @@ export const createReportsRouter = (
   staffPerformanceService: StaffPerformanceService | undefined,
 ) => {
   const router = Router();
+
+  router.use(authorizeOperation('reports.read'));
 
   router.get('/sales-trend', async (request, response) => {
     const validation = validateSalesTrendQuery(request.query);
