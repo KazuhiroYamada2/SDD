@@ -332,3 +332,10 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - 最終段階ではDocker CLIを使わず、各ブラウザー実行前に既存のguard付きE2E DB resetを実施した。各回とも`customer_management_e2e`でusers 3、customers 6、sales_records 8を確認。Firefox: ST 5/5、CC 5/5、SP 6/6、RP 2/2、VL 2/2、Reports smoke 1/1、計21/21 PASS。WebKitも同じ内訳で21/21 PASS。
 - 前回のChromium 21/21は同じrevisionのBackend・Frontend・E2E・Playwright設定と同じ専用fixtureによる結果で、今回はコード変更がないため再実行しなかった。最終結果はChromium 21/21、Firefox 21/21、WebKit 21/21、合計63/63 PASS。UI manager Login、business API Bearer形式、CC-05の再訪200/304、RP-02のpending後に実Backendへcontinue、VL-01の不正入力時対象Reports GET 0件を維持した。
 - T-111 PASS。Authorization・403は未実装。T-605は今回PASS判定せず、次TaskでAuthentication全体の受入観点を最終確認する。
+## 2026-09-21 T-605 Authentication最終検証（PASS）
+
+- T-605原文と02・03の仕様に対するFit/Gapを既存Backend・実DB・Browser証跡で照合し、GAP 0件と判定した。今回は新規実装・新規テストを追加していない。
+- 認証関連Backend testは`npm --prefix backend test -- src/auth`で7ファイル・56/56 PASS。Login成功、入力不正400、email不存在・password不一致・無効ユーザーの共通401、dummy Argon2id verify、JWTの`sub`・`iat`・`exp`のみ・HS256・1800秒、Bearer欠落・形式不正、JWT形式不正・署名不正・期限切れ、`sub`のuser不存在、発行後のinactive化による次requestの401、同じtokenでのrole変更反映とrequestごとのuser lookup、production保護経路の401を既存テストで再確認した。Backend全テストは26ファイル・130/130 PASS、Backend build PASS。
+- Docker CLIを使わず、`.env.e2e`の`NODE_ENV=e2e`・専用DB`customer_management_e2e`・接続先`127.0.0.1:55432`を確認した。既存scriptのURL・接続後DB識別guardを通してreset・seedを実行し、それぞれusers 3、customers 6、sales_records 8を確認した。managerのDB上のroleはmanager、`is_active=true`。
+- T-109実DB Login smokeはsuccess 200とwrong password 401 `AUTHENTICATION_FAILED`の2/2 PASS。実production appでBearerなしLogin 200、Login JWTのBearer・1800秒・manager情報を確認した。同じJWTで`GET /api/v1/reports/sales-trend`と`GET /api/v1/reports/customer-categories`へ送信し、Bearerあり200と固定fixtureどおりの応答、Bearerなし401 `{ "code": "AUTHENTICATION_REQUIRED", "message": "Authentication required." }`を両経路で確認した。JWT全文は出力していない。
+- Browser LoginはT-110/T-111の既存Reports E2E証跡（Chromium 21/21、Firefox 21/21、WebKit 21/21、合計63/63 PASS）を参照し、今回は再実行していない。Public healthもT-111の既存証跡を参照した。Authorization・403は未実装であり、T-105以降の責務。以上によりT-605 PASS。
