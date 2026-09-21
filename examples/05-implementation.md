@@ -459,3 +459,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Customerはstaffのlist/search own scope、detail/edit own許可・other 404、create許可、delete 403、managerのread許可・create/edit/delete 403、adminの全操作許可を確認した。Activityはstaff ownのGET/POST許可・other 404、managerのGET許可・POST 403、adminのGET/POST許可を確認した。
 - Reports Authorization testをmanager・adminそれぞれが3 APIすべてのhandlerへ到達するmatrixへ拡張した。staffは3 APIすべてvalidation・Service前に403となる既存証跡を維持する。productionコードの不具合はなく、変更していない。
 - 未認証401、operation-level拒否403、staff scope外と不存在の同一404、operation拒否時のresource lookup・update・Service未到達を確認した。FrontendとPlaywrightはT-505を先取りしないため変更・実行していない。T-504は完了し、T-505が着手可能となった。
+
+## 2026-09-22 T-505 Browser/E2E Authorization（完了）
+
+- 既存Reports suiteと分離して、`e2e/authorization/role-authorization.spec.ts`と`playwright.authorization.config.ts`を追加した。1 browserあたり4 scenariosで、未認証401、staff、manager、adminのBrowser表示制御と代表的なBackend拒否を検証する。既存Reports 21 scenarios/browserは変更していない。
+- 既存login helperをstaff・manager・adminで共用できる形へ拡張した。E2E fixtureにはstaffとadminのテスト専用Login情報を追加し、既存manager fixtureは互換exportとした。DB reset/seedはstaff・manager・adminのArgon2id hash、role、active状態を検証する。production DBとschemaは変更していない。
+- Customer一覧から開く詳細画面に既存`ActivityHistory`を接続した。これによりstaff・manager・adminがCustomer詳細から活動履歴を参照でき、既存componentのrole制御によりstaff・adminだけに登録formを表示する。新しい業務機能は追加していない。
+- T-505専用npm scriptはDocker CLIを呼ばず、起動済みの専用PostgreSQL `127.0.0.1:55432`へ既存の安全guard付きresetで直接接続する。PlaywrightのBackend・Frontend起動設定と3 browser設定は既存Reports configを再利用する。
+- production修正後の関連Frontend testは3 files・58/58 PASS。全回帰はBackend 43 files・321/321、Frontend 15 files・166/166、Backend/Frontend buildがPASSした。
+- T-505はChromium先行4/4、最終3 browser各4/4、計12/12 PASS。既存Reports回帰は3 workersでChromium・Firefox・WebKit各21/21、計63/63 PASSした。

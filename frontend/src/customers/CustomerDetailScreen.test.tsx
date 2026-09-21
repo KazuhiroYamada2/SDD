@@ -18,6 +18,14 @@ const customer = {
   deleted_at: null,
 };
 
+const detailFetch = () => vi.fn().mockImplementation((input: RequestInfo | URL) => {
+  const url = String(input);
+  return Promise.resolve({
+    ok: true,
+    json: vi.fn().mockResolvedValue(url.endsWith('/activities') ? [] : customer),
+  });
+});
+
 describe('CustomerDetailScreen', () => {
   afterEach(() => {
     cleanup();
@@ -32,8 +40,8 @@ describe('CustomerDetailScreen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('顧客情報を読み込み中...');
   });
 
-  it('shows the business fields from the production detail response without technical fields or Activity', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(customer) });
+  it('shows business fields and Activity history without technical fields', async () => {
+    const fetchMock = detailFetch();
     vi.stubGlobal('fetch', fetchMock);
 
     renderAuthenticated(<CustomerDetailScreen customerId={customerId} onBack={vi.fn()} />);
@@ -46,8 +54,8 @@ describe('CustomerDetailScreen', () => {
     expect(screen.getByText('既存顧客')).toBeInTheDocument();
     expect(screen.queryByText(customer.owner_user_id)).not.toBeInTheDocument();
     expect(screen.queryByText('論理削除日時')).not.toBeInTheDocument();
-    expect(screen.queryByText('営業活動履歴')).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('heading', { name: '営業活動履歴' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -81,7 +89,7 @@ describe('CustomerDetailScreen', () => {
 
   it('offers the loaded customer to a real edit operation only when allowed', async () => {
     const onEdit = vi.fn();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(customer) }));
+    vi.stubGlobal('fetch', detailFetch());
     renderAuthenticated(<CustomerDetailScreen customerId={customerId} onBack={vi.fn()} canEdit onEdit={onEdit} />);
 
     fireEvent.click(await screen.findByRole('button', { name: '編集' }));
@@ -90,7 +98,7 @@ describe('CustomerDetailScreen', () => {
 
   it('offers the loaded customer to a real delete operation only when allowed', async () => {
     const onDelete = vi.fn();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(customer) }));
+    vi.stubGlobal('fetch', detailFetch());
     renderAuthenticated(<CustomerDetailScreen
       customerId={customerId}
       onBack={vi.fn()}

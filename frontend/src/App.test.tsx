@@ -159,6 +159,9 @@ describe('App', () => {
       if (url === `/api/v1/customers/${customerRead.id}`) {
         return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
       }
+      if (url === `/api/v1/customers/${customerRead.id}/activities`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue([]) });
+      }
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -171,6 +174,7 @@ describe('App', () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       '/api/v1/customers?page=1&page_size=20&sort=name_asc',
       `/api/v1/customers/${customerRead.id}`,
+      `/api/v1/customers/${customerRead.id}/activities`,
     ]);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客一覧へ戻る' }));
@@ -178,6 +182,7 @@ describe('App', () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       '/api/v1/customers?page=1&page_size=20&sort=name_asc',
       `/api/v1/customers/${customerRead.id}`,
+      `/api/v1/customers/${customerRead.id}/activities`,
       '/api/v1/customers?page=1&page_size=20&sort=name_asc',
     ]);
   });
@@ -187,6 +192,9 @@ describe('App', () => {
       const url = String(input);
       if (url === `/api/v1/customers/${customerRead.id}`) {
         return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}/activities`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue([]) });
       }
       const parameters = new URL(url, 'https://example.test').searchParams;
       const page = Number(parameters.get('page'));
@@ -239,7 +247,8 @@ describe('App', () => {
   it.each<UserRole>(['manager', 'admin'])('lets %s navigate from the list to Customer detail', async (role) => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
-      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) }));
     await renderLoggedInApp(role);
 
     fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
@@ -260,6 +269,9 @@ describe('App', () => {
         const detailCalls = fetchMock.mock.calls.filter(([calledUrl, calledOptions]) =>
           String(calledUrl) === url && (calledOptions as RequestInit | undefined)?.method !== 'PATCH').length;
         return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(detailCalls > 1 ? updated : customerRead) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}/activities`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue([]) });
       }
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
@@ -282,7 +294,8 @@ describe('App', () => {
   it('does not show Customer edit to manager', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
-      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) }));
     await renderLoggedInApp('manager');
     fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
     fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
@@ -293,7 +306,8 @@ describe('App', () => {
   it.each<UserRole>(['staff', 'manager'])('does not show Customer delete to %s', async (role) => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerListResponse) })
-      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) }));
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue(customerRead) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue([]) }));
     await renderLoggedInApp(role);
     fireEvent.click(screen.getByRole('button', { name: '顧客一覧' }));
     fireEvent.click(await screen.findByRole('button', { name: '株式会社サンプルの詳細を表示' }));
@@ -315,6 +329,9 @@ describe('App', () => {
       }
       if (url === `/api/v1/customers/${customerRead.id}`) {
         return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue(customerRead) });
+      }
+      if (url === `/api/v1/customers/${customerRead.id}/activities`) {
+        return Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue([]) });
       }
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });

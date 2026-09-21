@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getCustomer, type Customer } from '../api/customers';
 import { useAuthenticatedApi } from '../auth/useAuthenticatedApi';
+import { ActivityHistory } from '../activities/ActivityHistory';
 
 type Props = {
   customerId: string;
@@ -66,6 +67,7 @@ export function CustomerDetailScreen({
             <div><dt>住所</dt><dd>{optionalValue(customer.address)}</dd></div>
             <div><dt>分類</dt><dd>{customer.category ?? '未分類'}</dd></div>
           </dl>
+          <ActivityHistory customerId={customer.id} ownerUserId={customer.owner_user_id} />
           </>
         )}
       </section>

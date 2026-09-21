@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import * as argon2 from 'argon2';
-import { e2eManager } from '../../e2e/fixtures/auth-manager.mjs';
+import { e2eAdmin, e2eManager, e2eStaff } from '../../e2e/fixtures/auth-users.mjs';
 
 const expectedDatabase = 'customer_management_e2e';
 const tables = ['audit_logs', 'sales_records', 'activities', 'customers', 'users'];
@@ -60,10 +60,16 @@ async function migrate(client) {
 }
 
 async function seed(client) {
+  const staffPasswordHash = await argon2.hash(e2eStaff.password, {
+    type: argon2.argon2id,
+    memoryCost: 19 * 1024,
+    timeCost: 2,
+    parallelism: 1,
+  });
   for (const [id, email] of fixture.users) {
     await client.query(
       'INSERT INTO users (id, email, password_hash, role, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)',
-      [id, email, 'e2e-fixture-no-login', 'staff', '2026-01-01T00:00:00Z'],
+      [id, email, id === e2eStaff.id ? staffPasswordHash : 'e2e-fixture-no-login', 'staff', '2026-01-01T00:00:00Z'],
     );
   }
   const managerPasswordHash = await argon2.hash(e2eManager.password, {
@@ -75,6 +81,16 @@ async function seed(client) {
   await client.query(
     'INSERT INTO users (id, email, password_hash, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, true, $5, $5)',
     [e2eManager.id, e2eManager.email, managerPasswordHash, e2eManager.role, '2026-01-01T00:00:00Z'],
+  );
+  const adminPasswordHash = await argon2.hash(e2eAdmin.password, {
+    type: argon2.argon2id,
+    memoryCost: 19 * 1024,
+    timeCost: 2,
+    parallelism: 1,
+  });
+  await client.query(
+    'INSERT INTO users (id, email, password_hash, role, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, true, $5, $5)',
+    [e2eAdmin.id, e2eAdmin.email, adminPasswordHash, e2eAdmin.role, '2026-01-01T00:00:00Z'],
   );
   for (const [id, name, category, owner, deletedAt] of fixture.customers) {
     await client.query(
@@ -96,7 +112,7 @@ async function verify(client) {
     const result = await client.query(`SELECT COUNT(*)::int AS count FROM ${table}`);
     counts[table] = result.rows[0].count;
   }
-  if (JSON.stringify(counts) !== JSON.stringify({ audit_logs: 0, sales_records: 8, activities: 0, customers: 6, users: 3 })) {
+  if (JSON.stringify(counts) !== JSON.stringify({ audit_logs: 0, sales_records: 8, activities: 0, customers: 6, users: 4 })) {
     throw new Error('E2E fixture verification failed: unexpected row counts.');
   }
   const manager = await client.query(`SELECT id, email, role, is_active,
@@ -109,6 +125,16 @@ async function verify(client) {
       manager.rows[0].valid_hash_format !== true || manager.rows[0].owns_no_customers !== true ||
       manager.rows[0].has_no_sales !== true) {
     throw new Error('E2E fixture verification failed: manager authentication fixture is invalid.');
+  }
+  const authorizationUsers = await client.query(
+    `SELECT id, role, is_active, password_hash LIKE '$argon2id$%' AS valid_hash_format
+    FROM users WHERE id = ANY($1::uuid[]) ORDER BY id`,
+    [[e2eStaff.id, e2eAdmin.id]],
+  );
+  if (authorizationUsers.rows.length !== 2 ||
+      authorizationUsers.rows.some((user) => user.is_active !== true || user.valid_hash_format !== true) ||
+      authorizationUsers.rows[0].role !== 'staff' || authorizationUsers.rows[1].role !== 'admin') {
+    throw new Error('E2E fixture verification failed: Authorization users are invalid.');
   }
   const result = await client.query(`SELECT u.email, c.name, c.category, c.deleted_at IS NOT NULL AS deleted,
       COALESCE(su.email, '') AS sales_email,

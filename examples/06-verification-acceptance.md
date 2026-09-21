@@ -462,3 +462,20 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - Reports 3 APIはstaffが3/3で403かつvalidation・Service未到達、managerが3/3で200、adminが3/3で200となりPASSした。admin全3経路の明示的証跡を補うためReports Authorization testだけを拡張し、productionコードは変更していない。
 - 未認証は401 `AUTHENTICATION_REQUIRED`、operation-level拒否は403 `FORBIDDEN`、staff scope外customerは不存在と同じ404 `CUSTOMER_NOT_FOUND`でPASSした。Authentication → operation Authorization → validation/resource lookup → scope Authorization → business processingの順序を維持し、operation拒否では不要なlookup・updateを実行しない。
 - T-504関連Backend testは14 files・150/150 PASS。Backend全testは43 files・321/321 PASS。Backend TypeScript buildはPASS。Frontend変更・test/buildとPlaywrightはT-504範囲外のため未実施。T-504はPASS・完了、T-505は着手可能。
+
+## 2026-09-22 T-505 Browser/E2E Authorization検証（PASS）
+
+| 対象 | Browser表示・操作 | Backend Authorization証跡 | 結果 |
+| --- | --- | --- | --- |
+| staff | Customer一覧、自担当A1詳細、登録・編集、Activity履歴・登録を表示。Customer削除、Reports、Users入口は非表示 | Reports GETとCustomer DELETEは403。Users GETは403。他担当B1のCustomer GETとActivity GET/POSTは同じ404 `CUSTOMER_NOT_FOUND` | PASS |
+| manager | Customer一覧・B1詳細とActivity履歴を表示。Customer登録・編集・削除、Activity登録、Users入口は非表示。Reports入口から画面へ遷移可能 | Customer POST、Activity POST、Users GETは403 | PASS |
+| admin | Customer一覧・B1詳細、登録・編集・削除、Activity履歴・登録、Reports入口を表示。Users一覧とrole変更controlを表示 | 許可操作の画面と実API取得を確認。role変更business詳細はT-503の責務として重複検証なし | PASS |
+| 未認証 | ― | protected Customer APIが401 `AUTHENTICATION_REQUIRED` | PASS |
+
+- T-505専用suiteは1 file・4 scenarios/browser。Chromium先行実行は4/4 PASS。最終実行はChromium 4/4、Firefox 4/4、WebKit 4/4、計12/12 PASSした。
+- Browserから実Frontend、Vite proxy、実Backend、Repository、専用PostgreSQLへ接続した。拒否APIはPlaywright request contextでLogin APIから取得したrole別Bearer tokenを使用し、Frontendの非表示だけを認可証跡にしていない。
+- staff scope外のCustomer詳細とActivity GET/POSTは、存在有無を公開しない同一404 contractを確認した。operation-level拒否は403、未認証は401となり、T-505原文の境界に適合した。
+- 既存Reports回帰はChromium 21/21、Firefox 21/21、WebKit 21/21、計63/63 PASSした。初回の6 workers実行では環境負荷によりFirefox 2件が30秒timeoutとなったが、assertion差分やHTTPエラーはなかった。DB reset後、既存specを変更せず3 workersで再実行し63/63 PASSを確認した。
+- E2E fixtureはusers 4、customers 6、sales_records 8、activities 0を安全guard付きreset後に確認した。Docker CLIは使用せず、`127.0.0.1:55432`へ直接接続した。production DBとschemaは変更していない。
+- production修正はCustomer詳細への既存Activity履歴component接続のみ。関連Frontend test 3 files・58/58、Frontend全test 15 files・166/166、Frontend buildがPASSした。Backend fixture変更の回帰としてBackend全test 43 files・321/321、Backend buildもPASSした。
+- staff・manager・adminのBrowser表示制御、401・403・scope外404、Reports・Users role制御、既存Reports回帰がすべてPASSしたため、T-505はPASS・完了。T-501～T-505のAuthorization一連もPASS・完了と判定する。
