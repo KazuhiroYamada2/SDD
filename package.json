@@ -1,0 +1,46 @@
+{
+  "name": "sdd",
+  "version": "1.0.0",
+  "description": "> [!NOTE]\r > **日本語版をお探しの方へ**\r > このリポジトリは書籍『仕様駆動開発 実践入門』の練習用リポジトリです。\r > 日本語の README は [README_ja.md](./README_ja.md) をご覧ください。\r > **書籍の正誤表は[こちら](./docs/guides/errata.md)です。**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "scripts": {
+    "e2e:reports:prepare": "docker compose --env-file .env.e2e -f compose.e2e.yml up -d --wait && npm --prefix backend run e2e:db:reset",
+    "e2e:reports": "npm run e2e:reports:prepare && playwright test --config=playwright.reports.config.ts",
+    "e2e:auth": "npm run e2e:reports:prepare && playwright test --config=playwright.auth.config.ts",
+    "e2e:authorization:prepare": "npm --prefix backend run e2e:db:reset",
+    "e2e:authorization": "npm run e2e:authorization:prepare && playwright test --config=playwright.authorization.config.ts",
+    "e2e:customers:prepare": "npm --prefix backend run e2e:db:reset",
+    "e2e:customers": "npm run e2e:customers:prepare && playwright test --config=playwright.customers.config.ts",
+    "benchmark:customers": "npm --prefix backend run benchmark:customers",
+    "benchmark:customers:load": "npm --prefix backend run benchmark:customers:load",
+    "migrate:customer-encryption": "npm --prefix backend run migrate:customer-encryption",
+    "verify:customer-encryption": "npm --prefix backend run verify:customer-encryption",
+    "migrate:customers": "npm --prefix backend run migrate:customers",
+    "verify:customer-migration": "npm --prefix backend run verify:customer-migration",
+    "backup:postgres": "npm --prefix backend run backup:postgres",
+    "verify:backup-restore": "npm --prefix backend run verify:backup-restore",
+    "migration:rehearse": "npm --prefix backend run migration:rehearse"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KazuhiroYamada2/SDD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/KazuhiroYamada2/SDD/issues"
+  },
+  "homepage": "https://github.com/KazuhiroYamada2/SDD#readme",
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.9",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.2",
+    "pdfjs-dist": "^6.3.289"
+  }
+}

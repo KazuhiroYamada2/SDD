@@ -1,127 +1,168 @@
 # タスク分割工程
 
-このファイルは、仕様駆動開発の**タスク分割工程**で作成されるタスク分割書です。
+このファイルは、02-planning-requirement.mdの全要件を実装または検証へ追跡できる粒度に分解したタスク分割書です。アプリケーションコードはこの工程では作成しない。
 
-## タスク分割の原則
+## 要件ID
 
-仕様駆動開発のタスク分割工程では、「1タスク＝30分レビューで終わる」程度の粒度を推奨します。
+### 機能要件
+
+- **F-01〜F-05**: 顧客情報の登録、編集、削除、検索・フィルタリング、一覧表示
+- **F-06〜F-08**: 訪問記録、商談内容、次回訪問予定
+- **F-09〜F-11**: 売上推移、顧客分類、営業担当者別実績
+- **F-12〜F-14**: 閲覧権限、編集権限、管理者権限
+
+### 非機能要件
+
+- **N-01**: 顧客情報検索を3秒以内に表示
+- **N-02**: 最大50ユーザーの同時アクセス
+- **N-03**: ログイン認証
+- **N-04**: 顧客情報の暗号化保存
+- **N-05**: アクセスログの記録
+- **N-06**: 平日9:00〜18:00の稼働率99%以上
+- **N-07**: メンテナンスの事前通知
+
+各タスクの完了条件は、実装、レビュー、関連テストの結果を確認できることとする。優先度は高・中・低で表す。
+
+## 事前設計タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-001 | APIと画面の一覧、エラー形式、共通IDの確定 | 全要件 | 03の承認 | 高 |
+| T-002 | users、customers、activities、sales_records、audit_logsのスキーマ設計 | F-01〜F-14、N-04、N-05 | T-001 | 高 |
+| T-003 | staff・manager・adminの権限マトリクスを確定。成果物は03のRole × Operation × Scope表とし、3roleの操作可否・データ範囲、Backend API側で認可を強制する原則が揃い、レビューできることを完了条件とする | F-12〜F-14 | T-001 | 高 |
+| T-004 | Phase 1の暗号化対象を`name_kana`・`email`・`phone`・`address`、方式をAES-256-GCM、保存形式をversion・key ID・12-byte IV・16-byte tag・ciphertextからなる`enc:v1` envelopeとして確定する。環境設定のcurrent key IDとkey ring、起動時validation、rotation、one-shot plaintext migration、既存Role Matrixに従うscope確認後の復号、fail-closed error契約を02/03へ正本化する。仕様レビューとproduction変更なしの確認を完了条件とする | N-04 | T-001 | 高 |
+| T-005 | 正式な演習用Excel 6 sheetを分析し、40 Customerのsource schema、全Customer fieldへのmapping、新UUID、担当者メール・カテゴリマスタのmapping、重複・validation・reject、`Asia/Tokyo`日時変換、batch transaction、移行台帳によるretry/idempotency、T-107暗号化後のDB write、reconciliation、PIIを出さないlog契約を02/03へ確定する。実データのvalid 31件・reject 9件と理由別件数の照合、production code/schema変更なしを完了条件とする | 01の互換性制約 | T-002、T-004 | 中 |
+| T-006 | 検索性能、同時アクセス、稼働率の測定計画を確定 | N-01、N-02、N-06 | T-001 | 高 |
+| T-007 | AWS `ap-northeast-1`のS3・CloudFront、ECS Fargate・ALB、Multi-AZ RDS PostgreSQL 16をproduction構成として確定する。TLS、Secrets Manager、secret rotation、RDS automated backup・PITR・manual snapshot、7日・14日のretention、KMS encryption、四半期restore drill、RPO 5分・RTO 60分、CloudWatch・SNS、3営業日前と1時間前のmaintenance通知、15分以内に開始するincident一次切り分けを02/03へ正本化する。仕様確定のみでProduction code・AWS resourceを変更しないことを完了条件とする | N-06、N-07 | T-006 | 高 |
+
+## 共通基盤タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-101 | Vite、React、TypeScriptのFrontend雛形を作成 | 全機能 | T-001 | 高 |
+| T-102 | Node.js、Express、TypeScriptのBackend雛形を作成 | 全機能 | T-001 | 高 |
+| T-103 | PostgreSQL接続、マイグレーション、トランザクション基盤を作成 | 全機能 | T-002、T-102 | 高 |
+| T-104 | BackendのLogin APIとAuthentication部品を実装する。入力不正時の400、既存ユーザーのArgon2id password照合、HS256 JWT発行（30分）、Bearer形式・HS256固定・期限の検証、`sub`によるusers存在・`is_active`の各request確認、現在roleを持つ`authenticatedUser`設定、確定した401共通応答とdummy hashによるuser enumeration対策を実装・テストする。production業務APIへの適用はT-111、role別の認可はT-105、Frontend Login画面はT-110、audit_logs永続記録はT-108として分け、初期password設定は含めない | N-03 | T-003、T-102 | 高 |
+| T-105 | 共通Authorization機構と403処理を実装する。`authenticatedUser`を入力とするrole × operation判定、取得済みcustomerのownerを使う小さなscope policy、403 `FORBIDDEN`共通応答、unit test、Authentication→Authorization順序の共通integration testを含む。T-105A（policy・403 core）とT-105B（共通integration）に分けられる。全production業務APIへの適用、未実装APIの作成、Frontend表示制御は含めない | F-12〜F-14 | T-003、T-104 | 高 |
+| T-106 | 既存validation・error contractを維持し、Node.js標準`crypto.randomUUID()`でrequestごとにUUID v4を生成する最初段のRequest ID middleware、型付き`request.requestId`、Success・errorの`X-Request-ID` response header、Login既存契約を維持したmalformed JSON共通処理、既知errorと内部情報を隠す予期しない500の共通error handlerを実装する。Clientの`X-Request-ID`はvalidation・採用・echoせず、error bodyへ`requestId`を追加しない。400・401・403・404・409・500・503、後続処理からのrequest context参照、既存code/message回帰、Backend全test・buildを完了条件とし、T-108のaccess・audit log永続化は含めない | 全機能、N-05 | T-001、T-102 | 高 |
+| T-107 | 03の契約に従い、Node.js標準`crypto`によるAES-256-GCM component、current key IDとkey ringの設定、起動時validation、Customer create・変更fieldだけのedit暗号化、scope確認後のauthorized decrypt、`null`保持を実装する。実PostgreSQLでplaintextと異なる`enc:v1`保存値と復号DTOを確認し、tamper、unknown・wrong key、malformed envelopeをfail closedとする。active・logical deletedを含む既存plaintextの冪等なone-shot offline migrationとplaintext残存検査を実装し、steady stateの混在・read時自動暗号化を許可しない。鍵・plaintext・完全なenvelopeをlog、error、test outputへ出さず、Customer/API/Authorization regressionを完了条件とする | N-04 | T-004、T-103 | 高 |
+| T-108 | 全HTTP requestを`HTTP_ACCESS` structured JSONとして標準出力し、`req.requestId`、method、normalized route、status、duration、actor、`req.ip`、timestampを記録する。既存`audit_logs`へ正式10 actionを記録し、mandatoryなLogin成功・Customer list/detail/update/delete・role変更はaudit失敗時にgeneric 500、write 3種は同一clientのtransactionでrollbackする。Login失敗、未認証401、operation拒否403、scope-hidden 404はbest-effortとし元のresponseを維持する。Response・access・auditのrequest ID一致、route/query・secret・credential・Customer PII非記録、scope拒否のresource ID非保存、atomicity、DB cleanup、Backend全test・buildを完了条件とする | N-05 | T-002、T-106 | 高 |
+| T-109 | E2E認証基盤を準備する。既存staff fixtureを維持し、集計値に影響しないE2E専用manager、テスト専用passwordから生成したArgon2id hash、実DB Login API smoke test、Playwrightで再利用可能なlogin helperを追加する。実DBでmanagerのJWT取得と既存Reports 63件PASSを完了条件とし、Frontend認証・production API保護・既存63件の書換えは行わない | N-03 | T-103、T-104、既存E2E専用DB基盤 | 高 |
+| T-110 | Frontend認証を導入する。Login画面とAPI client、token・userのReact memory保持、共通authenticated fetchによるBearer付与と業務API 401処理、Login 400/401表示、既存初期業務画面への遷移、Logout、再読込後のLogin復帰を実装する。Frontend unit/component testとE2E managerでログインする既存Reports Playwright 63件の3 Browser PASSを完了条件とする。production業務APIはまだ保護しない | N-03 | T-101、T-104、T-109 | 高 |
+| T-111 | production業務APIに共通Authentication middlewareを適用する。`POST /api/v1/auth/login`と`GET /health`はPublicのまま、その他の現在および後続のPhase 1業務APIを認証必須とする。Backend production API test、実DB Login→Bearer→業務API成功、Bearerなし401、既存Reports Playwright 63件の3 Browser PASSを完了条件とし、role認可・403は含めない | N-03 | T-104、T-110 | 高 |
+
+T-104は認証結果と内部向け失敗理由を判定可能にする。認証・認可の`audit_logs`永続記録はT-108の責務とし、T-104の前提Taskには追加しない。
+T-104のBackend Authentication部品と、N-03のproduction統合は区別する。移行順はT-109→T-110→T-111→T-605→T-105→T-501等とし、T-105の既存依存関係は変更しない。T-109のE2E専用passwordは本番ユーザーのInitial Password Provisioningを解決しない。
+
+## 顧客情報管理タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-201 | 顧客登録APIと登録画面を実装 | F-01 | T-103、T-106、T-107 | 高 |
+| T-202 | `GET /api/v1/customers`一覧APIと`GET /api/v1/customers/:id`詳細API、一覧画面、詳細へのstate-based導線と一覧へ戻る操作を実装する。既存顧客登録成功応答と同じCustomer read共通DTOを使用し、一覧はpagination envelopeを返す。T-501の閲覧scopeを同時適用し、staff一覧は自担当だけ、staffの他担当詳細は不存在と同じ404、manager・adminは全顧客とする。論理削除済み顧客は一覧から除外し詳細を404とし、unrestrictedなproduction GET APIを作らない | F-05、F-12 | T-201、T-105 | 高 |
+| T-203 | `PATCH /api/v1/customers/:id`の部分更新APIとstate-based編集画面を実装する。編集可能fieldは`name`、`name_kana`、`email`、`phone`、`address`、`category`に限定し、owner変更は含めない。T-502の`customer.edit`を同時適用し、staffは自担当のみ、managerはlookup前に403、adminは全active customer、staff scope外・不存在・logical deletedは同じ404とする。保存後はdetail APIから再取得し、キャンセルは更新せず詳細へ戻る | F-02、F-13 | T-202、T-105、T-107 | 高 |
+| T-204 | `DELETE /api/v1/customers/:id`の論理削除APIとstate-based削除確認画面を実装する。成功はbodyなしの204、customer不存在・既にlogical deletedは同じ404とする。T-502の`customer.delete`を同時適用し、staff・managerはlookup前に403、adminだけがactive customerを削除できる。`deleted_at`と`updated_at`を更新し、削除後はlist/searchから除外、detail/edit/re-deleteは404とする。Frontendはadminだけに削除導線を表示し、成功後は一覧へ戻る | F-03、F-13 | T-203、T-105 | 高 |
+| T-205 | T-202の`GET /api/v1/customers`へ顧客名query、category・owner_user_id filter、4種類の安定sort、page/page_sizeとmetadataを実装し、一覧画面へ検索操作、category、sort、20・50・100件、前後page、0件表示を追加する。条件はANDとし、staffのowner security scopeをSQLへ同時適用する。owner_user_idはBackend API capabilityに留め、T-503前にUUID手入力またはowner選択UIを追加しない | F-04、F-05、F-12 | T-202 | 高 |
+| T-206 | 顧客情報の入力エラー、重複、権限エラーを実装 | F-01〜F-05 | T-201〜T-205 | 高 |
+| T-207 | 顧客CRUD、一覧、検索をPlaywrightで検証 | F-01〜F-05 | T-201〜T-206 | 高 |
+
+## 営業活動履歴タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-301 | 活動履歴の登録・一覧APIと画面を実装 | F-06 | T-002、T-105 | 高 |
+| T-302 | 商談内容の入力・保存・表示を実装 | F-07 | T-301 | 高 |
+| T-303 | 次回訪問予定の入力・保存・表示を実装 | F-08 | T-301 | 高 |
+| T-304 | 活動履歴の顧客紐付け、日時、担当者の検証を実装 | F-06〜F-08 | T-301〜T-303 | 高 |
+| T-305 | 活動履歴の登録と表示をPlaywrightで検証 | F-06〜F-08 | T-301〜T-304 | 高 |
+
+## レポート・分析タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-401 | sales_records集計元データ基盤を準備する。schema・migrationとF-09/F-11に必要なデータ項目を整え、既存のsales_recordsをレポート集計元として利用可能にする。業務用登録・更新は含めない | F-09、F-11 | T-002 | 中 |
+| T-402 | `GET /api/v1/reports/sales-trend`を実装。month(from)からmonth(to)までを月昇順で生成し、from/toの期間内だけを月単位で集計する。売上がない月はsalesAmount=`"0.00"`で補完するResponse DTOを返す | F-09 | T-401 | 中 |
+| T-403 | `GET /api/v1/reports/customer-categories`を実装。deleted_atがnullの現在の有効顧客をcategory別に集計し、nullは「未分類」、0件は`{ "items": [] }`を返す。customerCount降順、同数はResponse上のcategory昇順で返す。from/toがない場合はHTTP 200、fromのみ・toのみ・両方（空文字を含む）が指定された場合はHTTP 400を検証する | F-10 | T-002 | 中 |
+| T-404 | `GET /api/v1/reports/staff-performance`を実装。sales_records.user_idとusers.emailを使用し、staffId、staffEmail、salesAmount、salesCountを返す。salesAmountは小数点以下2桁の文字列とし、金額降順・staffEmail昇順で返す | F-11 | T-401 | 中 |
+| T-405 | レポート集計値、0件、売上推移の0埋め、期間境界、営業担当者別実績のstaffEmailを使う並び順、および確定したResponse DTOを単体・統合テストで検証 | F-09〜F-11 | T-402〜T-404 | 高 |
+| T-407 | 売上推移・営業担当者別実績APIのfrom/to必須、YYYY-MM-DD形式、from > toの400応答を単体・統合テストで検証 | F-09、F-11 | T-402、T-404 | 高 |
+| T-408 | 売上推移のmonth昇順、月途中from/to、from/to両端を含む範囲、範囲外sales_recordsの除外、売上0件月のsalesAmount=`"0.00"`を単体・統合テストで検証 | F-09 | T-402 | 高 |
+| T-409 | 顧客分類のcustomerCount降順と、同数時にResponse上のcategory昇順となることを単体・統合テストで検証 | F-10 | T-403 | 高 |
+| T-406 | レポート表示をPlaywrightで検証 | F-09〜F-11 | T-405、T-407〜T-409 | 中 |
+
+## 権限管理タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-501 | 閲覧権限をAPIと画面に適用する。顧客一覧・検索・詳細、活動履歴一覧、Reports 3種が対象。現行APIの`GET /api/v1/customers/:customerId/activities`とReports 3 GETに適用し、staffの親顧客scope外は不存在と同じ404、staffのReportsは403、manager・adminのReportsは全社・全担当者とする。顧客一覧・詳細はT-202、検索はT-205のAPI実装と同時に適用し、staffの一覧・検索はowner scopeをSQL条件へ含め、staffの他担当詳細は`CUSTOMER_NOT_FOUND`とする。Reports、Activity GET、Customer list/detail/searchが揃った後にT-501を最終判定する。ユーザー参照はT-503で扱う | F-12 | T-003、T-105 | 高 |
+| T-502 | 登録・編集・削除権限をAPIと画面に適用する。`POST /api/v1/customers`ではstaffの保存ownerを認証済み本人へ強制しmanagerを403、adminには既存owner指定を認める。`POST /api/v1/customers/:customerId/activities`ではstaffは自担当顧客のみ、managerは403、adminは全顧客とし、staff scope外は不存在と同じ404にする。T-203の`PATCH /api/v1/customers/:id`ではstaffは自担当のみ、managerはlookup前に403、adminは全active customerとし、owner変更を認めない。T-204の`DELETE /api/v1/customers/:id`ではstaff・managerをlookup前に403、adminだけにlogical deleteを許可する。活動の`user_id`の意味は変更しない | F-01、F-02、F-03、F-06、F-13 | T-501 | 高 |
+| T-503 | `GET /api/v1/users`と`PATCH /api/v1/users/:id/role`、state-basedユーザー管理画面を実装する。両APIはadminだけを許可し、staff・managerはlookup前に403とする。一覧はactive/inactiveを含む公開4 fieldをemail ASC・id ASCで返す。role変更はinactive userも対象とし、自己role変更は同一roleのno-op以外409、最後のactive admin降格はtransactionと決定的row lockで競合安全に409とする。Frontendはadminだけに入口を表示し、成功後一覧を再取得する。ユーザー新規登録、active・email・password・role以外の変更、pagination・検索・filterは含めない | F-14 | T-501 | 高 |
+| T-504 | staff・manager・admin別に顧客・活動履歴・ReportsのBackend/APIアクセスを検証する。operationの許可・403、staffの自担当・他担当（不存在と同じ404）、staff Reports 403を含む | F-12〜F-14 | T-501〜T-503 | 高 |
+| T-505 | 401・403とFrontend画面表示をPlaywrightで検証する。画面上の非表示をBackendの認可強制の代わりにしない | F-12〜F-14、N-03 | T-504 | 高 |
+
+## 非機能実装・検証タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-601 | 顧客検索のインデックス、ページング、接続プールを設定 | N-01 | T-205、T-103 | 高 |
+| T-602 | Phase 1性能受入用のCustomer 100,000件（active 95,000件、logical deleted 5,000件、owner 100 users、category 20種類と約10%のNULL、name検索0件・約100件・約10,000件hit）を決定的に生成する。concurrency 1で必須11 scenariosを各10回warm-up後に100回HTTP測定し、nearest-rank方式のscenario別p95がすべて3秒以内であることを確認する。default list、staff scope、name high-hit、deep paginationはEXPLAIN ANALYZEも記録し、production SQL・index・schema・pool・pagination方式は変更しない | N-01 | T-601 | 高 |
+| T-603 | T-602の100,000 Customerを使い、barrierから50 requestsを同時開始するload benchmarkを実施する。必須8 scenariosを各2 waves warm-up後に20 waves、計1,000 requestsずつ測定し、scenarioごとにHTTP成功率100%、期待外status 0件、nearest-rank方式のp95が3秒以内であることを確認する。p99と`pg.Pool` max 10に対するtotal・idle・waitingを観測し、終了後のidle復帰も確認する。production SQL・schema・index・pool・timeout・pagination方式は変更しない | N-02 | T-602、T-006 | 高 |
+| T-604 | `name_kana`・`email`・`phone`・`address`について、create・edit・`null`、DBの`enc:v1`実値、authorized list/detail/create/edit responseの復号を検証する。staff own、staff otherの復号前404、manager・adminの全active readを確認し、Authentication→operation Authorization→DB scope/resource判定→scope Authorization→decrypt→DTOの順序を証明する。tamper、unknown・wrong key、malformed envelope、plaintext混在をfail closedとし、鍵・plaintext・完全なenvelopeが公開response・log・test outputへ漏れないこと、one-shot migration、Customer検索契約、全Backend regressionを最終Acceptanceする | N-04 | T-107、T-201、T-203 | 高 |
+| T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する。実DB Loginとproduction保護APIでBearerあり成功・なし401も最終確認する。Browser LoginはT-110のE2Eで検証する | N-03 | T-104、T-111 | 高 |
+| T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |
+| T-607 | T-007に従い、認証不要の`/health/live`・DB `SELECT 1`を使う`/health/ready`、ALB readiness契約、CloudFormationのECS・ALB・RDS metric Alarm、SNS email通知、RDS `availability`・`failure`・`backup` EventSubscription、監視runbook、四半期restore drillのescalation手順を実装する。Health API test、CloudFormation static validation、Backend全test/buildを完了条件とし、AWS resourceのlocal deployは含めない | N-06 | T-007 | 高 |
+| T-608 | Asia/Tokyoの月曜日～金曜日09:00～17:55を5分intervalで測定し、successful expected samples / expected samplesのraw ratioが99.0%以上であることを月次判定する。missingと対象時間内maintenance failureをfailure側へ数える。Frontend HTTPS 2xxとBackend `/health/ready`を確認するCloudWatch Synthetics Canary・IAM・artifact、pure calculator、CloudWatch adapter、month report CLI、runbookを実装し、100%・exact 99%・below 99%・missing、CloudFormation static validation、Backend全test/buildを完了条件とする。AWS deployと実Production月次測定は含めない | N-06 | T-607 | 高 |
+| T-609 | Amazon SESとECS Task Roleを使う運用CLIでPLANNEDのINITIAL・REMINDER、EMERGENCYの即時通知をactive usersへ配信する。event・recipient単位delivery schema、JST本文、SES transport abstraction、SENT重複抑止、FAILED retry、partial failure継続、safe failure code、runbook、実PostgreSQL fake transport Acceptance、Backend全test/buildを完了条件とし、Frontend UI・business API・scheduler・実SES送信は含めない | N-07 | T-007 | 高 |
+| T-610 | JST月～金を営業日とし、PLANNED INITIALを開始3営業日前の同local time以前、REMINDERを開始60分前±5分、EMERGENCY初回attemptをevent作成後15分以内としてrecipient単位で検証する。pure evaluator、初回attempt保持migration、verification CLI、exit 0/2/1、A～H実PostgreSQL Acceptance、runbook、Backend全test/buildを完了条件とする。recipient snapshotがないため既存delivery集合を対象証跡とし、scheduler・実SES送信・timing result tableは追加しない | N-07 | T-609 | 高 |
+
+## 移行・運用タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-701 | T-005のExcel契約に従うoffline migrationを実装する。6 sheet/header preflight、全件重複検出、正規化・validation、owner/category mapping、UUID v4採番、設定可能なbatch、batch transaction、Customerと移行台帳の同時commit、retry/idempotency、reject論理record、AES-256-GCM暗号化後のwrite、件数・envelope・plaintext残存0のreconciliationを自動検証する。承認sampleで初回31 insert・9 reject、再実行0 insert、失敗batch rollback・再実行を実DBで確認する | 01の互換性制約 | T-005、T-103、T-107 | 中 |
+| T-702 | T-007のAWS構成を前提に、`NODE_ENV=production`、必須secret、AWS RDS CAによるTLS、T-601のpool max 10、Secrets Manager injection用env interfaceを実装・検証する。production起動時の設定不備をfailさせ、`.env.example`・`.gitignore`・backup/restore scriptまたはrunbookを整備する。local PostgreSQLでbackup生成、分離DBへのrestore、schema・table・FK・row count・`enc:v1`・authorized decryptを再現可能に検証し、Backend全test/buildを完了条件とする。AWS resource作成とlocal実測によるAWS RTO保証は含めない | N-04、N-06 | T-004、T-007 | 高 |
+| T-703 | `operations-manual.md`を既存monitoring・backup/restore・maintenance runbookの判断入口として作成し、health、Alarm初動、SEV1〜3、incident response、secret rotation、release・migration、四半期restore drill、証跡を統合する。`incident-contacts.md`へrole-based contact matrixとGit外controlled rosterを定義し、10運用scenario、cross-reference、secret・PII非記載、natural-japanese lintをdocumentation Acceptanceする | N-05〜N-07 | T-607、T-609 | 高 |
+| T-704 | 001～003適用済みのrelease直前baselineから004とT-701を専用PostgreSQL DBでforward適用する。pre-check、pg_dump、31 inserted / 9 rejected、schema・FK・暗号化・health smoke、故障注入、別DBへのrollback restore、pre-state一致、schema skipとledgerの再実行安全性、cleanup、runbook、Backend全test/buildを完了条件とする。本番/AWS resourceと旧application binaryは実行対象外 | 全機能、N-06 | T-701、T-702 | 高 |
+
+## 共通検証・受入タスク
+
+| ID | タスク | 要件 | 依存 | 優先度 |
+| --- | --- | --- | --- | --- |
+| T-801 | Backendの単体・統合テストを実行し、不具合を修正 | 全API、N-03〜N-05 | T-201〜T-503 | 高 |
+| T-802 | Frontendの主要画面と入力エラーを検証 | F-01〜F-14 | T-201〜T-505 | 高 |
+| T-803 | Playwrightの主要シナリオを実行 | F-01〜F-14、N-03 | T-207、T-305、T-406、T-505 | 高 |
+| T-804 | 非機能試験の結果と合否を記録 | N-01〜N-07 | T-602〜T-610 | 高 |
+| T-805 | 要件トレーサビリティ表と仕様差分レポートを作成 | 全要件 | T-801〜T-804 | 高 |
+| T-806 | 顧客との受入テストを実施し、承認を取得 | 全要件 | T-805 | 高 |
+
+## 要件トレーサビリティ
+
+| 要件 | 実装タスク | 検証タスク |
+| --- | --- | --- |
+| F-01〜F-05 | T-201〜T-206 | T-207、T-802、T-803 |
+| F-06〜F-08 | T-301〜T-304 | T-305、T-802、T-803 |
+| F-09〜F-11 | T-401〜T-404 | T-405〜T-409、T-802、T-803 |
+| F-12〜F-14 | T-501〜T-503 | T-504、T-505、T-802、T-803 |
+| N-01 | T-601 | T-602、T-804 |
+| N-02 | T-006 | T-603、T-804 |
+| N-03 | T-104、T-109〜T-111 | T-605、T-803、T-804 |
+| N-04 | T-004、T-107、T-702 | T-604、T-804 |
+| N-05 | T-108 | T-606、T-703、T-804 |
+| N-06 | T-007、T-607 | T-608、T-704、T-804 |
+| N-07 | T-007、T-609 | T-610、T-703、T-804 |
 
 ## マイルストーン
 
-### マイルストーン1: 原則決定工程完了（2週間後）
+1. **設計承認**: T-001〜T-007が完了し、03の実装開始条件を満たす
+2. **共通基盤完了**: T-101〜T-111が完了し、認証・認可・監査を含むAPI基盤が動作する
+3. **機能実装完了**: T-201〜T-505が完了し、F-01〜F-14を実装する
+4. **非機能検証完了**: T-601〜T-610が完了し、N-01〜N-07の合否を記録する
+5. **受入完了**: T-701〜T-806が完了し、顧客承認を取得する
 
-- [ ] プロジェクト憲章（[01-principle-definition.md](./01-principle-definition.md)）の策定
-- [ ] ステークホルダーとの合意形成
-- [ ] 基本原則の明確化
+## 実装開始条件
 
-### マイルストーン2: 企画・要件定義工程完了（4週間後）
-
-- [ ] 機能要件の詳細化
-- [ ] 非機能要件の明確化
-- [ ] 未決定事項の整理
-- [ ] 顧客との合意形成
-
-### マイルストーン3: 設計計画工程完了（7週間後）
-
-- [ ] 技術スタックの選定（AIを活用した複数案の比較）
-- [ ] データベース設計
-- [ ] API設計
-- [ ] UI/UX設計
-- [ ] セキュリティ設計
-- [ ] レビュー会の実施
-
-### マイルストーン4: タスク分割工程完了（9週間後）
-
-- [ ] 各機能のタスク分解（30分レビュー可能な粒度）
-- [ ] 依存関係の整理
-- [ ] 優先度の設定
-- [ ] 進捗管理ツールへの反映
-
-### マイルストーン5: 実装工程完了（17週間後）
-
-- [ ] 顧客情報管理機能の実装
-- [ ] 営業活動履歴機能の実装
-- [ ] レポート機能の実装
-- [ ] 権限管理機能の実装
-- [ ] コードレビューの実施（AI生成コードも必ず人間がレビュー）
-
-### マイルストーン6: 検証・受入工程完了（19週間後）
-
-- [ ] 統合テストの実施
-- [ ] 仕様差分レポートの作成
-- [ ] 顧客との受入テスト
-- [ ] 変更履歴の説明
-
-### マイルストーン7: 移行・運用工程完了（20週間後）
-
-- [ ] 本番環境への移行
-- [ ] 運用マニュアルの作成
-- [ ] 運用開始
-- [ ] フィードバック収集の仕組み構築
-
-## タスク分解の例
-
-### 機能1: 顧客情報の管理
-
-#### タスク1.1: データベーススキーマの設計（30分レビュー）
-
-- **依存**: 設計計画工程の完了
-- **優先度**: 高
-- **見積もり**: 2時間
-
-#### タスク1.2: 顧客情報登録APIの実装（30分レビュー）
-
-- **依存**: タスク1.1の完了
-- **優先度**: 高
-- **見積もり**: 4時間
-
-#### タスク1.3: 顧客情報一覧表示APIの実装（30分レビュー）
-
-- **依存**: タスク1.1の完了
-- **優先度**: 高
-- **見積もり**: 3時間
-
-#### タスク1.4: 顧客情報検索機能の実装（30分レビュー）
-
-- **依存**: タスク1.3の完了
-- **優先度**: 中
-- **見積もり**: 4時間
-
-### 機能2: 営業活動履歴の記録
-
-#### タスク2.1: 営業活動履歴データベーススキーマの設計（30分レビュー）
-
-- **依存**: 設計計画工程の完了
-- **優先度**: 高
-- **見積もり**: 2時間
-
-#### タスク2.2: 訪問記録登録APIの実装（30分レビュー）
-
-- **依存**: タスク2.1の完了
-- **優先度**: 高
-- **見積もり**: 3時間
-
-## 依存関係の整理
-
-```mermaid
-gantt
-    title 仕様駆動開発プロジェクトスケジュール
-    dateFormat  YYYY-MM-DD
-    section フェーズ
-    原則決定       :a1, 2025-11-10, 2w
-    企画・要件定義  :a2, after a1, 2w
-    設計計画       :a3, after a2, 3w
-    タスク分割     :a4, after a3, 2w
-    実装           :a5, after a4, 8w
-    検証・受入     :a6, after a5, 2w
-    移行・運用     :a7, after a6, 1w
-```
-
-## 進捗管理
-
-仕様駆動開発では、日本式の進捗報告会に流用できるよう、バーンダウンチャートやガントチャートを出力します。
+T-001〜T-007の完了、03の設計承認、権限マトリクスの合意、非機能要件の測定条件の合意を実装開始条件とする。未決定事項が残る場合は実装せず、仕様変更として記録する。
 
 ---
 
-**注意**: このタスク分割書は、仕様駆動開発の「7 つの工程」のうち、**タスク分割工程**の成果物です。次の工程（実装工程）では、このタスクを基に実装を進めます。
-
+**注意**: このタスク分割書は、02-planning-requirement.mdの要求を削除せず、各要件を実装タスクまたは検証タスクへ対応付けたものです。

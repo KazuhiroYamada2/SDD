@@ -1,0 +1,437 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Phase 1 production monitoring for the customer management service
+
+Parameters:
+  EnvironmentName:
+    Type: String
+  EcsClusterName:
+    Type: String
+  EcsServiceName:
+    Type: String
+  LoadBalancerFullName:
+    Type: String
+  TargetGroupFullName:
+    Type: String
+  RdsDbInstanceIdentifier:
+    Type: String
+  NotificationEmail:
+    Type: String
+  FrontendHealthUrl:
+    Type: String
+    AllowedPattern: '^https://.*$'
+  BackendBaseUrl:
+    Type: String
+    AllowedPattern: '^https://.*$'
+  AvailabilityCanaryName:
+    Type: String
+    AllowedPattern: '^[0-9a-z_-]{1,21}$'
+  SyntheticsRuntimeVersion:
+    Type: String
+    Default: syn-nodejs-puppeteer-11.0
+  AlbHealthCheckPath:
+    Type: String
+    Default: /health/ready
+    AllowedValues:
+      - /health/ready
+  EcsCpuThreshold:
+    Type: Number
+    Default: 80
+  EcsMemoryThreshold:
+    Type: Number
+    Default: 80
+  AlbTarget5xxThreshold:
+    Type: Number
+    Default: 10
+  AlbResponseTimeThresholdSeconds:
+    Type: Number
+    Default: 2
+  RdsCpuThreshold:
+    Type: Number
+    Default: 80
+  RdsConnectionThreshold:
+    Type: Number
+    Default: 80
+  RdsFreeableMemoryThresholdBytes:
+    Type: Number
+    Default: 268435456
+  RdsFreeStorageThresholdBytes:
+    Type: Number
+    Default: 10737418240
+  RdsLatencyThresholdSeconds:
+    Type: Number
+    Default: 0.1
+
+Resources:
+  AvailabilityArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteAvailabilityArtifacts
+            Status: Enabled
+            ExpirationInDays: 31
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  AvailabilityCanaryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: availability-canary
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub '${AvailabilityArtifactBucket.Arn}'
+                  - !Sub '${AvailabilityArtifactBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: CloudWatchSynthetics
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  BusinessHoursAvailabilityCanary:
+    Type: AWS::Synthetics::Canary
+    Properties:
+      Name: !Ref AvailabilityCanaryName
+      ArtifactS3Location: !Sub 's3://${AvailabilityArtifactBucket}'
+      ExecutionRoleArn:
+        Fn::GetAtt: [AvailabilityCanaryRole, Arn]
+      RuntimeVersion: !Ref SyntheticsRuntimeVersion
+      Handler: index.handler
+      StartCanaryAfterCreation: true
+      SuccessRetentionPeriod: 31
+      FailureRetentionPeriod: 31
+      Schedule:
+        Expression: 'cron(0/5 0-8 ? * MON-FRI *)'
+        DurationInSeconds: 0
+      RunConfig:
+        TimeoutInSeconds: 60
+        EnvironmentVariables:
+          FRONTEND_HEALTH_URL: !Ref FrontendHealthUrl
+          BACKEND_BASE_URL: !Ref BackendBaseUrl
+      Code:
+        Script: |
+          const synthetics = require('Synthetics');
+          const https = require('https');
+
+          const get = (rawUrl) => new Promise((resolve, reject) => {
+            const url = new URL(rawUrl);
+            if (url.protocol !== 'https:') return reject(new Error('HTTPS is required.'));
+            const request = https.get(url, { timeout: 30000 }, (response) => {
+              const chunks = [];
+              response.on('data', (chunk) => chunks.push(chunk));
+              response.on('end', () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+            });
+            request.on('timeout', () => request.destroy(new Error('Probe timed out.')));
+            request.on('error', reject);
+          });
+
+          exports.handler = async () => {
+            await synthetics.executeStep('frontend', async () => {
+              const response = await get(process.env.FRONTEND_HEALTH_URL);
+              if (response.status < 200 || response.status >= 300) throw new Error('Frontend probe failed.');
+            });
+            await synthetics.executeStep('backend-ready', async () => {
+              const readyUrl = new URL('/health/ready', process.env.BACKEND_BASE_URL).toString();
+              const response = await get(readyUrl);
+              if (response.status !== 200) throw new Error('Backend readiness probe failed.');
+              let body;
+              try { body = JSON.parse(response.body); } catch { throw new Error('Backend readiness response is invalid.'); }
+              if (body.status !== 'ready') throw new Error('Backend readiness response is invalid.');
+            });
+          };
+
+  MonitoringTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub '${EnvironmentName} customer management monitoring'
+
+  MonitoringEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+      TopicArn: !Ref MonitoringTopic
+
+  EcsCpuHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ECS service CPU is high.
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref EcsCpuThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  EcsMemoryHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ECS service memory is high.
+      Namespace: AWS/ECS
+      MetricName: MemoryUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref EcsMemoryThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbNoHealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB has no healthy backend target.
+      Namespace: AWS/ApplicationELB
+      MetricName: HealthyHostCount
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbUnhealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB reports an unhealthy backend target.
+      Namespace: AWS/ApplicationELB
+      MetricName: UnHealthyHostCount
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbTarget5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB backend target 5xx responses are elevated.
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: !Ref AlbTarget5xxThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB backend response time is high.
+      Namespace: AWS/ApplicationELB
+      MetricName: TargetResponseTime
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref AlbResponseTimeThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsCpuHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS CPU is high.
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions: &RdsDimensions
+        - Name: DBInstanceIdentifier
+          Value: !Ref RdsDbInstanceIdentifier
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsCpuThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsConnectionsHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS database connections are high.
+      Namespace: AWS/RDS
+      MetricName: DatabaseConnections
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsConnectionThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsFreeableMemoryLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS freeable memory is low.
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsFreeableMemoryThresholdBytes
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsFreeStorageLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS free storage is low.
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: !Ref RdsFreeStorageThresholdBytes
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsReadLatencyHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS read latency is high.
+      Namespace: AWS/RDS
+      MetricName: ReadLatency
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsLatencyThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsWriteLatencyHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS write latency is high.
+      Namespace: AWS/RDS
+      MetricName: WriteLatency
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsLatencyThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsOperationalEventSubscription:
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      Enabled: true
+      EventCategories:
+        - availability
+        - failure
+        - backup
+      SnsTopicArn: !Ref MonitoringTopic
+      SourceIds:
+        - !Ref RdsDbInstanceIdentifier
+      SourceType: db-instance
+
+Outputs:
+  AvailabilityCanaryName:
+    Value: !Ref AvailabilityCanaryName
+  AvailabilityScheduleUtc:
+    Value: 'cron(0/5 0-8 ? * MON-FRI *)'
+  MonitoringTopicArn:
+    Value: !Ref MonitoringTopic
+  RequiredAlbHealthCheckPath:
+    Value: !Ref AlbHealthCheckPath
+  RequiredAlbHealthCheckSuccessCode:
+    Value: '200'
