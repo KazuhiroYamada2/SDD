@@ -906,3 +906,29 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - Phase 1にはrecipient snapshotがないため、delivery recordが存在するrecipient集合を対象証跡とする。当時activeでもdelivery未作成のuserは事後に完全再構成できず、T-610は対象者網羅性を証明しない。
 - Frontendは変更しておらず、Frontend test/buildとPlaywrightは未実施。schedulerと実AWS SES送信も完了条件外のため未実施である。
 - INITIAL、REMINDER、EMERGENCY、recipient集計、初回attempt、CLI、実DB Acceptance、runbook、Backend回帰が揃ったため、T-610はPASS・完了と判定する。
+
+## 2026-09-22 T-704 Production migration rehearsal受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| PostgreSQL client | `pg_dump` / `pg_restore` 16.15 | PASS |
+| Safety guard | E2E環境、localhost、port、source DB、許可DB名、接続identityを確認。wrong DBを拒否 | PASS |
+| Precheck | PostgreSQL 16、001～003 baseline、暗号設定、plaintext残存0、tool、artifact作成条件 | PASS |
+| Pre-migration backup | custom-format artifact生成、non-empty、application secret非同梱 | PASS |
+| Forward schema | 001～003適用済みbaselineから004を適用し、column・constraintを確認 | PASS |
+| Customer migration初回 | source 40 / inserted 31 / rejected 9、active 28 / deleted 3 | PASS |
+| Reject内訳 | duplicate 2、name 1、owner email 1、owner mapping 1、category 1、email 1、delete state 2 | PASS |
+| Forward integrity | schema、FK、ledger 31、Customer二重登録0、`enc:v1`、plaintext残存0 | PASS |
+| Application smoke | `live` 200、`ready` 200、authorized Customer read | PASS |
+| Failure injection | 意図したmigration failure後にapplication rolloutは`NOT_RUN` | PASS |
+| Rollback restore | pre-change backupをforward DBとは別のrollback DBへ`pg_restore` | PASS |
+| Rollback integrity | baseline schema、全table row count、FK、migration data 0、Customer暗号化・復号がpre-stateと一致 | PASS |
+| Rerun / idempotency | 004は適用済みskip。T-701は0 inserted / 31 already migrated / 9 rejected | PASS |
+| Cleanup | rehearsal・failure・rollback DB、backup artifact、temporary fileを削除 | PASS |
+| Local所要時間 | 2,176ms。AWS本番RTOの保証値には使用しない | PASS |
+| 実AWS / RDS migration | Production・RDS snapshot restoreは実施しない | 未実施（完了条件外） |
+| 旧application binary rollback | repositoryに旧binaryがないため手順確認のみ | 未実施（DB rollback Acceptanceと分離） |
+
+- T-704関連テストは5 files・24/24 PASS。実PostgreSQL rehearsalもPASSした。Backend全テストは64 files・431/431 PASS、Backend buildはPASSした。
+- Production business API、Production startup、Production schema、Frontend、AWS resourceは変更していない。Frontend test/buildとPlaywrightは対象外のため未実施である。
+- Safety、backup、forward、31/9 reconciliation、health smoke、failure stop、rollback、pre-state整合、idempotency、cleanup、runbookが揃ったため、T-704はPASS・完了と判定する。

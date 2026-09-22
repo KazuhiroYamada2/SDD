@@ -22,6 +22,7 @@
     "maintenance:verify-timing": "node --import tsx scripts/verify-maintenance-timing.mjs",
     "verify:maintenance-timing": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-maintenance-timing-acceptance.mjs",
     "verify:maintenance": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-maintenance-notifications.mjs",
+    "migration:rehearse": "node --env-file=../.env.e2e --import tsx scripts/rehearse-production-migration.mjs",
     "availability:report": "node --import tsx scripts/availability-report.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
     "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",

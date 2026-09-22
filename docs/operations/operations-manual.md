@@ -106,6 +106,10 @@ incidentでは発生時刻、検知元、severity、影響、一次対応開始�
 
 運用記録、CloudWatch Logs、Alarm、SNS、作業メモには、AWS・DB credential、JWT secret、Customer encryption key、完全な`DATABASE_URL`、private contact、plaintext Customer PII、recipient一覧、完全なciphertext envelopeを記載しない。調査にはresource ID、request ID、event ID、件数、安全なerror分類を使用する。
 
+## Production migration rehearsal
+
+本番移行前は[Production migration rehearsal runbook](production-migration-rehearsal.md)に従い、pre-change backup、manifest順のschema・data migration、health smoke、rollback restore、再実行安全性を専用環境で確認する。本番ではsnapshot完了前にmigrationを開始せず、migration検証がFAILした場合はapplication rolloutを続行しない。
+
 ## Operational scenario walkthrough
 
 | Scenario | Detection | First action | Runbook / Escalation | 通知・復旧確認・証跡 |

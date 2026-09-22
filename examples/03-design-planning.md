@@ -532,3 +532,17 @@ IncidentはSEV1・SEV2・SEV3に分類する。SEV1はservice利用不能、DB u
 ---
 
 **注意**: この設計計画書は、02-planning-requirement.mdの要求を変更せず、実装と検証の判断基準を定義するものです。
+
+## T-704 Production migration rehearsal design
+
+本番移行は、maintenance開始、write停止、pre-check、manual snapshot、schema migration、data migration、migration検証、application rollout、health smoke、service再開、reconciliationの順で行う。Migration検証がFAILした場合はapplication rolloutを続行しない。Production server起動時の自動migrationは禁止する。
+
+Local rehearsalは既存E2E PostgreSQL 16上の専用DBで実施する。接続元、forward用rehearsal DB、failure injection DB、rollback restore DBを分離し、`NODE_ENV=e2e`、`127.0.0.1:55432`、許可されたDB名、接続先identityをguardする。Production/AWS resource、Production credential、Production encryption keyは使用しない。
+
+Release直前baselineは001～003適用済みとし、今回releaseのpending schema migrationを004とする。Manifestは001、002、003をprerequisite、004、T-701 Customer migrationの順とする。004は`first_attempted_at`の有無で適用状態を検証し、適用済みSQLを重ねて実行しない。T-701はmigration ledgerにより同一dataset・sourceの再実行を`already_migrated`とする。
+
+Schema・data変更前にPostgreSQL 16の`pg_dump`でcustom-format backupを取得する。失敗またはempty artifactの場合はmigrationを開始しない。Forward後はschema、FK、件数、ledger、maintenance schema、Customer `enc:v1`、plaintext残存0、authorized decrypt、`/health/live`、`/health/ready`を検証する。
+
+Rollback triggerはschema migration failure、data migration system error、reconciliation不一致、plaintext残存、decrypt不能、重大なFK・data integrity failure、application startup failure、readiness継続FAILとする。T-701で仕様化された9件のdata-quality rejectだけではrollbackしない。Rollbackはreverse SQLを基本方式とせず、pre-change backupを別DBへrestoreし、pre-stateのschema、件数、FK、暗号化状態を確認して復旧判断する。本番ではRDS snapshotまたはPITRとapplication revision rollbackを組み合わせる。旧binaryがないlocal rehearsalではDB rollbackだけを実測する。
+
+Rehearsalはstep別PASS/FAIL、migration件数、reconciliation、所要時間、cleanupをmachine-readable summaryとして出力する。credential、secret、PII、完全なciphertextは出力しない。Local所要時間はAWS本番RTO 60分の保証に使わず、四半期restore drillで継続検証する。

@@ -22,7 +22,8 @@
     "migrate:customers": "npm --prefix backend run migrate:customers",
     "verify:customer-migration": "npm --prefix backend run verify:customer-migration",
     "backup:postgres": "npm --prefix backend run backup:postgres",
-    "verify:backup-restore": "npm --prefix backend run verify:backup-restore"
+    "verify:backup-restore": "npm --prefix backend run verify:backup-restore",
+    "migration:rehearse": "npm --prefix backend run migration:rehearse"
   },
   "repository": {
     "type": "git",

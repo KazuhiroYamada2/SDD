@@ -597,3 +597,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `004_add_maintenance_first_attempted_at.sql`を追加し、既存`attempted_at`を初回値としてbackfillした。新規deliveryでは初回claim時だけ`first_attempted_at`を設定し、retryでは維持する。`attempted_at`は直近attemptを示す既存の意味を保つ。
 - `maintenance:verify-timing` CLIを追加した。event・phase・target・pass・fail・delivery status・reason・expected timing・検証時刻を出力し、timing PASSはexit 0、FAILは2、system errorは1とする。recipient emailは出力しない。
 - 実E2E PostgreSQLでA～Hの境界値、CLI exit code、retry後の初回attempt保持、cleanupを検証した。`maintenance-notification.md`へ配信後のverificationとT-703 escalationを追加し、scheduler・実SES送信・timing result tableは追加していない。
+
+## 2026-09-22 T-704 Production migration rehearsal
+
+- `migration:rehearse` CLIとoffline rehearsal helperを追加した。接続先を専用local E2E環境へ限定し、release直前baselineの001～003、pending migrationの004、T-701 Customer migrationをmanifest順に実行する。
+- schema・data変更前に既存T-702の`pg_dump` helperでcustom-format backupを取得した。Forward後はschema、FK、Customer 31件、ledger、暗号化、`live`・`ready`、authorized Customer readを検証した。004の適用済みskipとT-701の31件`already_migrated`も確認した。
+- pre-change dumpをforward DBとは別のrollback DBへrestoreし、baseline schema、row count、FK、Customer暗号化・復号を比較した。別のfailure DBでは意図したmigration failure後にapplication rolloutが開始されないことを確認した。
+- `docs/operations/production-migration-rehearsal.md`へmanifest、本番順序、rollback trigger、snapshot/PITRによる復旧、証跡、RPO・RTOとの関係を記録し、統合operations manualから接続した。Customer business API、Production startup、Production schema、Frontend、AWS resourceは変更していない。
