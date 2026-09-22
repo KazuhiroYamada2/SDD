@@ -837,3 +837,22 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - T-609関連テストは6 files・39/39 PASS。実E2E PostgreSQLとfake transportによるAcceptanceもPASSした。
 - Backend全テストは57 files・395/395 PASS、Backend buildはPASSした。Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施である。
 - event作成、active recipient、全3 phase、SES production adapter、DB record、重複抑止、partial failure、retry、runbook、schema migration、Backend回帰が揃ったため、T-609はPASS・完了と判定する。
+
+## 2026-09-22 T-703 運用manual・監視・障害連絡受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Document existence | 統合manual、incident contacts、既存3 runbookを確認 | PASS |
+| Cross-reference | manualからmonitoring、backup/restore、maintenance、contactsへのlinkを確認 | PASS |
+| Incident severity | SEV1〜3の判断基準とSEV1の15分以内初動を確認 | PASS |
+| Contact matrix | 7 roleの責務、条件、順序、Git外rosterを確認 | PASS |
+| Scenario walkthrough | ALB、health、5xx、RDS 3種、restore、maintenance 3種の10件 | PASS |
+| Evidence policy | incident、maintenance、restore drillの記録項目を確認 | PASS |
+| Secret・PII | credential、実連絡先、plaintext PII、完全ciphertextの実値なし | PASS |
+| Natural Japanese lint | 新規2文書はfindings 0。03/05/06も検査し、既存大文書全体の統計的指摘だけでT-703追加箇所に個別指摘なし | PASS |
+| Production code / DB schema | 変更なし | 未実施（変更不要） |
+| Backend test / build | Production code変更なしのため再実行なし | 未実施（完了条件外） |
+
+- 既存runbookを重複コピーせず、統合manualを状況判断の入口として接続した。全10 scenarioでdetection、first action、runbook、escalation、通知要否、recovery、evidenceを追跡できる。
+- 実在人物の連絡先はrepositoryへ置かず、Git外のアクセス制御されたProduction operations contact rosterを正式な管理先とした。
+- 統合operations manual、monitoring procedure、incident response、severity、contact matrix、backup・restore、maintenance、secret rotation、release・migration、scenario walkthroughが揃ったため、T-703はPASS・完了と判定する。

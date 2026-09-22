@@ -121,7 +121,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | --- | --- | --- | --- | --- |
 | T-701 | T-005のExcel契約に従うoffline migrationを実装する。6 sheet/header preflight、全件重複検出、正規化・validation、owner/category mapping、UUID v4採番、設定可能なbatch、batch transaction、Customerと移行台帳の同時commit、retry/idempotency、reject論理record、AES-256-GCM暗号化後のwrite、件数・envelope・plaintext残存0のreconciliationを自動検証する。承認sampleで初回31 insert・9 reject、再実行0 insert、失敗batch rollback・再実行を実DBで確認する | 01の互換性制約 | T-005、T-103、T-107 | 中 |
 | T-702 | T-007のAWS構成を前提に、`NODE_ENV=production`、必須secret、AWS RDS CAによるTLS、T-601のpool max 10、Secrets Manager injection用env interfaceを実装・検証する。production起動時の設定不備をfailさせ、`.env.example`・`.gitignore`・backup/restore scriptまたはrunbookを整備する。local PostgreSQLでbackup生成、分離DBへのrestore、schema・table・FK・row count・`enc:v1`・authorized decryptを再現可能に検証し、Backend全test/buildを完了条件とする。AWS resource作成とlocal実測によるAWS RTO保証は含めない | N-04、N-06 | T-004、T-007 | 高 |
-| T-703 | 運用マニュアル、監視手順、障害時連絡先を作成 | N-05〜N-07 | T-607、T-609 | 高 |
+| T-703 | `operations-manual.md`を既存monitoring・backup/restore・maintenance runbookの判断入口として作成し、health、Alarm初動、SEV1〜3、incident response、secret rotation、release・migration、四半期restore drill、証跡を統合する。`incident-contacts.md`へrole-based contact matrixとGit外controlled rosterを定義し、10運用scenario、cross-reference、secret・PII非記載、natural-japanese lintをdocumentation Acceptanceする | N-05〜N-07 | T-607、T-609 | 高 |
 | T-704 | 本番移行リハーサルとロールバック手順を検証 | 全機能、N-06 | T-701、T-702 | 高 |
 
 ## 共通検証・受入タスク

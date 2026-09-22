@@ -577,3 +577,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - active usersだけを取得するRepository、event/phase validation、JST plain text生成、recipient単位の継続送信、SENT skip、FAILED retryを行うServiceを実装した。providerの生errorは保存せず、safeな`SES_SEND_FAILED`だけを記録する。
 - AWS SDK v3のSES v2 clientを使うtransport adapterと運用CLIを追加した。ProductionではECS Task Role、`AWS_REGION=ap-northeast-1`、SES verified senderの`MAINTENANCE_FROM_EMAIL`を使う。CLIは集計だけを出力し、partial failure時は成功を維持してnon-zero終了する。
 - `docs/operations/maintenance-notification.md`へ予定・緊急maintenance、INITIAL・REMINDER・EMERGENCY、delivery確認、retry、PENDING照合、incident escalationを記録した。Frontend UI、business API、scheduler、実AWS SES送信は追加していない。
+
+## 2026-09-22 T-703 Integrated operations manual
+
+- `docs/operations/operations-manual.md`をPhase 1運用の入口として追加した。Production構成、daily operation、health判断、Alarm初動、SEV1〜3、incident response、backup・restore、maintenance通知、secret rotation、release・migration、四半期restore drill、証跡・情報保護を整理し、既存3 runbookへ接続した。
+- `docs/operations/incident-contacts.md`へOperations Primary/Secondary、Application Owner、Database Owner、Security Contact、Business / Service Owner、AWS Supportのrole-based matrixとseverity別escalationを記録した。実連絡先はGit外のアクセス制御されたProduction operations contact rosterで管理する。
+- 10の運用scenarioについて、検知、初動、runbook、escalation、利用者通知、復旧確認、証跡をwalkthroughした。Production code、DB schema、Frontend、AWS resourceは変更していない。

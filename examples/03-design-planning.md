@@ -472,6 +472,14 @@ SNS Topicにはdeployment時に指定した運用担当emailをsubscriptionし�
 
 監視・incident対応は`docs/operations/production-monitoring.md`、backup・四半期restore drillは`docs/operations/production-backup-restore.md`を正本手順とする。Health、CloudWatch Logs、Alarm、SNS、incident記録へsecret、credential、plaintext PII、完全なciphertext envelopeを出力しない。AWS resource deploymentはlocal Acceptanceに含めず、CloudFormationのYAML parse、required parameter、SNS/Alarm wiring、RDS EventSubscriptionをstatic testで検証する。
 
+## T-703 Integrated operations design
+
+`docs/operations/operations-manual.md`をPhase 1運用の入口とし、監視、backup・restore、maintenance通知の詳細を既存runbookへ委譲する。manualはproduction構成、daily operation、health判断、Alarm初動、incident severity・response、secret rotation、release・migration、四半期restore drill、証跡、情報保護を案内する。
+
+IncidentはSEV1・SEV2・SEV3に分類する。SEV1はservice利用不能、DB unavailable、重大data corruption、security incidentとし、検知後15分以内に一次切り分けを開始する。SEV2は一部機能停止、継続的5xx、性能劣化、backup failure、SEV3は利用継続可能な軽微な異常とする。
+
+`docs/operations/incident-contacts.md`はrole-based contact matrixの正本とする。実在人物の連絡先はrepositoryへ保存せず、Git外のアクセス制御されたProduction operations contact rosterで管理する。Incident証跡には時刻、検知元、severity、影響、判断、対応、復旧、reconciliationを残し、secret、credential、plaintext PII、完全なciphertext、不要なrecipient一覧を含めない。
+
 ## テスト方針
 
 - Backend: バリデーション、業務ロジック、認証・認可、暗号化、監査ログ、APIの単体・統合テスト
