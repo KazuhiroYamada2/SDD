@@ -1114,3 +1114,39 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - 限界: Backend全476 testsとbuildは、04がT-606の完了条件として要求せず、Production codeも変更していないため再実行していない。未実施項目をPASSとして扱わない。
 - 参照・変更・削除・権限変更、actor・target、request ID相関、scope秘匿、PII・secret非記録、atomicity、cleanupがすべてAcceptanceを満たした。T-606はPASS・完了と判定する。
 - T-602～T-610はすべてPASS・完了しているため、T-804「非機能試験の結果と合否を記録」は着手可能である。残る未完了TaskはT-804、T-805、T-806の3件である。
+
+## 2026-09-23 T-804 非機能試験結果・合否（PASS）
+
+N-01～N-07は、正本が定めるLocal/E2Eのimplementation Acceptanceをすべて満たした。下表のProduction継続項目は、未実施を隠さずLocal Acceptanceと分離しており、AWS Productionでの実績を示すものではない。
+
+| NFR ID | Requirement | Acceptance criteria | Evidence / Task | Actual result | Environment | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| N-01 | 顧客情報検索を3秒以内に表示 | 100,000 Customer、concurrency 1。11 scenariosを各10回warm-up後に100回測定し、scenario別nearest-rank p95が3,000ms以下 | T-601、T-602 | 100,000件（active 95,000 / deleted 5,000）。全11 scenariosがHTTP 200。最遅p95はname low-hitの78.616msで、基準より2,921.384ms短い | Local Node.js 24.19.0 / PostgreSQL 16.15。Production実績ではない | PASS |
+| N-02 | 最大50ユーザーの同時アクセス | 50 requestsをbarrierから同時開始。8 scenariosを各2 waves warm-up後に20 waves、各1,000 requests測定。成功率100%、期待外status 0、scenario別p95 3,000ms以下 | T-006、T-602、T-603 | 8,000/8,000成功、error・invalid response・期待外status各0。最遅p95はname high-hitの842.520ms。Pool max 10、最大waiting 90、終了後waiting 0 | Local load benchmark。Production負荷実績ではない | PASS |
+| N-03 | email/passwordによるログイン認証と30分JWT。失敗理由を秘匿し、業務APIを保護 | Login成功、入力不正400、共通401、Bearer/JWT異常、期限切れ、inactive化、user不存在、現在role再取得、実DB Login、保護API、Browser Loginを確認 | T-104、T-109～T-111、T-605、T-803 | 認証関連7 files・56/56、T-109 smoke 2/2、実DBでBearerあり200・なし401。JWT 1,800秒。Browser Reports 3 browsersで63/63、T-803全体92 executions PASS | Local unit/integration、専用E2E PostgreSQL、Playwright。Production user provisioningは対象外 | PASS |
+| N-04 | `name_kana`・`email`・`phone`・`address`をAES-256-GCMで暗号化保存 | `enc:v1`実値、create/edit/null、認可後復号、scope外404、migration、tamper・key error fail closed、secret・PII非開示、backup/restoreを確認 | T-004、T-107、T-604、T-702 | 4 fieldのDB ciphertext・復号DTO・権限順序・plaintext残存0・idempotency・fail closedがPASS。47 files・345/345。Local backupから分離DB restoreも924msでPASS | 専用E2E PostgreSQLとlocal restore。924msはAWS RTO実績ではない | PASS |
+| N-05 | 全HTTP access logと、Login・認証認可・Customer参照/変更/削除・role変更のauditを安全に記録 | 正式10 actions、request ID相関、scope秘匿、PII・secret非記録、mandatory/best-effort、write atomicity、1 request 1 access record、cleanupを確認 | T-106、T-108、T-606、T-703 | T-606の6 scenariosは各audit 1件。Response・access・auditのrequest ID一致。成功write 3件commit、audit失敗3件rollback、scope外404でtarget UUID非保存、cleanup後audit 0件 | Unit/integrationと専用E2E PostgreSQL。Production ECS→CloudWatch収集はdeploy後に継続確認 | PASS |
+| N-06 | 平日09:00～18:00の月次稼働率99%以上。Health、監視、backup/restore、RPO/RTOを運用 | JST平日09:00～17:55の5分slotでraw ratio 99.0%以上。Frontend 2xxとready 200。Health、12 Alarm、RDS event、SNS、PITR/backup、四半期restore drill手順を確認 | T-007、T-607、T-608、T-702、T-704 | Availability fixtureは100/100=100% PASS、99/100=99% PASS、98/100=98%を正しくFAIL。Health・static CloudFormation・local restore・migration rehearsalがPASS。Local restore 924ms、rehearsal 2,176ms | Local tests、static validation、local PostgreSQL。AWS未deploy。Production月次稼働率、RPO 5分・RTO 60分、四半期drillは運用開始後に継続 | PASS（implementation acceptance） |
+| N-07 | 予定maintenanceを3営業日前と1時間前に通知し、緊急時は速やかに通知 | INITIALは3営業日前deadline以前、REMINDERは開始65～55分前、EMERGENCY初回attemptは作成後15分以内。recipient単位で全件合格。重複抑止・retry・partial failureも確認 | T-007、T-609、T-610、T-703 | active users 4件、INITIAL 4/4 SENT、REMINDER 4/4 SENT、EMERGENCY初回3 SENT・1 FAILED後retry成功、delivery 12件。境界A～H、exit 0/2/1、初回attempt保持がPASS | 専用E2E PostgreSQLとfake SES transport。実SES送信・Production timingは運用開始後に継続 | PASS（implementation acceptance） |
+
+### Gap・矛盾確認
+
+| 確認対象 | 件数 | 結果 |
+| --- | ---: | --- |
+| RequirementとAcceptance criteriaの不一致 | 0 | なし |
+| examples/02と03の矛盾 | 0 | なし |
+| examples/04の完了条件に対する06証跡不足 | 0 | なし |
+| PASS記録の要求値未達 | 0 | なし |
+| Local結果をProduction実績とした誤記 | 0 | なし |
+| T-804を停止する重大なSpecification Gap | 0 | なし |
+
+AWS resource deployment、Production月次稼働率、Production RPO/RTO、四半期restore drill、実SES送信、Production通知timingは、正本がLocal Acceptanceから明示的に分離した継続運用項目である。これらを実施済みまたはProduction PASSとは記録していない。
+
+### 実施範囲と判定
+
+- 方法: examples/02・03のN-01～N-07、04のT-602～T-610とtraceability、05・06の既存実績を突合し、要求値と実測値を比較した。T-601、T-702～T-704、T-801、T-803、T-108は補助証跡として参照した。
+- 新規試験: 未実施。既存証跡が完了条件を満たすため、performance・load、Backend全476 tests、Frontend全166 tests、Playwright 92 executions、Backend・Frontend buildを再実行していない。
+- 変更範囲: Production code、Frontend、DB schema、AWS resource、examples/01～04は変更なし。examples/05・06の記録だけを更新した。
+- 限界: 本表のPASSはT-804のimplementation Acceptance判定である。Production運用値はAWS deploy後に月次・四半期・maintenance eventごとに継続測定する。
+- 結論: 7要件すべてでRequirement、Acceptance criteria、Evidence、Actual result、Environment、Statusが揃い、未検証項目も明示した。T-804はPASS・完了と判定する。
+- 次Task: T-801～T-804がPASS・完了したため、T-805「要件トレーサビリティ表と仕様差分レポートを作成」は着手可能である。残る未完了TaskはT-805、T-806の2件である。

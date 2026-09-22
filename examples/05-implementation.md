@@ -658,3 +658,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `audit_logs`の列が`id`、`user_id`、`action`、`resource_type`、`resource_id`、`request_id`、`ip_address`、`created_at`だけであることを実DBで確認した。関連security testと合わせて、Customer PII、password・hash、JWT、Authorization、Cookie、暗号鍵、完全ciphertext、DB・AWS credentialを保存しない契約を確認した。検証結果へCustomer PIIは出力していない。
 - Acceptance後に既存の安全ガード付きresetを実行し、`audit_logs`を0件へ戻した。Customers 6件、Users 4件、Sales records 8件とその他の可変fixtureもbaselineへ復元した。
 - Production code、DB schema・migration、Frontend、Playwrightは変更していない。変更は既存Acceptance scriptと本記録だけである。T-108関連回帰は6 files・40 tests PASS。04のT-606完了条件にBackend全test・buildは含まれないため、全476 testsとBackend buildは再実行していない。
+
+## 2026-09-23 T-804 非機能試験結果の統合
+
+- examples/02・03のN-01～N-07、04の実装・検証Task、05・06の既存証跡を横断し、Requirement、Acceptance criteria、実施Task、実測・検証結果、環境、合否を06の正式結果表へ統合した。T-602～T-610に加え、先行・補助証跡としてT-601、T-702～T-704、T-801、T-803、T-108を参照した。
+- N-01の100,000 Customer・concurrency 1、N-02の50 concurrent requests、N-03の認証、N-04のCustomer暗号化、N-05のaccess・audit、N-06のavailability・monitoring・backup/restore、N-07のmaintenance通知・timingについて、要求値と記録済み実績を比較した。7要件すべてがLocal/E2Eのimplementation Acceptanceを満たしていた。
+- Local/E2E benchmarkをAWS Production性能として扱わず、local restoreの924msとmigration rehearsalの2,176msをProduction RTO実績へ使用していない。AWS未deploy、Production月次稼働率、RPO 5分・RTO 60分、四半期restore drill、実SES送信と通知timingは、仕様どおりProduction運用開始後の継続確認として分離した。
+- RequirementとAcceptance criteriaの不一致0件、02と03の矛盾0件、04の完了条件に対する証跡不足0件、要求値未達0件、Local結果をProduction実績とした誤記0件だった。T-804を停止する重大なGapはない。
+- 新規試験は実施していない。Backend全476 tests、Frontend全166 tests、Playwright 92 executions、performance・load benchmark、Backend・Frontend buildは再実行していない。Production code、Frontend、DB schema、AWS resource、examples/01～04は変更していない。
