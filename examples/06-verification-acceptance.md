@@ -932,3 +932,22 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - T-704関連テストは5 files・24/24 PASS。実PostgreSQL rehearsalもPASSした。Backend全テストは64 files・431/431 PASS、Backend buildはPASSした。
 - Production business API、Production startup、Production schema、Frontend、AWS resourceは変更していない。Frontend test/buildとPlaywrightは対象外のため未実施である。
 - Safety、backup、forward、31/9 reconciliation、health smoke、failure stop、rollback、pre-state整合、idempotency、cleanup、runbookが揃ったため、T-704はPASS・完了と判定する。
+
+## 2026-09-22 T-801 Backend単体・統合テスト受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Initial Backend全test | 64 files・431 tests。FAIL 0、SKIP 0 | PASS |
+| Unit test | service、validation、policy、crypto、timing、availability等を含む既存suite | PASS |
+| Integration test | API、middleware、repository、configuration、migration・operation helper等を含む既存suite | PASS |
+| Security regression | 401、403、staff scope外404、secret非公開、crypto fail closed、plaintext PII非保存、Production config fail closed | PASS |
+| DB cleanup | 安全ガード付きE2E DB reset後、maintenance event・delivery、migration ledger、audit log、activityは0件。基準fixture件数も一致 | PASS |
+| Time dependency | maintenance timing、availability、JWT expiryの既存testがPASS | PASS |
+| External dependency | 実AWS credential・実AWS接続なしで全suiteが完結 | PASS |
+| Defect | 新規不具合0件。修正なし | PASS |
+| Final Backend全test | 64 files・431 tests。FAIL 0、SKIP 0 | PASS |
+| Backend build | TypeScript compile成功 | PASS |
+| Frontend / Playwright | T-801対象外 | 未実施 |
+
+- Production code、test code、DB fixture・setupは変更していない。Production API contractと業務仕様の回帰はなかった。
+- 既知の失敗0件、予期しないskip 0件、DB cleanup PASS、Backend build PASSのため、T-801はPASS・完了と判定する。

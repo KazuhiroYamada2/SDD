@@ -604,3 +604,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - schema・data変更前に既存T-702の`pg_dump` helperでcustom-format backupを取得した。Forward後はschema、FK、Customer 31件、ledger、暗号化、`live`・`ready`、authorized Customer readを検証した。004の適用済みskipとT-701の31件`already_migrated`も確認した。
 - pre-change dumpをforward DBとは別のrollback DBへrestoreし、baseline schema、row count、FK、Customer暗号化・復号を比較した。別のfailure DBでは意図したmigration failure後にapplication rolloutが開始されないことを確認した。
 - `docs/operations/production-migration-rehearsal.md`へmanifest、本番順序、rollback trigger、snapshot/PITRによる復旧、証跡、RPO・RTOとの関係を記録し、統合operations manualから接続した。Customer business API、Production startup、Production schema、Frontend、AWS resourceは変更していない。
+
+## 2026-09-22 T-801 Backend単体・統合テスト
+
+- Backend全64 test files・431 testsを今回あらためて実行し、初回・最終回帰とも全件PASSした。既知の失敗と予期しないskipは0件だった。
+- Authentication、Authorization、Customer CRUD・検索、Activity、Reports、Users・role、暗号化、Customer migration、Production設定、backup・restore、Health・monitoring、maintenance通知・timing、availability、migration rehearsalの既存testを確認した。
+- 新規不具合は見つからなかった。Production code、test code、DB fixture・setupは変更していない。
+- 専用E2E PostgreSQLを既存の安全ガード付きresetで初期化し、maintenance event・delivery、migration ledger、audit log、activityの残存0件と基準fixture件数を確認した。Backend buildもPASSした。
