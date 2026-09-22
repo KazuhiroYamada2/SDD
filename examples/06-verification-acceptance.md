@@ -1310,3 +1310,29 @@ T-106 Request IDの過去Gapは02「Request ID・共通エラー」、03「Reque
 - T-806判定: **未完了 — Customer approval pending**。
 - SDD演習判定: **未完了**。全Task完了・SDD演習完了とは判定しない。
 - 残Task: T-806のみ。顧客がUAT checklistを確認し、Customer decision、承認者、承認日、comment、承認証跡を記録する必要がある。
+
+## 2026-09-23 T-806 顧客承認取得（PASS・完了）
+
+顧客受入責任者がFunctional 14/14、Non-functional 7/7、UAT 14/14の結果を確認し、Phase 1を明示的に承認した。前節のCustomer approval pendingは、この承認取得により解消した。
+
+| Acceptance item | Result | Status |
+| --- | --- | --- |
+| Functional requirements | 14 / 14 | PASS |
+| Non-functional requirements | 7 / 7 | PASS |
+| Total requirements | 21 / 21 | PASS |
+| UAT scenarios | 14 / 14 | PASS |
+| Open defects | 0 | PASS |
+| Open specification gaps | 0 | PASS |
+| Unimplemented requirements | 0 | PASS |
+| Unverified requirements | 0 | PASS |
+| Customer decision | APPROVED | PASS |
+| Customer approver | 演習上の顧客受入責任者 | 確認済み |
+| Approval date | 2026-09-23 | 確認済み |
+| Customer comment | Phase 1の受入条件を満たしていることを確認した。 | 確認済み |
+
+- Approval evidence: 顧客受入責任者による2026-09-23の明示入力を、[顧客受入テスト・承認記録](../docs/acceptance/customer-acceptance.md)とexamples/05・06へ記録した。Codexの判断を顧客承認として使用していない。
+- Customer approval: **APPROVED**。
+- T-806判定: **PASS・完了**。
+- Task残数: **0**。
+- SDD演習判定: **全Task完了・SDD演習完了**。
+- Production operational follow-up: AWS deploy後のavailability、RPO/RTO・四半期restore drill、実SES送信、maintenance timing、Initial Password Provisioningは、承認済みPhase 1の継続運用事項として維持する。

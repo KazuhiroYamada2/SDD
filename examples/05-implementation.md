@@ -682,3 +682,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Open defects、Open specification gaps、未実装Requirement、未検証Requirementはいずれも0件である。AWS resource未deploy、Production availability、Production RPO/RTO・四半期restore drill、実SES送信、Production maintenance timing、Initial Password Provisioningは正本どおりKnown limitationsまたは継続運用項目として明示した。
 - Repository内にCustomer approver、approval date、`APPROVED`または同等の実在する顧客承認証跡はなかった。Customer decisionを`PENDING`、承認者・承認日・commentを未入力とし、技術testのPASSを顧客承認として扱っていない。T-806は「未完了 — Customer approval pending」、SDD演習も未完了で、残TaskはT-806のみである。
 - Production code、Test code、Frontend、DB schema、AWS resourceは変更していない。変更は受入文書とexamples/05・06の記録だけである。
+
+## 2026-09-23 T-806 顧客承認取得（PASS・完了）
+
+- 顧客受入責任者から、Functional 14/14、Non-functional 7/7、UAT 14/14の確認と、Phase 1を承認する明示入力を受領した。Customer decisionは`APPROVED`、承認者は「演習上の顧客受入責任者」、承認日は2026-09-23、コメントは「Phase 1の受入条件を満たしていることを確認した。」である。
+- [顧客受入テスト・承認記録](../docs/acceptance/customer-acceptance.md)のCustomer decision、承認者、承認日、コメントを更新し、UAT-01～UAT-14のApprovalを`APPROVED`とした。技術testのPASSではなく、顧客本人の明示入力を承認証跡として使用した。
+- UAT scenario PASS、Functional 14/14、NFR 7/7、Total 21/21、Open defects 0、Open specification gaps 0、顧客承認証跡あり、Customer decision `APPROVED`の全完了条件が成立した。T-806をPASS・完了とし、全Task完了、SDD演習完了と判定した。
+- Production code、Test code、Frontend、DB schema、AWS resourceは変更していない。新規test・build・performance測定は実施していない。Production operational follow-upは受入後の継続事項として維持する。
