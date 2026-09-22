@@ -519,3 +519,56 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - pool maxやtimeoutの目標値は正本にないため、library既定値を推測で変更していない。接続数はmax 10で有界。transaction release漏れはなく、test/prodで別のpool実装も使用していない。
 - production変更はapplication終了時のpool close追加のみ。schema・index・Customer SQL・paginationは変更していない。関連test 5 files・55/55、Backend全test 44 files・322/322、Backend buildがPASSした。Frontend変更とPlaywright実行はない。
 - index、pagination、connection poolが正本どおり設定され、明確だったpool終了処理のGapも解消したため、T-601はPASS・完了と判定する。
+
+## 2026-09-22 T-602 Customer検索性能測定（PASS）
+
+### 性能受入用データと実行環境
+
+| 項目 | 実測値 |
+| --- | --- |
+| Customer | 100,000件 |
+| active / logical deleted | 95,000件 / 5,000件 |
+| owner | 100 users、各1,000件 |
+| category | 20種類、各4,500件 |
+| category `NULL` | 10,000件 |
+| name no-hit / low-hit / high-hit | 0件 / 100件 / 10,000件（active customer対象） |
+| Node.js / PostgreSQL | v24.19.0 / 16.15 |
+| concurrency / pool max | 1 / 10 |
+| warm-up / measured requests | scenarioごとに10回 / 100回 |
+| p95 | 測定値を昇順に並べたnearest-rank方式の95番目 |
+| deep pagination | `page=950`、`page_size=100`、`OFFSET 94900` |
+
+このdatasetはT-602/T-603用の再現可能なPhase 1 Acceptance modelであり、production実績件数やproduction環境の性能保証値ではない。
+
+### HTTP benchmark
+
+| Scenario | Measured | Median | p95 | Max | 判定 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| default list | 100 | 16.315ms | 21.399ms | 22.648ms | PASS |
+| name no-hit | 100 | 65.683ms | 69.256ms | 104.250ms | PASS |
+| name low-hit | 100 | 65.937ms | 78.616ms | 106.329ms | PASS |
+| name high-hit | 100 | 65.574ms | 68.004ms | 77.385ms | PASS |
+| category filter | 100 | 16.271ms | 18.569ms | 20.467ms | PASS |
+| owner_user_id filter | 100 | 16.534ms | 18.606ms | 18.887ms | PASS |
+| query + category AND | 100 | 66.042ms | 69.034ms | 74.467ms | PASS |
+| name_desc sort | 100 | 16.053ms | 19.028ms | 20.466ms | PASS |
+| created_at_desc sort | 100 | 16.519ms | 19.690ms | 31.054ms | PASS |
+| deep pagination | 100 | 50.058ms | 56.912ms | 62.882ms | PASS |
+| staff scope | 100 | 16.657ms | 18.128ms | 19.508ms | PASS |
+
+全scenarioを混ぜず、11 scenariosを個別に判定した。全p95が3,000ms以下であり、最遅はname low-hitの78.616msだった。
+
+### EXPLAIN (ANALYZE, BUFFERS)
+
+| Query | Items plan / execution | Count plan / execution | 評価 |
+| --- | --- | --- | --- |
+| default list | Index Scan → Incremental Sort → Limit / 0.086ms | Index Only Scan → Aggregate / 7.978ms | active 95,000件のcountを含めてHTTP p95 21.399ms |
+| staff scope + high-hit | owner indexのBitmap Scan → Sort → Limit / 1.280ms | owner indexのBitmap Scan → Aggregate / 0.940ms | owner security scopeがSQLへ適用された |
+| name high-hit | name順Index Scan → Incremental Sort → Limit / 47.403ms | Seq Scan → Aggregate / 47.749ms | 前後wildcardのcountではname B-treeを使用しない |
+| deep pagination | Index Scan → Incremental Sort → Limit / 48.701ms | Index Only Scan → Aggregate / 8.098ms | OFFSET 94,900の走査コストはあるがp95 56.912ms |
+
+- HTTP statusは全測定requestで200、responseは`items`、`page`、`page_size`、`total_count`、`total_pages`を持つpagination envelopeだった。
+- `ILIKE '%query%'`は通常のB-tree name indexで直接効率化されず、name high-hitのcountはSeq Scanとなった。ただし今回の全name scenariosはp95 3,000ms以下のため、`pg_trgm`とGIN/GiSTは将来のデータ量増加時や性能未達時の改善候補に留める。
+- deep paginationは現行OFFSET方式の最終有効pageでPASSした。keyset paginationへの変更は行っていない。
+- Production business code、schema、index、Customer SQL、connection pool値、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。Frontend変更・test/buildとPlaywrightはT-602対象外のため未実施。
+- 全必須scenarioがp95 3,000ms以下だったため、T-602はPASS・完了。依存条件を満たしたため、T-603 50同時ユーザー負荷試験へ着手可能と判定する。

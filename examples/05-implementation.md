@@ -487,3 +487,14 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Backendは`pg.Pool`を1つ生成して共有する。現行library既定値はmax 10、min 0、idle timeout 10秒、connection timeout・statement timeout・query timeoutは未設定、max lifetime 0、allowExitOnIdle false。設定値は正本で未定義のため変更していない。
 - application終了時にpoolを閉じる処理がなかったため、`closeDatabase()`を追加した。SIGINT/SIGTERMでは新規HTTP受付を停止した後に`pool.end()`を実行する。transaction clientは既存どおり`finally`でreleaseする。
 - production schema・index・Customer SQLは変更していない。T-601関連は5 files・55/55 PASS、Backend全testは44 files・322/322 PASS、Backend buildはPASSした。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-22 T-602 Customer検索性能測定（完了）
+
+- Phase 1の性能受入用データ条件を02/03/04へ反映した。これはproduction実績件数ではなく、T-602/T-603で再現可能な測定を行うためのAcceptance modelである。
+- `backend/scripts/customer-search-benchmark.mjs`を追加した。既存の安全guard付きE2E DB reset後、`generate_series`を使う1回の`INSERT ... SELECT`で100,000 Customerを生成する。Customerはactive 95,000件、logical deleted 5,000件、owner 100 usersへ各1,000件、category `NULL` 10,000件と20種類へ各4,500件を決定的に分布させる。実個人情報は使用しない。
+- name検索用markerはactive customerに対してno-hit 0件、low-hit 100件、high-hit 10,000件となるよう生成し、測定前にSQLで実件数を検証する。再実行時は既存E2E resetから開始するためdatasetを二重化しない。
+- benchmarkはproduction `createApp()`をloopback HTTP listenerで起動し、Login APIから取得したadmin・staff tokenを再利用して`GET /api/v1/customers`を呼び出す。fixture生成、DB reset、login、token取得は測定外とし、response body受信完了までを`performance.now()`で測った。
+- 11 scenariosをconcurrency 1で逐次実行し、各10回のwarm-upを除外した後に100回測定した。medianは中央2値の平均、p95は昇順95番目のnearest-rank方式で算出し、scenarioごとに3,000ms以下か判定した。deep paginationは`page=950`、`page_size=100`、`OFFSET 94900`とした。
+- default list、staff scope、name high-hit、deep paginationでは、items queryとcount queryを分けて`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`で記録した。HTTP p95とSQL execution timeは別の値として扱う。
+- 実行環境はNode.js v24.19.0、PostgreSQL 16.15、`pg.Pool` max 10。全11 scenariosのp95は18.128～78.616msで、すべて3,000ms以下だった。最遅はname low-hitの78.616ms。name high-hitのcountはSeq Scanで、通常のB-tree name indexが前後wildcard検索へ直接利用されないことを確認した。
+- package scriptとしてrepository rootとBackendへ`benchmark:customers`を追加した。Production business code、Customer SQL、schema、index、pool値、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。FrontendとPlaywrightは変更・実行していない。

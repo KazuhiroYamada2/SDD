@@ -159,7 +159,10 @@
 
 ### パフォーマンス
 
-- 顧客情報の検索は3秒以内に結果を表示
+- 顧客情報の検索は、Phase 1の性能受入用データ100,000件を使った単一request（concurrency 1）の測定で、必須scenarioごとの95パーセンタイルが3秒以内に結果を表示する。これは実際のproduction実績件数ではなく、T-602とT-603で使用する再現可能なAcceptance datasetとする。
+- 性能受入用データはactive 95,000件、logical deleted 5,000件とし、100 usersへ決定的に均等分布させる。categoryは20種類と`NULL`で構成し、全体の約10%を`NULL`、残りを20種類へおおむね均等に分布させる。nameには実個人情報を含まない決定的なsynthetic dataを使用する。
+- name部分一致検索には、active customerに対して0件、約100件（約0.1%）、約10,000件（約10%）がヒットする3種類の検索語を用意する。実ヒット件数はdataset生成後にSQLで確認する。
+- T-602は各scenarioを逐次実行し、10 requestsのwarm-up後に100 requestsを測定する。HTTP request開始からresponse受信完了までのwall-clock時間を記録し、nearest-rank方式でscenarioごとのp95を算出する。fixture生成、DB reset、login、token取得は測定時間に含めない。全必須scenarioのp95が3,000ms以下の場合に合格とする。
 - 同時アクセス数：最大50ユーザー
 
 ### セキュリティ

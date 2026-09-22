@@ -280,7 +280,12 @@ request bodyで許可するfieldは次のとおりとする。
 
 ## 性能・可用性設計
 
-- 顧客検索は本番相当データで、通常負荷時の95パーセンタイルが3秒以内であることを受入条件とする。
+- 顧客検索はPhase 1の性能受入用データで測定する。このdatasetはCustomer 100,000件（active 95,000件、logical deleted 5,000件）とし、100 usersへ決定的に均等分布させる。categoryは20種類と`NULL`で構成し、全体の約10%を`NULL`、残りを20種類へおおむね均等に分布させる。nameには実個人情報を含まない決定的なsynthetic dataを使用する。この件数と分布はT-602/T-603用の再現可能なAcceptance modelであり、production実績件数を表すものではない。
+- nameの`ILIKE '%query%'`には、active customerに対してno-hit 0件、low-hit約100件（約0.1%）、high-hit約10,000件（約10%）となる決定的な検索語を用意する。dataset生成後にSQLで実ヒット件数を確認し、測定結果とともに記録する。
+- T-602はconcurrency 1で逐次実行する。scenarioごとに10 requestsをwarm-upとして除外し、その後の100 requestsについて、HTTP request開始からresponse body受信完了までのwall-clock時間をmsで記録する。fixture生成、DB reset、login、token取得は測定に含めない。
+- 測定値を昇順に並べ、p95はnearest-rank方式の95番目、medianは中央2値の平均として算出する。default list、name no-hit・low-hit・high-hit、category filter、owner filter、queryとcategoryのAND、name降順、created_at降順、deep pagination、staff owner scopeを個別に測定し、各scenarioのp95が3,000ms以下であることを受入条件とする。全scenarioを混ぜたp95では判定しない。
+- deep paginationは現行のOFFSET方式を維持し、active 95,000件に対して`page_size=100`、最終有効ページの`page=950`を測定する。T-602ではpagination方式を変更しない。
+- T-602ではdefault list、staff scope、name high-hit、deep paginationについて`EXPLAIN (ANALYZE, BUFFERS)`を取得し、HTTP応答時間とは分けて記録する。通常のB-tree name indexが前後wildcardの部分一致へ直接利用されないことも確認するが、測定結果を理由にindexやproduction SQLを変更しない。
 - 50同時ユーザーで主要操作がエラー率1%未満となることを負荷試験で確認する。
 - DB接続プール、ページング、検索インデックスを使用する。
 - 平日9:00〜18:00の稼働率99%以上を、監視サービスの稼働記録で測定する。

@@ -14,7 +14,8 @@
     "e2e:authorization:prepare": "npm --prefix backend run e2e:db:reset",
     "e2e:authorization": "npm run e2e:authorization:prepare && playwright test --config=playwright.authorization.config.ts",
     "e2e:customers:prepare": "npm --prefix backend run e2e:db:reset",
-    "e2e:customers": "npm run e2e:customers:prepare && playwright test --config=playwright.customers.config.ts"
+    "e2e:customers": "npm run e2e:customers:prepare && playwright test --config=playwright.customers.config.ts",
+    "benchmark:customers": "npm --prefix backend run benchmark:customers"
   },
   "repository": {
     "type": "git",
