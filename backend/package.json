@@ -12,6 +12,8 @@
     "e2e:db:seed": "node --env-file=../.env.e2e scripts/e2e-db.mjs seed",
     "e2e:db:reset": "node --env-file=../.env.e2e scripts/e2e-db.mjs reset",
     "e2e:api:verify": "node --env-file=../.env.e2e scripts/verify-e2e-api.mjs",
+    "migrate:customer-encryption": "node --import tsx scripts/encrypt-customer-data.mjs",
+    "verify:customer-encryption": "node --import tsx scripts/verify-customer-encryption.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
     "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",
     "benchmark:customers:load": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs --load"

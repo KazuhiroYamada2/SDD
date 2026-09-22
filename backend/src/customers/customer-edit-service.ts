@@ -3,12 +3,16 @@ import { assertOperationAllowed, isCustomerInScope } from '../authorization/auth
 import { CustomerNotFoundError } from './customer-read-service.js';
 import { toCustomerReadDto, type CustomerReadDto } from './customer-read-types.js';
 import type { CustomerEditRepository, UpdateCustomerInput } from './customer-repository.js';
+import type { CustomerCrypto } from './customer-crypto.js';
 
 export type CustomerEditService = {
   update(id: string, input: UpdateCustomerInput, authenticatedUser: AuthenticatedUser): Promise<CustomerReadDto>;
 };
 
-export const createCustomerEditService = (repository: CustomerEditRepository): CustomerEditService => ({
+export const createCustomerEditService = (
+  repository: CustomerEditRepository,
+  customerCrypto: CustomerCrypto,
+): CustomerEditService => ({
   async update(id, input, authenticatedUser) {
     assertOperationAllowed(authenticatedUser, 'customer.edit');
     const customer = await repository.findActiveById(id);
@@ -16,8 +20,8 @@ export const createCustomerEditService = (repository: CustomerEditRepository): C
       throw new CustomerNotFoundError();
     }
 
-    const updated = await repository.updateActiveById(id, input);
+    const updated = await repository.updateActiveById(id, customerCrypto.encryptUpdateInput(input));
     if (updated === null) throw new CustomerNotFoundError();
-    return toCustomerReadDto(updated);
+    return toCustomerReadDto(customerCrypto.decryptCustomer(updated));
   },
 });

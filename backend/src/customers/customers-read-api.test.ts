@@ -7,6 +7,8 @@ import {
 } from '../test/authenticated-api.js';
 import type { Customer, CustomerListCriteria, CustomerReadRepository } from './customer-repository.js';
 import { createCustomerReadService } from './customer-read-service.js';
+import { passthroughCustomerCrypto } from '../test/customer-crypto.js';
+import { createCustomerCrypto } from './customer-crypto.js';
 
 const otherOwnerId = '22222222-2222-4222-8222-222222222222';
 const missingCustomerId = '55555555-5555-4555-8555-555555555555';
@@ -55,7 +57,7 @@ const repositoryFor = (customers: Customer[]): CustomerReadRepository => ({
 const appFor = (customers: Customer[], role: 'staff' | 'manager' | 'admin' = 'staff') => {
   const repository = repositoryFor(customers);
   return {
-    app: createAuthenticatedTestApp({ customerReadService: createCustomerReadService(repository) }, role),
+    app: createAuthenticatedTestApp({ customerReadService: createCustomerReadService(repository, passthroughCustomerCrypto) }, role),
     repository,
   };
 };
@@ -250,6 +252,30 @@ describe('GET /api/v1/customers/:id', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(dto(own));
+  });
+
+  it('returns only the generic 500 contract for tampered encrypted data', async () => {
+    const crypto = createCustomerCrypto({
+      currentKeyId: 'test', keys: new Map([['test', Buffer.alloc(32, 8)]]),
+    });
+    const encrypted = crypto.encrypt('email', 'private@example.test').split(':');
+    const ciphertext = Buffer.from(encrypted[5]!, 'base64');
+    ciphertext[0] ^= 1;
+    encrypted[5] = ciphertext.toString('base64');
+    const stored = customer({ email: encrypted.join(':') });
+    const repository = repositoryFor([stored]);
+    const app = createAuthenticatedTestApp({
+      customerReadService: createCustomerReadService(repository, crypto),
+    });
+
+    const response = await authenticatedRequest(app).get(`/api/v1/customers/${stored.id}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve customer.',
+    });
+    expect(JSON.stringify(response.body)).not.toContain('private@example.test');
+    expect(JSON.stringify(response.body)).not.toContain('enc:v1:');
   });
 
   it('returns the same 404 for another owner and a missing customer', async () => {

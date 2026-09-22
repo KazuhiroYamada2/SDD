@@ -3,6 +3,7 @@ import { createApp } from '../app.js';
 import type { AuthUserRepository } from '../auth/auth-user-repository.js';
 import type { UserRole } from '../auth/auth-types.js';
 import { createJwtService } from '../auth/jwt-service.js';
+import { passthroughCustomerCrypto } from './customer-crypto.js';
 
 export const testUserId = '11111111-1111-4111-8111-111111111111';
 export const testJwtService = createJwtService();
@@ -18,7 +19,12 @@ const createAuthUserRepository = (role: UserRole): AuthUserRepository => ({
 export const createAuthenticatedTestApp = (
   dependencies: Parameters<typeof createApp>[0] = {},
   role: UserRole = 'staff',
-) => createApp({ ...dependencies, authUserRepository: createAuthUserRepository(role), jwtService: testJwtService });
+) => createApp({
+  customerCrypto: passthroughCustomerCrypto,
+  ...dependencies,
+  authUserRepository: createAuthUserRepository(role),
+  jwtService: testJwtService,
+});
 
 export const createManagerAuthenticatedTestApp = (dependencies: Parameters<typeof createApp>[0] = {}) =>
   createAuthenticatedTestApp(dependencies, 'manager');

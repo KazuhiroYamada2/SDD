@@ -10,6 +10,7 @@ import {
   CustomerNotFoundError,
   customerNotFoundResponse,
 } from './customer-read-service.js';
+import { passthroughCustomerCrypto } from '../test/customer-crypto.js';
 
 const staff: AuthenticatedUser = { id: '11111111-1111-4111-8111-111111111111', role: 'staff' };
 const otherOwnerId = '22222222-2222-4222-8222-222222222222';
@@ -57,7 +58,7 @@ describe('createCustomerReadService list', () => {
     const other = customer({ id: '33333333-3333-4333-8333-333333333333', owner_user_id: otherOwnerId });
     const deleted = customer({ id: '44444444-4444-4444-8444-444444444444', deleted_at: new Date() });
     const repository = repositoryFor([own, other, deleted]);
-    const service = createCustomerReadService(repository);
+    const service = createCustomerReadService(repository, passthroughCustomerCrypto);
 
     await expect(service.list(staff)).resolves.toMatchObject({
       items: [{ id: own.id, owner_user_id: staff.id }],
@@ -79,7 +80,7 @@ describe('createCustomerReadService list', () => {
     const other = customer({ id: '33333333-3333-4333-8333-333333333333', owner_user_id: otherOwnerId });
     const deleted = customer({ id: '44444444-4444-4444-8444-444444444444', deleted_at: new Date() });
     const repository = repositoryFor([own, other, deleted]);
-    const service = createCustomerReadService(repository);
+    const service = createCustomerReadService(repository, passthroughCustomerCrypto);
 
     const result = await service.list({ id: staff.id, role });
 
@@ -89,7 +90,7 @@ describe('createCustomerReadService list', () => {
 
   it.each(['staff', 'manager', 'admin'] as const)('excludes logically deleted customers for %s', async (role) => {
     const repository = repositoryFor([customer({ deleted_at: new Date() })]);
-    const result = await createCustomerReadService(repository).list({ id: staff.id, role });
+    const result = await createCustomerReadService(repository, passthroughCustomerCrypto).list({ id: staff.id, role });
 
     expect(result).toEqual({ items: [], page: 1, page_size: 20, total_count: 0, total_pages: 0 });
   });
@@ -98,7 +99,7 @@ describe('createCustomerReadService list', () => {
     const list = vi.fn().mockResolvedValue({ items: [customer()], totalCount: 101 });
     const repository: CustomerReadRepository = { list, findActiveById: vi.fn() };
 
-    const result = await createCustomerReadService(repository).list(staff, {
+    const result = await createCustomerReadService(repository, passthroughCustomerCrypto).list(staff, {
       page: 3,
       pageSize: 50,
       query: 'Sample',
@@ -123,7 +124,7 @@ describe('createCustomerReadService list', () => {
     const list = vi.fn().mockResolvedValue({ items: [], totalCount: 0 });
     const repository: CustomerReadRepository = { list, findActiveById: vi.fn() };
 
-    await createCustomerReadService(repository).list({ id: staff.id, role }, {
+    await createCustomerReadService(repository, passthroughCustomerCrypto).list({ id: staff.id, role }, {
       page: 1,
       pageSize: 20,
       ownerUserId: otherOwnerId,
@@ -142,7 +143,7 @@ describe('createCustomerReadService list', () => {
 describe('createCustomerReadService detail', () => {
   it('returns the common read DTO for a customer owned by staff', async () => {
     const own = customer();
-    const result = await createCustomerReadService(repositoryFor([own])).findById(own.id, staff);
+    const result = await createCustomerReadService(repositoryFor([own]), passthroughCustomerCrypto).findById(own.id, staff);
 
     expect(result).toEqual({
       ...own,
@@ -154,14 +155,17 @@ describe('createCustomerReadService detail', () => {
 
   it('hides another owner customer from staff', async () => {
     const other = customer({ owner_user_id: otherOwnerId });
-    const error = await publicError(createCustomerReadService(repositoryFor([other])).findById(other.id, staff));
+    const decryptCustomer = vi.fn(passthroughCustomerCrypto.decryptCustomer);
+    const crypto = { ...passthroughCustomerCrypto, decryptCustomer };
+    const error = await publicError(createCustomerReadService(repositoryFor([other]), crypto).findById(other.id, staff));
 
     expect(error).toEqual({ status: 404, ...customerNotFoundResponse });
+    expect(decryptCustomer).not.toHaveBeenCalled();
   });
 
   it.each(['manager', 'admin'] as const)('returns another owner customer for %s', async (role) => {
     const other = customer({ owner_user_id: otherOwnerId });
-    const result = await createCustomerReadService(repositoryFor([other]))
+    const result = await createCustomerReadService(repositoryFor([other]), passthroughCustomerCrypto)
       .findById(other.id, { id: staff.id, role });
 
     expect(result.id).toBe(other.id);
@@ -169,7 +173,7 @@ describe('createCustomerReadService detail', () => {
   });
 
   it('returns the not-found contract for a missing customer', async () => {
-    const error = await publicError(createCustomerReadService(repositoryFor([]))
+    const error = await publicError(createCustomerReadService(repositoryFor([]), passthroughCustomerCrypto)
       .findById(customer().id, staff));
 
     expect(error).toEqual({ status: 404, ...customerNotFoundResponse });
@@ -177,7 +181,7 @@ describe('createCustomerReadService detail', () => {
 
   it.each(['staff', 'manager', 'admin'] as const)('treats a logically deleted customer as missing for %s', async (role) => {
     const deleted = customer({ deleted_at: new Date() });
-    const error = await publicError(createCustomerReadService(repositoryFor([deleted]))
+    const error = await publicError(createCustomerReadService(repositoryFor([deleted]), passthroughCustomerCrypto)
       .findById(deleted.id, { id: staff.id, role }));
 
     expect(error).toEqual({ status: 404, ...customerNotFoundResponse });
@@ -185,7 +189,7 @@ describe('createCustomerReadService detail', () => {
 
   it('uses the same public error for another owner and a missing customer', async () => {
     const other = customer({ owner_user_id: otherOwnerId });
-    const service = createCustomerReadService(repositoryFor([other]));
+    const service = createCustomerReadService(repositoryFor([other]), passthroughCustomerCrypto);
 
     const [scopeError, missingError] = await Promise.all([
       publicError(service.findById(other.id, staff)),

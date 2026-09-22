@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from '../auth/auth-types.js';
 import { assertOperationAllowed, isCustomerInScope } from '../authorization/authorization-policy.js';
 import type { CustomerReadRepository } from './customer-repository.js';
+import type { CustomerCrypto } from './customer-crypto.js';
 import {
   toCustomerReadDto,
   type CustomerListQuery,
@@ -36,7 +37,10 @@ export type CustomerReadService = {
   findById(id: string, authenticatedUser: AuthenticatedUser): Promise<CustomerReadDto>;
 };
 
-export const createCustomerReadService = (repository: CustomerReadRepository): CustomerReadService => ({
+export const createCustomerReadService = (
+  repository: CustomerReadRepository,
+  customerCrypto: CustomerCrypto,
+): CustomerReadService => ({
   async list(authenticatedUser, query = defaultListQuery) {
     assertOperationAllowed(authenticatedUser, 'customer.read');
     const result = await repository.list({
@@ -50,7 +54,7 @@ export const createCustomerReadService = (repository: CustomerReadRepository): C
     });
 
     return {
-      items: result.items.map(toCustomerReadDto),
+      items: result.items.map((customer) => toCustomerReadDto(customerCrypto.decryptCustomer(customer))),
       page: query.page,
       page_size: query.pageSize,
       total_count: result.totalCount,
@@ -64,6 +68,6 @@ export const createCustomerReadService = (repository: CustomerReadRepository): C
       throw new CustomerNotFoundError();
     }
 
-    return toCustomerReadDto(customer);
+    return toCustomerReadDto(customerCrypto.decryptCustomer(customer));
   },
 });

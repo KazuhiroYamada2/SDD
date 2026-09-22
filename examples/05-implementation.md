@@ -516,3 +516,13 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 環境設定からcurrent key IDとkey ringを取得し、不正設定では起動を失敗させる。read時再暗号化は行わず、rotationと既存plaintextはone-shot offline migrationで扱う。steady stateのplaintext混在とplaintext fallbackは禁止した。
 - 復号は既存Customer read Role Matrixに従い、DB scope/resource判定とscope Authorizationの後に行う。T-107の実装・検証内容とT-604の最終Acceptanceを04へ具体化した。
 - 今回は仕様確定のみで、Production code、schema、testは変更・実行していない。
+
+## 2026-09-22 T-107 Customer暗号化・復号処理（完了）
+
+- Node.js標準`crypto`でAES-256-GCM componentを実装した。`name_kana`、`email`、`phone`、`address`は値ごとにrandom 12-byte IVを生成し、16-byte authentication tag、`customer:v1:<field-name>`のAAD、current key IDを使って`enc:v1` envelopeへ変換する。
+- `CUSTOMER_ENCRYPTION_CURRENT_KEY_ID`と`CUSTOMER_ENCRYPTION_KEYS_JSON`からcurrent keyとkey ringを構成する。設定欠落、JSON・Base64不正、current key不存在、32 bytes以外の鍵はserver起動前に拒否する。`.env.example`と`.env.e2e.example`には変数名と形式だけを追加し、鍵値は保存していない。
+- Repositoryはroleを判定せず、暗号化済み値を保存・取得する。createはvalidation・Authorization後、DB保存前に暗号化し、editはscope確認後にrequestで変更された暗号化対象fieldだけを暗号化する。readはlistのSQL scope/filter/pagination後、detailのowner scope確認後に返却行だけを復号する。
+- `encrypt-customer-data.mjs`と`migrate:customer-encryption`を追加した。migrationはactive・logical deletedを区別せず全Customerをtransaction内で処理する。`NULL`と正しい`enc:v1`は維持し、plaintextだけを暗号化する。不正な`enc:v1`はrollbackし、更新後に全non-null値を再検証するため、再実行しても二重暗号化しない。
+- 実PostgreSQL Acceptance用の`verify-customer-encryption.mjs`を追加した。実Backend HTTPでcreate・edit・list・detailを実行し、DB直接参照によるenvelope確認、staff・manager・adminの復号、staff scope外404、active/deleted migration、冪等性、malformed時rollbackを検証する。鍵、plaintext PII、完全なciphertextは出力しない。
+- Customer columnは既存の`TEXT`でenvelopeを保存できるためschemaを変更していない。`name`、`category`、`owner_user_id`と検索SQL・index・paginationも変更していない。
+- Backend関連テストは8 files・91/91 PASS、Backend全テストは47 files・345/345 PASS、Backend buildはPASSした。FrontendとPlaywrightは変更・実行していない。

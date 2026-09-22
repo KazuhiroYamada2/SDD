@@ -26,6 +26,8 @@ import { createStaffPerformanceService, type StaffPerformanceService } from './r
 import { createUserRepository } from './users/user-repository.js';
 import { createUserService, type UserService } from './users/user-service.js';
 import { createUsersRouter } from './users/users-router.js';
+import { createCustomerCrypto, type CustomerCrypto } from './customers/customer-crypto.js';
+import { config } from './config.js';
 
 type AppDependencies = {
   loginService?: LoginService;
@@ -40,6 +42,7 @@ type AppDependencies = {
   customerCategoryService?: CustomerCategoryService;
   staffPerformanceService?: StaffPerformanceService;
   userService?: UserService;
+  customerCrypto?: CustomerCrypto;
 };
 
 export const createApp = (dependencies: AppDependencies = {}) => {
@@ -56,11 +59,12 @@ export const createApp = (dependencies: AppDependencies = {}) => {
       issueAccessToken: jwtService.issueAccessToken,
     }));
   const productionCustomerRepository = database === undefined ? undefined : createCustomerRepository(database);
+  const customerCrypto = dependencies.customerCrypto ?? createCustomerCrypto(config.customerEncryption);
   const customerRepository = dependencies.customerRepository ?? productionCustomerRepository;
   const customerReadService = dependencies.customerReadService ??
-    (productionCustomerRepository === undefined ? undefined : createCustomerReadService(productionCustomerRepository));
+    (productionCustomerRepository === undefined ? undefined : createCustomerReadService(productionCustomerRepository, customerCrypto));
   const customerEditService = dependencies.customerEditService ??
-    (productionCustomerRepository === undefined ? undefined : createCustomerEditService(productionCustomerRepository));
+    (productionCustomerRepository === undefined ? undefined : createCustomerEditService(productionCustomerRepository, customerCrypto));
   const customerDeleteService = dependencies.customerDeleteService ??
     (productionCustomerRepository === undefined ? undefined : createCustomerDeleteService(productionCustomerRepository));
   const activityService = dependencies.activityService ??
@@ -93,6 +97,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     customerReadService,
     customerEditService,
     customerDeleteService,
+    customerCrypto,
   ));
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));

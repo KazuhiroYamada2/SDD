@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createCustomerDeleteService } from './customer-delete-service.js';
 import { createCustomerEditService } from './customer-edit-service.js';
+import { passthroughCustomerCrypto } from '../test/customer-crypto.js';
 import { createCustomerReadService } from './customer-read-service.js';
 import type {
   Customer,
@@ -43,8 +44,8 @@ const setup = (role: 'staff' | 'manager' | 'admin' = 'admin') => {
   };
   return {
     app: createAuthenticatedTestApp({
-      customerReadService: createCustomerReadService(repository),
-      customerEditService: createCustomerEditService(repository),
+      customerReadService: createCustomerReadService(repository, passthroughCustomerCrypto),
+      customerEditService: createCustomerEditService(repository, passthroughCustomerCrypto),
       customerDeleteService: createCustomerDeleteService(repository),
     }, role),
     repository,

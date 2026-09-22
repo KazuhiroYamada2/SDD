@@ -634,3 +634,41 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - 01～06と既存のCustomer検索・Role Matrixを照合し、重大な仕様矛盾がないことを確認した。`name`を平文で維持するため、既存の`ILIKE '%query%'`と`name_asc`・`name_desc`を変更しない。
 - 02/03/04へ要件、技術方式、T-107実装条件、T-604 Acceptanceを反映した。Production code、schema、testは変更・実行していない。
 - T-004はPASS・完了。T-107は着手可能であり、T-604はT-107完了後に再開する。
+
+## 2026-09-22 T-107 Customer暗号化・復号処理検証（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| AES-256-GCM | random 12-byte IV、16-byte tag、field別AADでencrypt/decrypt | PASS |
+| 非決定性 | 同一plaintextの複数回暗号化でIVとenvelopeが不一致 | PASS |
+| Key configuration | current key ID、key ring、JSON・Base64・32-byte validation | PASS |
+| Startup validation | 欠落・不正設定、current key不存在をserver起動前に拒否 | PASS |
+| Create / edit / null | 保存前暗号化、変更fieldのみ再暗号化、省略field維持、DB `NULL`維持 | PASS |
+| Read | list/detail/create/edit responseで既存plaintext DTOを維持 | PASS |
+| Fail closed | field AAD違い、tampered ciphertext/tag、unknown・wrong key、malformed envelopeを拒否 | PASS |
+| Migration | active・logical deletedを暗号化し、`NULL`・既存envelopeを維持。再実行0更新 | PASS |
+| Rollback | malformed `enc:v1`でtransaction rollback | PASS |
+| Regression | 関連8 files・91/91、全47 files・345/345、Backend build | PASS |
+
+- 暗号設定のerrorは固定messageを使用し、crypto errorはCustomer APIの既存generic 500へ変換する。鍵値、Customer plaintext、完全なciphertext envelopeをerrorやlogへ追加していない。
+- Production codeはcrypto component、設定validation、Customer Service/Router統合、offline migrationを変更した。Customer schema、検索SQL、index、pagination、Frontend contractは変更していない。
+- T-107はPASS・完了と判定する。
+
+## 2026-09-22 T-604 Customer情報暗号化・復号権限 最終Acceptance（PASS）
+
+| Acceptance | 実PostgreSQL・HTTP結果 | 判定 |
+| --- | --- | --- |
+| DB暗号化 | 4 fieldのnon-null保存値が入力plaintextと不一致で、validな`enc:v1` envelope | PASS |
+| Authorized decrypt | staff own、manager、adminのdetailとstaff listが元のplaintext DTOを返却 | PASS |
+| Scope前decrypt禁止 | staff otherはService unit testでdecrypt 0回、実HTTPで404 `CUSTOMER_NOT_FOUND` | PASS |
+| Create | plaintext request、DB ciphertext、201 plaintext response | PASS |
+| Edit | 変更fieldは新envelope、省略fieldのenvelopeは不変、`null`はDB `NULL` | PASS |
+| Migration | active・logical deletedを暗号化し、完了後のplaintext残存なし | PASS |
+| Idempotency | 再実行で更新Customer 0、暗号化値0 | PASS |
+| Tamper・key error | tamper、wrong key、unknown key、malformed envelopeをfail closed | PASS |
+| Search contract | `name`・`category`・`owner_user_id`は平文、既存SQL・index・pagination変更なし | PASS |
+| Secret・PII非開示 | 鍵値と完全なciphertextをrepository、report、test outputへ出力せず、公開DTOにcrypto metadataなし | PASS |
+
+- Docker CLIは使用せず、専用E2E PostgreSQL `127.0.0.1:55432`へ接続した。検証用Customerは終了時に削除し、production DBは使用していない。
+- Backend全テストは47 files・345/345 PASS、Backend buildはPASS。Frontend変更はなく、Frontend test/buildとPlaywrightはT-604対象外のため未実施。暗号化対象は検索fieldではないためT-601～T-603の性能benchmarkも再実行していない。
+- DB実値、復号Authorization、migration、fail-closed error、全回帰が受入条件を満たしたため、T-604はPASS・完了と判定する。

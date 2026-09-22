@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCustomerEditService } from './customer-edit-service.js';
 import type { Customer, CustomerEditRepository } from './customer-repository.js';
 import { authenticatedRequest, createAuthenticatedTestApp, testUserId } from '../test/authenticated-api.js';
+import { passthroughCustomerCrypto } from '../test/customer-crypto.js';
 
 const id = '8a1f2d44-1234-4abc-8def-123456789abc';
 const otherOwnerId = '22222222-2222-4222-8222-222222222222';
@@ -21,7 +22,7 @@ const setup = (role: 'staff' | 'manager' | 'admin' = 'staff', found: Customer | 
     })),
   };
   return {
-    app: createAuthenticatedTestApp({ customerEditService: createCustomerEditService(repository) }, role),
+    app: createAuthenticatedTestApp({ customerEditService: createCustomerEditService(repository, passthroughCustomerCrypto) }, role),
     repository,
   };
 };

@@ -10,6 +10,8 @@ import {
 } from './customer-read-service.js';
 import { validateCustomerId, validateCustomerListQuery } from './customer-read-validation.js';
 import { validateCreateCustomer, validateUpdateCustomer } from './customer-validation.js';
+import type { CustomerCrypto } from './customer-crypto.js';
+import { toCustomerReadDto } from './customer-read-types.js';
 
 const customerId = (params: unknown): string | undefined =>
   (params as { id?: string }).id;
@@ -19,6 +21,7 @@ export const createCustomersRouter = (
   customerReadService?: CustomerReadService,
   customerEditService?: CustomerEditService,
   customerDeleteService?: CustomerDeleteService,
+  customerCrypto?: CustomerCrypto,
 ) => {
   const router = Router();
 
@@ -76,19 +79,19 @@ export const createCustomersRouter = (
       return;
     }
 
-    if (customerRepository === undefined) {
+    if (customerRepository === undefined || customerCrypto === undefined) {
       response.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Database is not configured.' });
       return;
     }
 
     try {
-      const customer = await customerRepository.create({
+      const customer = await customerRepository.create(customerCrypto.encryptCreateInput({
         ...validation.value,
         owner_user_id: request.authenticatedUser!.role === 'staff'
           ? request.authenticatedUser!.id
           : validation.value.owner_user_id,
-      });
-      response.status(201).json(customer);
+      }));
+      response.status(201).json(toCustomerReadDto(customerCrypto.decryptCustomer(customer)));
     } catch {
       response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create customer.' });
     }
