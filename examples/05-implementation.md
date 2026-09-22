@@ -508,3 +508,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 8 scenarios、計8,000 measured requestsはすべてHTTP 200かつschema正常で、期待外status、request error、invalid responseは0件だった。scenario別p95は49.278～842.520ms。最遅はname high-hitでmedian 483.276ms、p95 842.520ms、p99 869.427ms、max 915.130msだった。
 - SQL planはconcurrencyで変化しないためT-602のEXPLAIN証跡を再利用した。name high-hitのitems/countは約47msで、countはSeq Scanだった。50 concurrentではpool max 10に対して最大90 queriesが待機したが、その待ちを含むHTTP p95も3,000ms以内だったため追加EXPLAINは取得していない。
 - Production business code、Customer SQL、schema、index、pool max・timeout、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-22 T-004 個人情報暗号化・鍵管理仕様（完了）
+
+- Phase 1のCustomer暗号化対象を`name_kana`、`email`、`phone`、`address`に確定した。既存の部分一致検索、filter、sort、scopeを維持するため、`name`、`category`、`owner_user_id`と識別・日時fieldは平文のままとする。
+- application-levelのAES-256-GCM、32-byte key、値ごとのrandom 12-byte IV、16-byte authentication tag、field名を含むAAD、`enc:v1` envelopeを02/03へ正本化した。
+- 環境設定からcurrent key IDとkey ringを取得し、不正設定では起動を失敗させる。read時再暗号化は行わず、rotationと既存plaintextはone-shot offline migrationで扱う。steady stateのplaintext混在とplaintext fallbackは禁止した。
+- 復号は既存Customer read Role Matrixに従い、DB scope/resource判定とscope Authorizationの後に行う。T-107の実装・検証内容とT-604の最終Acceptanceを04へ具体化した。
+- 今回は仕様確定のみで、Production code、schema、testは変更・実行していない。

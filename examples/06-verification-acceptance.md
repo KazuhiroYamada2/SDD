@@ -617,3 +617,20 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - Production business code、schema、index、Customer SQL、pool max・timeout、pagination方式は変更していない。改善実装は不要と判断した。将来のデータ増加や性能未達時には、pool max、`pg_trgm` + GIN、count query、deep OFFSETの見直しを個別に評価する。
 - Backend全testは44 files・322/322 PASS、Backend buildはPASS。Frontend変更・test/buildとPlaywrightはT-603対象外のため未実施。
 - 全必須scenarioで成功率100%、期待外status 0件、p95 3,000ms以下となったため、T-603はPASS・完了と判定する。
+
+## 2026-09-22 T-004 個人情報暗号化・鍵管理仕様レビュー（PASS）
+
+| 確認対象 | 確定内容 | 判定 |
+| --- | --- | --- |
+| 暗号化対象 | `name_kana`、`email`、`phone`、`address` | PASS |
+| 平文field | `name`、`category`、`owner_user_id`、識別・日時field。既存検索・sort・scopeを維持 | PASS |
+| 暗号方式 | application-level AES-256-GCM、32-byte key、値ごとのrandom 12-byte IV、16-byte tag、field名を含むAAD | PASS |
+| 保存形式 | `enc:v1:<key-id>:<iv-base64>:<tag-base64>:<ciphertext-base64>`、`null`はDB `NULL` | PASS |
+| 鍵管理 | 環境設定のcurrent key IDとkey ring。DB・source・repositoryへ保存せず、不正設定は起動失敗 | PASS |
+| Rotation・移行 | read時再暗号化なし。明示的なone-shot migrationを使用し、active・logical deletedを対象化。steady stateのplaintext混在禁止 | PASS |
+| 復号Authorization | 既存Role Matrixを使用し、DB scope/resource判定とscope Authorizationの後に返却対象だけ復号 | PASS |
+| Error・秘密情報 | crypto failureはfail closed。鍵、plaintext、完全なenvelopeを公開response・log・test outputへ出さない | PASS |
+
+- 01～06と既存のCustomer検索・Role Matrixを照合し、重大な仕様矛盾がないことを確認した。`name`を平文で維持するため、既存の`ILIKE '%query%'`と`name_asc`・`name_desc`を変更しない。
+- 02/03/04へ要件、技術方式、T-107実装条件、T-604 Acceptanceを反映した。Production code、schema、testは変更・実行していない。
+- T-004はPASS・完了。T-107は着手可能であり、T-604はT-107完了後に再開する。

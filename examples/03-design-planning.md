@@ -272,7 +272,29 @@ request bodyで許可するfieldは次のとおりとする。
 
 ## セキュリティ・監査
 
-- 顧客情報の保存時は暗号化対象項目を暗号化し、暗号鍵をDBに保存しない。
+### Customer field encryption
+
+| 区分 | Field | 保存・利用方針 |
+| --- | --- | --- |
+| 暗号化 | `name_kana`、`email`、`phone`、`address` | applicationでAES-256-GCM暗号化後にDBへ保存し、認可されたreadで復号する |
+| 平文 | `name` | `ILIKE '%query%'`と`name_asc`・`name_desc`を維持するため、Phase 1では暗号化しない |
+| 平文 | `category`、`owner_user_id` | 既存のfilterとsecurity scopeをDBで適用する |
+| 平文 | `id`、`created_at`、`updated_at`、`deleted_at` | 識別、sort、logical deleteの既存契約を維持する |
+
+- Node.js標準`crypto`によるapplication-level encryptionを使用し、不要なcrypto dependencyや独自暗号方式を追加しない。algorithmはAES-256-GCM、鍵は32 bytes、IVは値ごとに`randomBytes`等で生成するcryptographically secure random 12 bytes、authentication tagは16 bytesとする。
+- AADはUTF-8文字列`customer:v1:<field-name>`とし、format versionとCustomer field nameを認証対象へ含める。これにより、たとえばemailのciphertextをphoneとして復号しようとした場合に失敗させる。Phase 1ではCustomer IDをAADへ含めない。
+- non-null値は`enc:v1:<key-id>:<iv-base64>:<tag-base64>:<ciphertext-base64>`のenvelopeで既存Customer columnへ保存する。delimiter、要素数、prefix、version、key ID、Base64各要素を厳密に検証してから復号する。T-107では既存columnがvalidation上限のplaintextを格納したenvelopeに十分な長さか確認し、不足する場合だけmigrationで拡張する。`null`はDBの`NULL`を維持する。
+- application設定はcurrent key IDと、key IDから32-byte keyへのmappingを持つkey ringで構成する。productionの値はdeployment環境のsecret管理機構から環境変数等でinjectし、DB、source code、Git repositoryへ保存しない。特定のcloud secret productはPhase 1で固定しない。testはtest専用keyを使い、production keyを共有しない。
+- config読込時に、暗号設定の存在、current key ID、current keyのkey ring内存在、全keyの32-byte長、設定形式を検証する。不正時はHTTP serverの起動前にfailさせ、暗号化なしのfallbackを禁止する。鍵値をlog、error、test outputへ出力しない。
+- encryptは常にcurrent key IDを使用し、decryptはenvelopeのkey IDでkey ringを選択する。read時の自動再暗号化は行わない。key rotationは明示的なone-shot re-encryption migrationで実施し、そのkey IDを持つciphertextが残る間は旧keyをkey ringから削除しない。
+- 既存plaintextはactive・logical deletedを問わずone-shot offline migrationの対象とする。application停止、migration、対象4 fieldのplaintext残存確認、新application起動の順を基本とする。steady stateのRepositoryはplaintextとciphertextの混在を許容せず、read時にplaintextを検出した場合も自動暗号化やplaintext返却を行わずfail closedとする。migrationは正しい`enc:v1` envelopeを識別し、二重暗号化しない。
+- POSTはvalidation・正規化後、Repositoryへの保存前に4 fieldのnon-null値を暗号化する。PATCHはrequestに含まれる暗号化対象fieldだけを暗号化し、省略fieldをdecrypt・re-encryptしない。明示的な`null`はDBの`NULL`として保存する。create・edit responseは保存後のauthorized DTOとしてplaintextを返す。
+- detailではAuthentication、operation Authorization、DB scope/resource判定、scope Authorization、decrypt、DTO生成の順とする。staff scopeは暗号化対象を取得・復号する前に`owner_user_id`を使ってSQLで限定し、scope外を404 `CUSTOMER_NOT_FOUND`とする。manager・adminは既存どおり全active Customerをreadできる。一覧・検索も`deleted_at IS NULL`、staff owner scope、query/filterをSQLで適用してから返却対象行だけを復号する。
+- 公開Customer DTOは既存契約を維持し、暗号化対象fieldをplaintextで返す。envelope、IV、tag、key IDはDTOへ追加しない。暗号化対象fieldをPhase 1の検索・filter・sortへ追加せず、平文の`name`、`category`、`owner_user_id`を使う既存Customer SQLは変更しない。deterministic encryption、blind index、order-preserving encryption、plaintext shadow columnは採用しない。
+- unknown key ID、malformed envelope、不正なIV・tag・ciphertext、authentication tag mismatch、decrypt failureはfail closedとする。APIは既存のgeneric internal server errorへ変換し、crypto内部情報を公開しない。logには鍵、Customer plaintext、完全なciphertext envelopeを含めない。
+
+### その他のセキュリティ・監査
+
 - SQLインジェクション対策としてパラメータ化クエリを使用する。
 - 認証・認可、個人情報の参照・変更・削除、権限変更をaudit_logsへ記録する。
 - アクセスログは最低1年間保存し、一般ユーザーは閲覧できない。

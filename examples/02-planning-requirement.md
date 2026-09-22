@@ -176,7 +176,18 @@
 - ログイン成功後は、認証導入前と同じ初期業務画面である「顧客登録画面」を表示する。ログインが401の場合は原因を区別せず共通メッセージを表示し、400の場合は入力エラーを表示して、いずれもLogin画面に留まり認証状態を保持しない。
 - 認証後の業務APIから401を受けた場合は認証状態を破棄してLogin画面へ戻し、再ログインが必要であることを共通メッセージで伝える。Browser再読込後も再ログインが必要とする。Logoutは保持中の認証状態を破棄してLogin画面へ戻す。Backend Logout APIは設けない。
 - E2E専用ユーザーのテスト用passwordとArgon2id hashはE2E fixtureで準備する。本番ユーザーのInitial Password Provisioningを解決したものとは扱わない。
-- 顧客情報は暗号化して保存
+- Phase 1ではCustomerの`name_kana`、`email`、`phone`、`address`をapplication-level encryptionで暗号化して保存する。`null`はDBの`NULL`のままとし、暗号文字列へ変換しない。
+- `name`、`category`、`owner_user_id`、`id`、`created_at`、`updated_at`、`deleted_at`は平文で保存する。`name`は既存の`ILIKE '%query%'`による部分一致検索と`name_asc`・`name_desc`のDB sortを維持するため、Phase 1では暗号化しない。deterministic encryption、blind index、order-preserving encryption、plaintext shadow columnは追加しない。
+- 暗号方式はAES-256-GCMとし、32 bytesの鍵、暗号化する値ごとに生成するcryptographically secure random 12 bytesのIV、16 bytesのauthentication tagを使用する。AADにはformat versionとCustomer field nameを含め、field間のciphertext取り違えを検出する。Phase 1ではCustomer IDをAADの必須要素としない。
+- 暗号化したnon-null値は`enc:v1:<key-id>:<iv-base64>:<tag-base64>:<ciphertext-base64>`形式でDBへ保存する。公開DTOは現在のfield setを維持し、認可されたreadでは暗号化対象fieldを復号したplaintextを返す。ciphertext envelope、IV、tag、key IDは公開しない。
+- Customer暗号鍵はDB、source code、Git repositoryへ保存しない。applicationは環境設定からcurrent key IDとkey IDから32-byte keyへのmappingを持つkey ringを取得する。productionではdeployment環境のsecret管理機構から環境変数等としてinjectし、特定のcloud secret productはPhase 1で固定しない。testではproduction keyとは異なるtest専用keyを使用する。
+- 暗号設定なし、current key IDなし、current keyのkey ring内不存在、key長不正、設定形式不正の場合はapplicationの起動を失敗させる。暗号化なしで起動するfallbackは設けない。鍵値はlog、error、仕様書、test outputへ出力しない。
+- 新規暗号化は常にcurrent key IDを使用し、復号はciphertext envelopeのkey IDに対応するkey ringの鍵を使用する。read時の自動再暗号化は行わない。rotation時は明示的なone-shot re-encryption migrationを実行し、対象ciphertextが残る旧keyをkey ringから削除しない。
+- 既存Customerのplaintextは、logical deletedを含む全件を対象とするone-shot offline migrationで暗号化する。原則としてapplication停止、migration、plaintext残存確認、新application起動の順でdeployする。steady stateではplaintextとciphertextの混在を許可せず、production read時の自動暗号化も行わない。migrationは正しい`enc:v1` envelopeを二重暗号化しない。
+- 復号可能範囲は既存Customer read Role Matrixと同じとする。staffは自担当Customerのみ、managerとadminは全active Customerを復号済みDTOとして取得できる。staffが他担当Customerを指定した場合は、復号せず404 `CUSTOMER_NOT_FOUND`を返す。処理順はAuthentication、operation Authorization、DB scope/resource判定、scope Authorization、decrypt、DTO生成とする。一覧・検索も既存SQLでscopeとfilterを適用し、返却対象行だけを復号する。
+- Customer登録では暗号化対象fieldをDB保存前に暗号化する。部分更新では変更された暗号化対象fieldだけを暗号化し、変更されていないfieldを不要に復号・再暗号化しない。`null`更新はDBの`NULL`を保存する。
+- `name_kana`、`email`、`phone`、`address`はPhase 1のCustomer検索・filter・sort対象に追加しない。平文を維持する`name`、`category`、`owner_user_id`の既存検索SQL契約は変更しない。
+- unknown key ID、malformed envelope、不正なIV・tag・ciphertext、authentication tag mismatch、その他のdecrypt failureはfail closedとし、plaintext fallbackを禁止する。公開APIは既存のgeneric internal server error契約を使用し、crypto固有情報をresponseへ出さない。logにも暗号鍵、Customerのplaintext、完全なciphertext envelopeを出力しない。
 - アクセスログを記録
 
 ### 可用性

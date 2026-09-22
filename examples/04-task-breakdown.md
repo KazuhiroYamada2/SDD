@@ -30,7 +30,7 @@
 | T-001 | APIと画面の一覧、エラー形式、共通IDの確定 | 全要件 | 03の承認 | 高 |
 | T-002 | users、customers、activities、sales_records、audit_logsのスキーマ設計 | F-01〜F-14、N-04、N-05 | T-001 | 高 |
 | T-003 | staff・manager・adminの権限マトリクスを確定。成果物は03のRole × Operation × Scope表とし、3roleの操作可否・データ範囲、Backend API側で認可を強制する原則が揃い、レビューできることを完了条件とする | F-12〜F-14 | T-001 | 高 |
-| T-004 | 個人情報の暗号化対象と鍵管理方式の確定 | N-04 | T-001 | 高 |
+| T-004 | Phase 1の暗号化対象を`name_kana`・`email`・`phone`・`address`、方式をAES-256-GCM、保存形式をversion・key ID・12-byte IV・16-byte tag・ciphertextからなる`enc:v1` envelopeとして確定する。環境設定のcurrent key IDとkey ring、起動時validation、rotation、one-shot plaintext migration、既存Role Matrixに従うscope確認後の復号、fail-closed error契約を02/03へ正本化する。仕様レビューとproduction変更なしの確認を完了条件とする | N-04 | T-001 | 高 |
 | T-005 | 既存データの項目マッピングと移行手順の確定 | 01の互換性制約 | T-002 | 中 |
 | T-006 | 検索性能、同時アクセス、稼働率の測定計画を確定 | N-01、N-02、N-06 | T-001 | 高 |
 | T-007 | メンテナンス通知、監視、バックアップ、障害対応手順の確定 | N-06、N-07 | T-006 | 高 |
@@ -45,7 +45,7 @@
 | T-104 | BackendのLogin APIとAuthentication部品を実装する。入力不正時の400、既存ユーザーのArgon2id password照合、HS256 JWT発行（30分）、Bearer形式・HS256固定・期限の検証、`sub`によるusers存在・`is_active`の各request確認、現在roleを持つ`authenticatedUser`設定、確定した401共通応答とdummy hashによるuser enumeration対策を実装・テストする。production業務APIへの適用はT-111、role別の認可はT-105、Frontend Login画面はT-110、audit_logs永続記録はT-108として分け、初期password設定は含めない | N-03 | T-003、T-102 | 高 |
 | T-105 | 共通Authorization機構と403処理を実装する。`authenticatedUser`を入力とするrole × operation判定、取得済みcustomerのownerを使う小さなscope policy、403 `FORBIDDEN`共通応答、unit test、Authentication→Authorization順序の共通integration testを含む。T-105A（policy・403 core）とT-105B（共通integration）に分けられる。全production業務APIへの適用、未実装APIの作成、Frontend表示制御は含めない | F-12〜F-14 | T-003、T-104 | 高 |
 | T-106 | 入力検証、エラー形式、リクエストIDの共通処理を実装 | 全機能、N-05 | T-001、T-102 | 高 |
-| T-107 | 顧客情報の暗号化・復号処理と秘密情報の設定を実装 | N-04 | T-004、T-103 | 高 |
+| T-107 | 03の契約に従い、Node.js標準`crypto`によるAES-256-GCM component、current key IDとkey ringの設定、起動時validation、Customer create・変更fieldだけのedit暗号化、scope確認後のauthorized decrypt、`null`保持を実装する。実PostgreSQLでplaintextと異なる`enc:v1`保存値と復号DTOを確認し、tamper、unknown・wrong key、malformed envelopeをfail closedとする。active・logical deletedを含む既存plaintextの冪等なone-shot offline migrationとplaintext残存検査を実装し、steady stateの混在・read時自動暗号化を許可しない。鍵・plaintext・完全なenvelopeをlog、error、test outputへ出さず、Customer/API/Authorization regressionを完了条件とする | N-04 | T-004、T-103 | 高 |
 | T-108 | アクセスログと監査ログの記録処理を実装 | N-05 | T-002、T-106 | 高 |
 | T-109 | E2E認証基盤を準備する。既存staff fixtureを維持し、集計値に影響しないE2E専用manager、テスト専用passwordから生成したArgon2id hash、実DB Login API smoke test、Playwrightで再利用可能なlogin helperを追加する。実DBでmanagerのJWT取得と既存Reports 63件PASSを完了条件とし、Frontend認証・production API保護・既存63件の書換えは行わない | N-03 | T-103、T-104、既存E2E専用DB基盤 | 高 |
 | T-110 | Frontend認証を導入する。Login画面とAPI client、token・userのReact memory保持、共通authenticated fetchによるBearer付与と業務API 401処理、Login 400/401表示、既存初期業務画面への遷移、Logout、再読込後のLogin復帰を実装する。Frontend unit/component testとE2E managerでログインする既存Reports Playwright 63件の3 Browser PASSを完了条件とする。production業務APIはまだ保護しない | N-03 | T-101、T-104、T-109 | 高 |
@@ -107,7 +107,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | T-601 | 顧客検索のインデックス、ページング、接続プールを設定 | N-01 | T-205、T-103 | 高 |
 | T-602 | Phase 1性能受入用のCustomer 100,000件（active 95,000件、logical deleted 5,000件、owner 100 users、category 20種類と約10%のNULL、name検索0件・約100件・約10,000件hit）を決定的に生成する。concurrency 1で必須11 scenariosを各10回warm-up後に100回HTTP測定し、nearest-rank方式のscenario別p95がすべて3秒以内であることを確認する。default list、staff scope、name high-hit、deep paginationはEXPLAIN ANALYZEも記録し、production SQL・index・schema・pool・pagination方式は変更しない | N-01 | T-601 | 高 |
 | T-603 | T-602の100,000 Customerを使い、barrierから50 requestsを同時開始するload benchmarkを実施する。必須8 scenariosを各2 waves warm-up後に20 waves、計1,000 requestsずつ測定し、scenarioごとにHTTP成功率100%、期待外status 0件、nearest-rank方式のp95が3秒以内であることを確認する。p99と`pg.Pool` max 10に対するtotal・idle・waitingを観測し、終了後のidle復帰も確認する。production SQL・schema・index・pool・timeout・pagination方式は変更しない | N-02 | T-602、T-006 | 高 |
-| T-604 | 顧客情報の暗号化保存と復号権限を検証 | N-04 | T-107、T-201、T-203 | 高 |
+| T-604 | `name_kana`・`email`・`phone`・`address`について、create・edit・`null`、DBの`enc:v1`実値、authorized list/detail/create/edit responseの復号を検証する。staff own、staff otherの復号前404、manager・adminの全active readを確認し、Authentication→operation Authorization→DB scope/resource判定→scope Authorization→decrypt→DTOの順序を証明する。tamper、unknown・wrong key、malformed envelope、plaintext混在をfail closedとし、鍵・plaintext・完全なenvelopeが公開response・log・test outputへ漏れないこと、one-shot migration、Customer検索契約、全Backend regressionを最終Acceptanceする | N-04 | T-107、T-201、T-203 | 高 |
 | T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する。実DB Loginとproduction保護APIでBearerあり成功・なし401も最終確認する。Browser LoginはT-110のE2Eで検証する | N-03 | T-104、T-111 | 高 |
 | T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |
 | T-607 | ヘルスチェック、監視、バックアップ、復旧手順を設定 | N-06 | T-007 | 高 |
