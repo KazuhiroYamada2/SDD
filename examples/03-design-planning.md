@@ -12,7 +12,7 @@
 | Authentication | JWT | APIアクセスの認証 |
 | E2E | Playwright | 主要ユーザーフローと受入確認 |
 
-採用技術は決定済みとし、代替案の比較検討は行わない。クラウド事業者は別途決定するが、アプリケーションはPostgreSQLと標準的なNode.js実行環境で動作する構成にする。
+採用技術は決定済みとし、代替案の比較検討は行わない。ProductionクラウドはAWS `ap-northeast-1`とし、アプリケーションはPostgreSQLと標準的なNode.js実行環境で動作する構成にする。
 
 ## 要件ID
 
@@ -301,7 +301,7 @@ request bodyで許可するfieldは次のとおりとする。
 - Node.js標準`crypto`によるapplication-level encryptionを使用し、不要なcrypto dependencyや独自暗号方式を追加しない。algorithmはAES-256-GCM、鍵は32 bytes、IVは値ごとに`randomBytes`等で生成するcryptographically secure random 12 bytes、authentication tagは16 bytesとする。
 - AADはUTF-8文字列`customer:v1:<field-name>`とし、format versionとCustomer field nameを認証対象へ含める。これにより、たとえばemailのciphertextをphoneとして復号しようとした場合に失敗させる。Phase 1ではCustomer IDをAADへ含めない。
 - non-null値は`enc:v1:<key-id>:<iv-base64>:<tag-base64>:<ciphertext-base64>`のenvelopeで既存Customer columnへ保存する。delimiter、要素数、prefix、version、key ID、Base64各要素を厳密に検証してから復号する。T-107では既存columnがvalidation上限のplaintextを格納したenvelopeに十分な長さか確認し、不足する場合だけmigrationで拡張する。`null`はDBの`NULL`を維持する。
-- application設定はcurrent key IDと、key IDから32-byte keyへのmappingを持つkey ringで構成する。productionの値はdeployment環境のsecret管理機構から環境変数等でinjectし、DB、source code、Git repositoryへ保存しない。特定のcloud secret productはPhase 1で固定しない。testはtest専用keyを使い、production keyを共有しない。
+- application設定はcurrent key IDと、key IDから32-byte keyへのmappingを持つkey ringで構成する。productionの値はAWS Secrets ManagerからECS Taskへ環境変数としてinjectし、DB、source code、Git repositoryへ保存しない。testはtest専用keyを使い、production keyを共有しない。
 - config読込時に、暗号設定の存在、current key ID、current keyのkey ring内存在、全keyの32-byte長、設定形式を検証する。不正時はHTTP serverの起動前にfailさせ、暗号化なしのfallbackを禁止する。鍵値をlog、error、test outputへ出力しない。
 - encryptは常にcurrent key IDを使用し、decryptはenvelopeのkey IDでkey ringを選択する。read時の自動再暗号化は行わない。key rotationは明示的なone-shot re-encryption migrationで実施し、そのkey IDを持つciphertextが残る間は旧keyをkey ringから削除しない。
 - 既存plaintextはactive・logical deletedを問わずone-shot offline migrationの対象とする。application停止、migration、対象4 fieldのplaintext残存確認、新application起動の順を基本とする。steady stateのRepositoryはplaintextとciphertextの混在を許容せず、read時にplaintextを検出した場合も自動暗号化やplaintext返却を行わずfail closedとする。migrationは正しい`enc:v1` envelopeを識別し、二重暗号化しない。

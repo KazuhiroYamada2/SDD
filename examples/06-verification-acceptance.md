@@ -1150,3 +1150,85 @@ AWS resource deployment、Production月次稼働率、Production RPO/RTO、四�
 - 限界: 本表のPASSはT-804のimplementation Acceptance判定である。Production運用値はAWS deploy後に月次・四半期・maintenance eventごとに継続測定する。
 - 結論: 7要件すべてでRequirement、Acceptance criteria、Evidence、Actual result、Environment、Statusが揃い、未検証項目も明示した。T-804はPASS・完了と判定する。
 - 次Task: T-801～T-804がPASS・完了したため、T-805「要件トレーサビリティ表と仕様差分レポートを作成」は着手可能である。残る未完了TaskはT-805、T-806の2件である。
+
+## 2026-09-23 T-805 要件トレーサビリティ・仕様差分Acceptance（PASS）
+
+Phase 1の正式RequirementはF-01～F-14とN-01～N-07の計21件である。21件すべてについてDesign、Task、Implementation、Verificationを追跡でき、未実装・未検証・意図しない実装はなかった。
+
+### Requirement traceability matrix
+
+| ID | Requirement | Design参照 | 実装Task | Implementation evidence | Verification / Acceptance evidence | Status | Gap / Difference |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| F-01 | 顧客情報の登録 | 03「REST API設計」「Customer field encryption」 | T-201、T-206、T-502 | `customers-router.ts`・`customer-repository.ts`、`App.tsx`。05「顧客情報登録API/画面」「T-502」 | 06「顧客情報登録API」「T-207」「T-802」「T-803」 | PASS | なし |
+| F-02 | 顧客情報の編集 | 03「顧客edit API設計」 | T-203、T-206、T-502 | `customer-edit-service.ts`・`CustomerEditScreen.tsx`。05「T-203」「T-502」 | 06「T-203」「T-204/T-502」「T-207」「T-802/803」 | PASS | なし |
+| F-03 | 顧客情報の論理削除 | 03「顧客logical delete API設計」 | T-204、T-206、T-502 | `customer-delete-service.ts`・`CustomerDeleteConfirmation.tsx`。05「T-204」 | 06「T-204 Customer論理削除・T-502最終検証」「T-207」「T-802/803」 | PASS | なし |
+| F-04 | 顧客検索・filter | 03「Query validation・検索・sort」 | T-205、T-206 | `customer-read-validation.ts`・`customer-repository.ts`・`CustomerList.tsx`。05「T-205」 | 06「T-205 Backend/Frontend」「T-207」「T-602/603」「T-802/803」 | PASS | なし |
+| F-05 | 顧客一覧・詳細 | 03「顧客read API設計」 | T-202、T-205、T-206 | `customer-read-service.ts`・`CustomerList.tsx`・`CustomerDetailScreen.tsx`。05「T-202」「T-205」 | 06「T-202B/C」「T-207」「T-802/803」 | PASS | なし |
+| F-06 | 訪問記録の登録・表示 | 03「data設計 activities」「REST API設計」 | T-301、T-304、T-502 | `activity-service.ts`・`activities-router.ts`・`ActivityHistory.tsx`。05「営業活動登録/参照API」 | 06「営業活動登録/参照API」「営業活動履歴Playwright」「T-803」 | PASS | なし |
+| F-07 | 商談内容の記録 | 03「data設計 activities」「REST API設計」 | T-302、T-304 | `activity-validation.ts`・`activity-service.ts`・`ActivityHistory.tsx`。05「営業活動履歴機能の差分確認」 | 06「営業活動登録API」「営業活動履歴Playwright」「T-802/803」 | PASS | なし |
+| F-08 | 次回訪問予定の設定 | 03「data設計 activities」「REST API設計」 | T-303、T-304 | `activity-validation.ts`・`activity-repository.ts`・`ActivityHistory.tsx`。05「営業活動履歴機能の差分確認」 | 06「営業活動登録API」「営業活動履歴Playwright」「T-802/803」 | PASS | なし |
+| F-09 | 売上推移 | 03「レポートResponse DTO」 | T-401、T-402、T-405、T-407、T-408 | `sales-trend-*`、`ReportsPage.tsx`。05「売上推移API/画面」 | 06「ST-01～ST-05」「レポート最終受入」「T-802/803」 | PASS | なし |
+| F-10 | 顧客分類 | 03「レポートResponse DTO」 | T-403、T-405、T-409 | `customer-category-*`、`CustomerCategoriesReport.tsx`。05「顧客分類API/画面」 | 06「CC-01～CC-05」「レポート最終受入」「T-802/803」 | PASS | なし |
+| F-11 | 営業担当者別実績 | 03「レポートResponse DTO」 | T-401、T-404、T-405、T-407 | `staff-performance-*`、`StaffPerformanceReport.tsx`。05「営業担当者別実績API/画面」 | 06「SP-01～SP-06」「レポート最終受入」「T-802/803」 | PASS | なし |
+| F-12 | 閲覧権限 | 03「認証・認可」「Role × Operation × Scope」 | T-501、T-504、T-505 | `authorization-policy.ts`、Customer/Activity/Reports router、Role別Frontend。05「T-501」 | 06「T-501最終Acceptance」「T-504/505」「T-802/803」 | PASS | なし |
+| F-13 | 登録・編集・削除権限 | 03「認証・認可」「Role × Operation × Scope」 | T-502、T-504、T-505 | `authorization-policy.ts`、Customer/Activity write service・UI。05「T-502」「T-204」 | 06「T-204/T-502」「T-504/505」「T-802/803」 | PASS | なし |
+| F-14 | 管理者権限・Users role管理 | 03「Users API設計」「Role × Operation × Scope」 | T-503、T-504、T-505 | `users-router.ts`・`user-service.ts`・`UsersManagement.tsx`。05「T-503」 | 06「T-503」「T-504/505」「T-802/803」 | PASS | なし |
+| N-01 | 顧客検索p95 3秒以内 | 03「性能・可用性設計」 | T-601、T-602、T-804 | Customer index/pagination/pool、`customer-search-benchmark.mjs`。05「T-601/602」 | 06「T-602」「T-804」。100,000件、最遅p95 78.616ms | PASS | Local Acceptance。Production保証ではない |
+| N-02 | 最大50ユーザー同時アクセス | 03「性能・可用性設計」 | T-006、T-603、T-804 | `customer-search-benchmark.mjs`の50-request barrier。05「T-603」 | 06「T-603」「T-804」。8,000/8,000成功、最遅p95 842.520ms | PASS | Local Acceptance。Production保証ではない |
+| N-03 | ログイン認証 | 03「認証・認可」 | T-104、T-109～T-111、T-605、T-803、T-804 | `auth/*`、Frontend `auth/*`、`login-helper.ts`。05「T-104」「T-109～111」 | 06「T-605」「T-803」「T-804」 | PASS | Initial Password Provisioningは対象外 |
+| N-04 | Customer情報の暗号化保存 | 03「Customer field encryption」「Secret management・rotation」 | T-004、T-107、T-604、T-702、T-804 | `customer-crypto.ts`・encryption migration・production config・backup/restore。05「T-107」「T-702」 | 06「T-604」「T-702」「T-804」 | PASS | Local restore値をAWS RTOに使用しない |
+| N-05 | Access・audit log | 03「Request ID・共通HTTP処理」「T-108 Access・audit logging」 | T-106、T-108、T-606、T-703、T-804 | `request-id-middleware.ts`・`access-log-middleware.ts`・`audit/*`。05「T-106」「T-108」「T-606」 | 06「T-106」「T-108 PASS」「T-606」「T-804」 | PASS | 過去Gap解消済み。Production収集はdeploy後継続 |
+| N-06 | 稼働率99%以上、Health・監視・backup/restore | 03「性能・可用性設計」「Phase 1 production運用設計」「T-607/608/704」 | T-007、T-607、T-608、T-702、T-704、T-804 | Health、`availability/*`、`monitoring.yaml`、backup/rehearsal script・runbook。05の同Task節 | 06「T-607/608/702/704」「T-804」 | PASS | Implementation Acceptance。Production月次値・RPO/RTOは継続 |
+| N-07 | Maintenance事前・緊急通知 | 03「Maintenance・incident response」「T-609/610」 | T-007、T-609、T-610、T-703、T-804 | `maintenance/*`、notification/timing CLI・runbook。05「T-609/610/703」 | 06「T-609/610/703」「T-804」 | PASS | Fake SES Acceptance。実送信・Production timingは継続 |
+
+### Coverage summary
+
+| Trace | Coverage | Status |
+| --- | ---: | --- |
+| Requirement → Design | 21 / 21（100%） | PASS |
+| Design → Task | 21 / 21（100%） | PASS |
+| Task → Implementation | 21 / 21（100%） | PASS |
+| Implementation → Verification | 21 / 21（100%） | PASS |
+| Functional requirements | 14 / 14（100%） | PASS |
+| Non-functional requirements | 7 / 7（100%） | PASS |
+| Unimplemented requirements | 0 | PASS |
+| Unverified requirements | 0 | PASS |
+| Unspecified / unintended implementation | 0 | PASS |
+
+### Phase 1対象外
+
+| 対象 | 正本 | 実装確認 | Status |
+| --- | --- | --- | --- |
+| モバイルアプリ | 01「Out of Scope」、02「未決定事項」 | Production実装なし | 対象外 |
+| 外部システム連携 | 01「Out of Scope」、02「未決定事項」、03「既存システムとの互換性」 | Realtime integration実装なし。Excel offline migrationだけを実装 | 対象外 |
+| 高度分析 | 01「Out of Scope」 | F-09～F-11の基本report以外の分析実装なし | 対象外 |
+| Initial Password Provisioning・password管理 | 02「セキュリティ」「未決定事項」、03「認証・認可」 | Loginのみ。User登録・password設定/変更/再設定APIなし | 対象外 |
+
+### Specification difference report
+
+| Category | Location | 内容 | Severity | Resolution |
+| --- | --- | --- | --- | --- |
+| Stale specification | 03「採用技術」 | cloud providerが「別途決定」のまま、後段のAWS `ap-northeast-1`確定と不一致 | 中 | 確定済みAWS契約へ同期。解消 |
+| Requirement vs Design / Stale specification | 02「セキュリティ」 | secret product未固定の記述が、同文書「可用性」のAWS Secrets Manager契約と不一致 | 中 | Secrets ManagerからECS Taskへinjectする契約へ同期。解消 |
+| Design vs Design / Stale specification | 03「Customer field encryption」 | secret product未固定の記述が、同文書「Secret management・rotation」と不一致 | 中 | Secrets ManagerからECS Taskへinjectする設計へ同期。解消 |
+| Task vs Implementation record | 05「T-702 Production設定・backup/restore基盤」 | 中間記録は実restore未完了だが、後続06では実backup・分離restoreまでPASS | 低 | 歴史的記録は維持し、本T-805節と06の最終PASSをcurrent statusとして明示。解消 |
+| Requirement vs Design | 全21 Requirement | 上記解消後のopen差分 | なし | Open 0 |
+| Design vs Task | 全21 Requirement | Open差分なし | なし | Open 0 |
+| Task vs Implementation | 全21 Requirement | Open差分なし | なし | Open 0 |
+| Implementation vs Verification | 全21 Requirement | Open差分なし | なし | Open 0 |
+| Unspecified implementation | Production module・script・migration・infra・runbook | 対応Requirementまたは04 Taskのない実装なし | なし | Open 0 |
+| Unverified requirement | F-01～F-14、N-01～N-07 | Verification evidenceのないRequirementなし | なし | Open 0 |
+
+**Open specification differences: 0**
+
+T-106 Request IDの過去Gapは02「Request ID・共通エラー」、03「Request ID・共通HTTP処理」、04 T-106へ反映され、05実装記録と06「T-106受入（PASS）」まで確認した。T-108 Audit contractの過去Gapも02「Access log・audit log」、03「T-108 Access・audit logging」、04 T-108へ反映され、05実装記録、06「T-108受入（PASS）」とT-606まで確認した。両方とも解消済みであり、open Gapではない。
+
+### Validation・T-806引継ぎ
+
+- Requirement ID completeness: F-01～F-14、N-01～N-07が連続し、重複・欠番なし。
+- Reference validation: matrixのmodule・script・migration・infra・runbookは実在し、examples内のMarkdown linkにdead referenceなし。
+- Regression: T-801 Backend 68 files・476 tests、T-802 Frontend 15 files・166 tests、T-803 32 scenarios・92 executions、T-804 NFR 7/7 PASSを再利用し、新規test・build・performance測定は実施していない。
+- Change scope: Production code、Test code、Frontend、DB schema、AWS resourceは変更なし。02・03のstale記述3件と05・06の記録だけを更新した。
+- T-805判定: Requirement coverage 100%、全trace 100%、未実装0、未検証0、意図しない実装0、open specification difference 0のためPASS・完了とする。
+- T-806引継ぎ: Customer CRUD・Activity・Reports・Authentication/Authorization・Users/role、error/Request ID、encryption/migration、access/audit、performance/load、health/monitoring/availability、backup/restore、maintenance、Production migration rehearsalを最終顧客受入対象とする。T-806では顧客本人による実施結果と承認を取得する必要があり、AIが承認を代行・推定してはならない。
+- 次Task: T-805完了によりT-806「顧客との受入テストを実施し、承認を取得」が着手可能である。残る未完了TaskはT-806の1件である。

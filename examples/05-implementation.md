@@ -666,3 +666,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Local/E2E benchmarkをAWS Production性能として扱わず、local restoreの924msとmigration rehearsalの2,176msをProduction RTO実績へ使用していない。AWS未deploy、Production月次稼働率、RPO 5分・RTO 60分、四半期restore drill、実SES送信と通知timingは、仕様どおりProduction運用開始後の継続確認として分離した。
 - RequirementとAcceptance criteriaの不一致0件、02と03の矛盾0件、04の完了条件に対する証跡不足0件、要求値未達0件、Local結果をProduction実績とした誤記0件だった。T-804を停止する重大なGapはない。
 - 新規試験は実施していない。Backend全476 tests、Frontend全166 tests、Playwright 92 executions、performance・load benchmark、Backend・Frontend buildは再実行していない。Production code、Frontend、DB schema、AWS resource、examples/01～04は変更していない。
+
+## 2026-09-23 T-805 要件トレーサビリティ・仕様差分レビュー
+
+- 正本からF-01～F-14とN-01～N-07の21 Requirement IDを抽出した。06へRequirement → Design → Task → Implementation → VerificationをRequirement単位で追跡する正式表を追加し、21/21件で両方の証跡とPASS判定を確認した。
+- 実装証跡はBackend、Frontend、E2E、migration、script、CloudFormation、runbookの実在fileと05の実装記録を照合した。検証証跡は06の個別Acceptance、T-801のBackend 68 files・476 tests、T-802のFrontend 15 files・166 tests、T-803の32 scenarios・92 executions、T-804のN-01～N-07結果を使用した。
+- Specification difference reviewで4件を検出し、すべて解消した。03冒頭のcloud provider未決定1件と、02・03のCustomer鍵管理に残っていたcloud secret product未確定2件を、確定済みのAWS `ap-northeast-1`・Secrets Manager契約へ同期した。05のT-702「実restore未完了」は途中時点の履歴であり、後続の06「T-702 Production設定・backup/restore検証（PASS）」で実backup・分離restoreまで完了したことを本節と差分レポートへ明記した。過去履歴そのものは改変していない。
+- T-106のRequest ID GapとT-108のAudit contract Gapは、02～04への契約反映、実装、05/06のPASS証跡まで確認できたため解消済みである。Open specification differences、未実装Requirement、未検証Requirement、Requirementのない意図しない実装はいずれも0件だった。
+- Phase 1対象外のモバイルアプリ、外部システム連携、高度分析、Initial Password Provisioning・password管理は未実装であり、欠落ではなく対象外として整理した。Production code、Test code、Frontend、DB schema、AWS resourceは変更していない。既存test、build、performance・loadは再実行していない。
