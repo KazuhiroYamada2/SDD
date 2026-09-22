@@ -1,0 +1,313 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Phase 1 production monitoring for the customer management service
+
+Parameters:
+  EnvironmentName:
+    Type: String
+  EcsClusterName:
+    Type: String
+  EcsServiceName:
+    Type: String
+  LoadBalancerFullName:
+    Type: String
+  TargetGroupFullName:
+    Type: String
+  RdsDbInstanceIdentifier:
+    Type: String
+  NotificationEmail:
+    Type: String
+  AlbHealthCheckPath:
+    Type: String
+    Default: /health/ready
+    AllowedValues:
+      - /health/ready
+  EcsCpuThreshold:
+    Type: Number
+    Default: 80
+  EcsMemoryThreshold:
+    Type: Number
+    Default: 80
+  AlbTarget5xxThreshold:
+    Type: Number
+    Default: 10
+  AlbResponseTimeThresholdSeconds:
+    Type: Number
+    Default: 2
+  RdsCpuThreshold:
+    Type: Number
+    Default: 80
+  RdsConnectionThreshold:
+    Type: Number
+    Default: 80
+  RdsFreeableMemoryThresholdBytes:
+    Type: Number
+    Default: 268435456
+  RdsFreeStorageThresholdBytes:
+    Type: Number
+    Default: 10737418240
+  RdsLatencyThresholdSeconds:
+    Type: Number
+    Default: 0.1
+
+Resources:
+  MonitoringTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub '${EnvironmentName} customer management monitoring'
+
+  MonitoringEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+      TopicArn: !Ref MonitoringTopic
+
+  EcsCpuHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ECS service CPU is high.
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref EcsCpuThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  EcsMemoryHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ECS service memory is high.
+      Namespace: AWS/ECS
+      MetricName: MemoryUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref EcsMemoryThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbNoHealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB has no healthy backend target.
+      Namespace: AWS/ApplicationELB
+      MetricName: HealthyHostCount
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbUnhealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB reports an unhealthy backend target.
+      Namespace: AWS/ApplicationELB
+      MetricName: UnHealthyHostCount
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbTarget5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB backend target 5xx responses are elevated.
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: !Ref AlbTarget5xxThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  AlbResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ALB backend response time is high.
+      Namespace: AWS/ApplicationELB
+      MetricName: TargetResponseTime
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref LoadBalancerFullName
+        - Name: TargetGroup
+          Value: !Ref TargetGroupFullName
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref AlbResponseTimeThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsCpuHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS CPU is high.
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions: &RdsDimensions
+        - Name: DBInstanceIdentifier
+          Value: !Ref RdsDbInstanceIdentifier
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsCpuThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsConnectionsHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS database connections are high.
+      Namespace: AWS/RDS
+      MetricName: DatabaseConnections
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsConnectionThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsFreeableMemoryLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS freeable memory is low.
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsFreeableMemoryThresholdBytes
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsFreeStorageLowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS free storage is low.
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: !Ref RdsFreeStorageThresholdBytes
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsReadLatencyHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS read latency is high.
+      Namespace: AWS/RDS
+      MetricName: ReadLatency
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsLatencyThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsWriteLatencyHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RDS write latency is high.
+      Namespace: AWS/RDS
+      MetricName: WriteLatency
+      Dimensions: *RdsDimensions
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      DatapointsToAlarm: 5
+      Threshold: !Ref RdsLatencyThresholdSeconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref MonitoringTopic]
+      OKActions: [!Ref MonitoringTopic]
+
+  RdsOperationalEventSubscription:
+    Type: AWS::RDS::EventSubscription
+    Properties:
+      Enabled: true
+      EventCategories:
+        - availability
+        - failure
+        - backup
+      SnsTopicArn: !Ref MonitoringTopic
+      SourceIds:
+        - !Ref RdsDbInstanceIdentifier
+      SourceType: db-instance
+
+Outputs:
+  MonitoringTopicArn:
+    Value: !Ref MonitoringTopic
+  RequiredAlbHealthCheckPath:
+    Value: !Ref AlbHealthCheckPath
+  RequiredAlbHealthCheckSuccessCode:
+    Value: '200'

@@ -43,10 +43,14 @@ type AppDependencies = {
   staffPerformanceService?: StaffPerformanceService;
   userService?: UserService;
   customerCrypto?: CustomerCrypto;
+  healthDatabase?: {
+    query: (sql: string) => Promise<unknown>;
+  } | null;
 };
 
 export const createApp = (dependencies: AppDependencies = {}) => {
   const app = express();
+  const healthDatabase = dependencies.healthDatabase === undefined ? database : dependencies.healthDatabase;
   const authUserRepository = dependencies.authUserRepository ??
     (database === undefined ? {
       findByEmail: async () => null,
@@ -89,6 +93,24 @@ export const createApp = (dependencies: AppDependencies = {}) => {
 
   app.get('/health', (_request, response) => {
     response.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/health/live', (_request, response) => {
+    response.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/health/ready', async (_request, response) => {
+    if (healthDatabase === undefined || healthDatabase === null) {
+      response.status(503).json({ status: 'unavailable' });
+      return;
+    }
+
+    try {
+      await healthDatabase.query('SELECT 1');
+      response.status(200).json({ status: 'ready' });
+    } catch {
+      response.status(503).json({ status: 'unavailable' });
+    }
   });
 
   app.use('/api/v1', createAuthenticationMiddleware({ userRepository: authUserRepository, jwtService }));

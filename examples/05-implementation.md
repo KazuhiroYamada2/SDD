@@ -565,3 +565,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 分離DB `customer_management_restore_t702`へrestoreし、主要6 table、row count、FK、Customer `enc:v1`、plaintext残存0、authorized decrypt、dump内のapplication secret非同梱を確認するscriptを追加した。source・restore DBと一時dumpのcleanupを組み込んだ。
 - `docs/operations/production-backup-restore.md`へRDS automated backup・PITR、manual snapshot、KMS、temporary restore、四半期drill、RPO 5分・RTO 60分、CloudWatch・SNS alertを記録した。`.gitignore`へenvironment fileとbackup artifactの除外を追加した。
 - local環境に`pg_dump`・`pg_restore`が存在せず、実backup/restoreはclient tool起動時に停止した。fake restoreへ置き換えていない。関連testは6 files・50/50、Backend全testは52 files・370/370、Backend buildはPASSしたが、実restore Acceptance未達のためT-702は未完了である。
+## 2026-09-22 T-607 Monitoring・Health Check
+
+- Backendへ認証不要の`GET /health/live`と`GET /health/ready`を追加した。livenessはDBへqueryせず200、readinessは`SELECT 1`成功時200、DB未設定・失敗時は内部情報を含めず503を返す。既存`GET /health`は互換性のため維持した。
+- `infra/monitoring.yaml`へCloudFormation templateを追加した。環境依存値と初期thresholdをparameter化し、SNS Topic・email subscription、ECS 2 alarms、ALB 4 alarms、RDS 6 alarms、RDSの`availability`・`failure`・`backup` EventSubscriptionを定義した。AlarmはALARM/OKをSNSへ送り、INSUFFICIENT_DATA actionは設定していない。
+- `docs/operations/production-monitoring.md`へsubscription confirmation、Alarm一覧、ALB・5xx・RDS異常時の一次対応、15分以内の切り分け、情報保護を記録した。既存`production-backup-restore.md`へrestore drill失敗時のSNS相当経路へのescalationを接続した。
+- CloudFormation YAMLのparseとresource wiringを検証するため、Backendのdev dependencyへ`yaml`だけを追加した。AWS CLI・AWS credentialは追加せず、AWS resourceはdeployしていない。Customer、Activity、Reports、Usersの業務contract、Frontend、DB schemaは変更していない。

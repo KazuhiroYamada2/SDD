@@ -448,6 +448,18 @@ T-701は、運用者が指定する安定した`dataset_id`とSource顧客番号
 
 logと集計には件数、dataset ID、row番号、Source顧客番号、reason code、target UUIDだけを使用する。Customerのplaintext PII、暗号鍵、完全なciphertext envelopeは出力しない。source Excel自体もsecretと同等にアクセス制御し、migration終了後の保管・削除は運用手順に従う。
 
+## T-607 Health・monitoring physical design
+
+Backendは認証不要の`GET /health/live`と`GET /health/ready`を提供する。livenessはDBへqueryせずHTTP 200 `{ "status": "ok" }`を返す。readinessは`SELECT 1`だけを実行し、成功時はHTTP 200 `{ "status": "ready" }`、DB未設定・接続失敗時は詳細を隠してHTTP 503 `{ "status": "unavailable" }`を返す。既存`GET /health`は互換性のため維持する。ALB Target Groupは`/health/ready`を使用し、success codeは200とする。
+
+Production monitoring resourceは`infra/monitoring.yaml`のCloudFormation stackで管理する。stack deployment regionを`ap-northeast-1`とし、環境名、ECS cluster/service、ALB/Target Group full name、RDS instance identifier、通知先emailをparameterで受け取る。secretはparameterに含めない。既存Target Groupはこのstackで再作成せず、health check pathとcodeはapplication deployment側で設定する。
+
+CloudWatch AlarmのPhase 1初期値は、ECS CPU・memory 80%が5分、ALB healthy target 0が2分、unhealthy target 1以上が2分、target 5xxが5分間に10件、平均response 2秒が5分、RDS CPU 80%・connections 80・freeable memory 256 MiB・read/write latency 100 msが各5分、free storage 10 GiB以下が10分とする。全thresholdはCloudFormation parameterで変更可能にする。ALARMとOKへの遷移をSNSへ通知し、INSUFFICIENT_DATA actionは設定しない。ただし`HealthyHostCount`の欠測はavailable target 0の見落としを防ぐためbreachingとして扱う。
+
+SNS Topicにはdeployment時に指定した運用担当emailをsubscriptionし、confirmationとtest notificationを必須とする。Production RDS instanceの有効なevent categoryである`availability`、`failure`、`backup`を`AWS::RDS::EventSubscription`から同じSNS Topicへ送る。restore drillの手動失敗は自動alarmの対象にできないため、運用者が同じSNS Topicまたは承認済みincident通知経路へescalationする。
+
+監視・incident対応は`docs/operations/production-monitoring.md`、backup・四半期restore drillは`docs/operations/production-backup-restore.md`を正本手順とする。Health、CloudWatch Logs、Alarm、SNS、incident記録へsecret、credential、plaintext PII、完全なciphertext envelopeを出力しない。AWS resource deploymentはlocal Acceptanceに含めず、CloudFormationのYAML parse、required parameter、SNS/Alarm wiring、RDS EventSubscriptionをstatic testで検証する。
+
 ## テスト方針
 
 - Backend: バリデーション、業務ロジック、認証・認可、暗号化、監査ログ、APIの単体・統合テスト

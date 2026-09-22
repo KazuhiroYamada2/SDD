@@ -792,3 +792,26 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - secret、credential、PII、完全なciphertextは出力していない。temporary restore databaseとbackup artifactは検証後に削除した。
 - RPO 5分・RTO 60分はRDS PITRと四半期restore drillで継続検証する運用目標である。local実測値だけでAWS本番RTOを保証しない。
 - Production config、TLS、secret interface、runbook、実backup・分離restore、データ整合性、暗号化状態、回帰検証がすべて揃ったため、T-702はPASS・完了と判定する。
+## 2026-09-22 T-607 Monitoring・Health Check受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| `GET /health/live` | 認証不要で200 `{ "status": "ok" }`。DB query 0回 | PASS |
+| `GET /health/ready` DB正常 | `SELECT 1`後に200 `{ "status": "ready" }` | PASS |
+| `GET /health/ready` DB異常 | 内部errorを出さず503 `{ "status": "unavailable" }` | PASS |
+| ALB health contract | path `/health/ready`、success code 200 | PASS |
+| CloudFormation parse | `infra/monitoring.yaml`を実際にYAML parse | PASS |
+| Required parameters | 環境、ECS、ALB、Target Group、RDS、通知先を確認。secret parameterなし | PASS |
+| SNS wiring | Topic・email subscription、全12 AlarmのAlarmActions/OKActionsを確認 | PASS |
+| ECS Alarm | CPUUtilization、MemoryUtilization | PASS |
+| ALB Alarm | healthy target 0、unhealthy target、target 5xx、response time | PASS |
+| RDS Alarm | CPU、connections、free memory/storage、read/write latency | PASS |
+| RDS EventSubscription | `availability`・`failure`・`backup`をSNSへ接続 | PASS |
+| Restore drill | 既存T-702 runbookへ手動失敗時のincident escalationを接続 | PASS |
+| Secret・PII保護 | Health、template、Alarm description、runbookに値・PII・完全envelopeなし | PASS |
+| AWS resource deployment | local環境では実施しない | 未実施（完了条件外） |
+
+- T-607関連テストは2 files・9/9 PASS。Backend全テストは53 files・378/378 PASS、Backend buildはPASSした。
+- AWS CLIはlocal環境にないため`validate-template`とstack deployは未実施。YAML parse、required parameter、SNS/Alarm wiring、RDS EventSubscriptionをstatic testで検証した。AWS resource未deployはT-607の完了条件外である。
+- Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施。T-702 backup/restore Acceptanceも再実行していない。
+- Health、ALB readiness、CloudWatch Alarm、SNS通知、RDS event・backup監視、restore drill手順、runbook、static validation、Backend回帰が揃ったため、T-607はPASS・完了と判定する。

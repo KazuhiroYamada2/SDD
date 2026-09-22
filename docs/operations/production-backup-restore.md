@@ -65,6 +65,8 @@ secret、credential、plaintext PII、完全なciphertext envelopeを作業log�
 
 検証後はtemporary RDS、temporary security rule、local dumpを削除する。必要な結果は件数、status、所要時間、実施者、incident IDだけを残す。
 
+T-607の監視運用では、restore drill failureを自動CloudWatch Alarmで判定しない。失敗を確認した運用者は[Production monitoring runbook](production-monitoring.md)に従い、監視用SNS Topicまたは承認済みincident通知経路へ直ちにescalationする。原因解消後に次のrestore成功を記録するまで、recoverableとは判定しない。
+
 ## Local verificationは標準PostgreSQL toolで再現する
 
 PostgreSQL 16互換の`pg_dump`と`pg_restore`をPATHへ配置するか、`PG_DUMP_PATH`と`PG_RESTORE_PATH`で実行fileを指定する。credentialは`DATABASE_URL`からprocess内で分離し、passwordをcommand argumentへ渡さない。
