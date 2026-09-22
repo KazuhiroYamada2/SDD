@@ -879,3 +879,30 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - T-608関連テストは4 files・20/20 PASS。Backend全テストは60 files・411/411 PASS、Backend buildはPASSした。
 - Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施である。DB schemaと既存T-607 Health・Alarm契約も変更していない。
 - 平日・時間帯、5分interval、formula、missing、Synthetics probe、月次calculator、CLI、runbook、static validation、Backend回帰が揃ったため、T-608はPASS・完了と判定する。実Production availabilityはAWS deploy後の月次運用で継続測定する。
+
+## 2026-09-22 T-610 Maintenance notification timing受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Business day | JST月～金。Monday～Friday開始の3営業日前を固定時刻で確認 | PASS |
+| INITIAL boundary | deadline exactly・1秒前はPASS、1秒後は`INITIAL_LATE` | PASS |
+| REMINDER boundary | -65分・-60分・-55分はPASS。window外はtoo early / late | PASS |
+| EMERGENCY boundary | created時刻、+5分、+15分はPASS、+15分1秒はlate | PASS |
+| Invalid timestamp | first attemptがcreatedより前の場合はFAIL | PASS |
+| Timing / delivery分離 | 15分以内attempt + FAILEDはtiming PASS、delivery FAIL | PASS |
+| First attempt evidence | retry後も`first_attempted_at`を維持し、`attempted_at`だけ更新 | PASS |
+| Verification CLI | PASS exit 0、timing FAIL exit 2、safe system error exit 1 | PASS |
+| A: INITIAL on-time | `INITIAL_ON_TIME` | PASS |
+| B: INITIAL late | `INITIAL_LATE` | 期待どおりFAIL |
+| C: REMINDER window内 | `REMINDER_ON_TIME` | PASS |
+| D: REMINDER too early | `REMINDER_TOO_EARLY` | 期待どおりFAIL |
+| E: REMINDER late | `REMINDER_LATE` | 期待どおりFAIL |
+| F: EMERGENCY 15分以内 | `EMERGENCY_ON_TIME` | PASS |
+| G: EMERGENCY 15分超 | `EMERGENCY_LATE` | 期待どおりFAIL |
+| H: FAILED後retry SENT | 初回attempt基準で`EMERGENCY_ON_TIME` | PASS |
+| Cleanup | Acceptance event・delivery残存0 | PASS |
+
+- T-610関連テストは4 files・12/12 PASS。実E2E PostgreSQL AcceptanceもPASSした。Backend全テストは63 files・422/422 PASS、Backend buildはPASSした。
+- Phase 1にはrecipient snapshotがないため、delivery recordが存在するrecipient集合を対象証跡とする。当時activeでもdelivery未作成のuserは事後に完全再構成できず、T-610は対象者網羅性を証明しない。
+- Frontendは変更しておらず、Frontend test/buildとPlaywrightは未実施。schedulerと実AWS SES送信も完了条件外のため未実施である。
+- INITIAL、REMINDER、EMERGENCY、recipient集計、初回attempt、CLI、実DB Acceptance、runbook、Backend回帰が揃ったため、T-610はPASS・完了と判定する。

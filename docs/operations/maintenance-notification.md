@@ -11,25 +11,28 @@ schema migrationはapplication起動時に実行しない。重要変更前snaps
 1. 次のCLIでPLANNED eventを作成する。
 2. 原則3営業日前までにINITIALを配信する。
 3. target・sent・failed・skipped件数とDB delivery recordを確認する。
-4. 開始1時間前にREMINDERを配信する。
-5. delivery結果を再確認する。
-6. failedがあれば同じsend commandを再実行し、未解消ならT-607のincident経路へescalationする。
+4. timing verification CLIでINITIALが開始3営業日前の同じJST local time以前であることを確認する。
+5. 開始1時間前にREMINDERを配信する。許容windowは開始65分前から55分前までとする。
+6. delivery結果とREMINDER timingを再確認する。
+7. failedまたはtiming FAILがあれば記録し、delivery failureは同じsend commandでretryする。未解消ならT-703のincident経路へescalationする。
 
 ```powershell
 npm.cmd --prefix backend run maintenance -- create --type planned --starts-at <ISO8601> --expected-recovery-at <ISO8601> --impact <text> --contact <text>
 npm.cmd --prefix backend run maintenance -- send --event-id <uuid> --phase initial
 npm.cmd --prefix backend run maintenance -- send --event-id <uuid> --phase reminder
+npm.cmd --prefix backend run maintenance:verify-timing -- --event-id <uuid>
 ```
 
 営業日calendarとschedulerはPhase 1では実装しない。運用者はT-007の期限を確認してCLIを実行する。
 
 ## 緊急maintenance
 
-実施決定後、可能な限り速やかにEMERGENCY eventを作成して配信する。結果確認、retry、escalationは予定maintenanceと同じである。
+実施決定後、直ちにEMERGENCY eventを作成する。eventの`created_at`をPhase 1の決定・登録時刻とし、15分以内に最初の送信attemptを開始する。配信後にtiming verificationを行い、結果確認、retry、escalationは予定maintenanceと同じとする。
 
 ```powershell
 npm.cmd --prefix backend run maintenance -- create --type emergency --starts-at <ISO8601> --expected-recovery-at <ISO8601> --impact <text> --contact <text>
 npm.cmd --prefix backend run maintenance -- send --event-id <uuid> --phase emergency
+npm.cmd --prefix backend run maintenance:verify-timing -- --event-id <uuid>
 ```
 
 ## Delivery recordとretry
@@ -38,9 +41,12 @@ npm.cmd --prefix backend run maintenance -- send --event-id <uuid> --phase emerg
 
 PENDINGは送信処理中または異常終了の可能性があるため、自動再送しない。運用者はSES送信記録とDB recordを照合し、FAILEDへ整理してからretryする。外部送信はDB transactionで取り消せないため、SES送信中に長時間transactionを保持しない。
 
+`first_attempted_at`は初回attempt、`attempted_at`は直近attemptを示す。EMERGENCY timingはretry後も`first_attempted_at`で判定し、delivery statusとは分けて記録する。15分以内のattemptがFAILEDだった場合、timingはPASS、deliveryはFAILとなる。
+
 CLIはtarget・sent・failed・skipped件数だけを出力する。failedが1件以上なら他recipientの成功を維持したままnon-zeroで終了する。recipient email一覧、providerの生error、credentialを出力しない。
+
+Timing verificationはdelivery recordが存在するrecipient集合だけを対象とする。Phase 1にはrecipient snapshotがないため、当時activeでもdeliveryが作成されなかったuserを事後に再構成できない。この制約を対象者網羅性の証明には使わない。Timing FAILだけを理由にserviceを自動停止せず、event ID、phase、検証時刻、pass・fail件数、overall resultをincident記録へ残す。
 
 ## 記録と情報保護
 
 確認queryではevent ID、phase、status、件数、attempted_at、sent_at、safe failure codeだけを使用する。maintenance email本文をaudit_logsへ複製しない。DB failure record、CLI output、logへAWS credential、JWT secret、Customer encryption key、完全なDATABASE_URL、Customer PII、不要なrecipient一覧を出力しない。
-

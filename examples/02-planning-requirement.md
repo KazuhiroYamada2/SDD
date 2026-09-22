@@ -223,6 +223,9 @@
 - Amazon CloudWatchでECS task数・restart・CPU・memory、ALB target health・4xx/5xx・latency、RDS CPU・connection・memory・storage・read/write latency・event、applicationの5xx・認証認可error増加・異常終了・migration/backup failureを監視する。monitoring logへsecretやplaintext PIIを出力しない。
 - 重大alarmはCloudWatch AlarmからAmazon SNSを経由して運用担当メールへ通知する。Backend available task 0、ALB unhealthy、継続的なHTTP 5xx、DB unavailable、DB storage critical、automated backup failure、restore verification failureを対象とする。PagerDuty等のthird-party paging serviceはPhase 1の必須要件にしない。
 - 利用者影響を伴う予定maintenanceは原則3営業日前までに通知し、開始1時間前に再通知する。日時、影響、復旧予定、問い合わせ先を運用メールまたは既存案内channelで伝える。緊急maintenanceは実施決定後、可能な限り速やかに通知する。Phase 1で新しい通知UIは作らない。
+- Maintenance通知timingはAsia/Tokyoで検証する。営業日は月曜日～金曜日とし、祝日・会社休日を自動除外しない。PLANNED INITIALは開始JST local timeを保って3営業日戻したdeadline以前を合格とする。
+- PLANNED REMINDERは開始60分前を基準とし、開始65分前から55分前までを許容windowとする。EMERGENCYはevent作成を実施決定の記録とし、`created_at`から15分以内に最初の送信attemptを開始する。
+- Timingはrecipient単位で判定する。INITIAL・REMINDERはSENTの`sent_at`、EMERGENCYはdelivery結果とは分離して`first_attempted_at`を使用する。1 recipientでもtiming未達ならphase全体をFAILとする。
 - 重大incidentの検知後15分以内に一次切り分けを開始する。alarm、incident認定、影響確認、application・DB・network切り分け、rollbackまたはrestore判断、service recovery、data reconciliation、関係者報告、事後分析の順を基本とする。DB破損・誤更新ではproductionへ直接上書きせず、temporary restoreでdataを確認してから復旧方法を決める。
 - automated backup failureはalert対象とする。restore drill failureは未解消incidentとして扱い、原因解消後に成功を再確認する。backupの存在だけでrecoverableとは判定しない。
 

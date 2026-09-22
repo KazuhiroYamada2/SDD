@@ -8,5 +8,7 @@ describe('maintenance repository idempotency', () => {
     expect(claimed).toBe(true);
     expect(query.mock.calls[0]![0]).toContain('ON CONFLICT (maintenance_event_id, phase, recipient_user_id)');
     expect(query.mock.calls[0]![0]).toContain("status = 'FAILED'");
+    expect(query.mock.calls[0]![0]).toContain('first_attempted_at');
+    expect(query.mock.calls[0]![0]).not.toContain('first_attempted_at = NOW()');
   });
 });

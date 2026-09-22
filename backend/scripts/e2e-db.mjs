@@ -55,7 +55,7 @@ async function checkConnection(client) {
 }
 
 async function migrate(client) {
-  for (const migration of ['001_create_core_schema.sql', '002_create_customer_migration_ledger.sql', '003_create_maintenance_notifications.sql']) {
+  for (const migration of ['001_create_core_schema.sql', '002_create_customer_migration_ledger.sql', '003_create_maintenance_notifications.sql', '004_add_maintenance_first_attempted_at.sql']) {
     const path = fileURLToPath(new URL(`../migrations/${migration}`, import.meta.url));
     await client.query(await readFile(path, 'utf8'));
   }

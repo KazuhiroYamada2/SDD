@@ -19,6 +19,8 @@
     "backup:postgres": "node --import tsx scripts/backup-postgres.mjs",
     "verify:backup-restore": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-backup-restore.mjs",
     "maintenance": "node --import tsx scripts/maintenance-notification.mjs",
+    "maintenance:verify-timing": "node --import tsx scripts/verify-maintenance-timing.mjs",
+    "verify:maintenance-timing": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-maintenance-timing-acceptance.mjs",
     "verify:maintenance": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-maintenance-notifications.mjs",
     "availability:report": "node --import tsx scripts/availability-report.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",

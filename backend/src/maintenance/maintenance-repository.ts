@@ -34,9 +34,9 @@ export const createMaintenanceRepository = (database: Database): MaintenanceRepo
   },
   async claimDelivery(eventId, phase, recipientId) {
     const result = await database.query<{ recipient_user_id: string }>(
-      `INSERT INTO maintenance_notification_deliveries (
-         maintenance_event_id, phase, recipient_user_id, status, attempted_at
-       ) VALUES ($1, $2, $3, 'PENDING', NOW())
+       `INSERT INTO maintenance_notification_deliveries (
+         maintenance_event_id, phase, recipient_user_id, status, attempted_at, first_attempted_at
+       ) VALUES ($1, $2, $3, 'PENDING', NOW(), NOW())
        ON CONFLICT (maintenance_event_id, phase, recipient_user_id) DO UPDATE
        SET status = 'PENDING', attempted_at = NOW(), sent_at = NULL,
            provider_message_id = NULL, failure_code = NULL
@@ -62,4 +62,3 @@ export const createMaintenanceRepository = (database: Database): MaintenanceRepo
     );
   },
 });
-

@@ -460,6 +460,16 @@ Serviceはdeliveryを短いDB操作でPENDINGへclaimしてからtransaction外�
 
 schema migrationは`003_create_maintenance_notifications.sql`としてoffline適用し、Production起動時に自動実行しない。snapshot、migration、validation、rolloutの順序を維持する。運用手順は`docs/operations/maintenance-notification.md`とし、failure未解消時はT-607のincident経路へescalationする。
 
+## T-610 Maintenance timing verification design
+
+Timing evaluatorはDB・SESから分離したpure logicとする。PLANNED INITIAL deadlineは開始時刻をJST local timeへ移し、月曜日～金曜日だけを数えて3営業日戻し、同じlocal timeを保つ。REMINDER windowは`starts_at - 65 minutes`から`starts_at - 55 minutes`までとする。EMERGENCYは`created_at`から15分以内の初回attemptを合格とし、created前のattemptをinvalidとする。
+
+INITIAL・REMINDERはrecipient deliveryがSENTであることと`sent_at`を評価する。EMERGENCYはstatus・retry後`sent_at`とは別に`first_attempted_at`を評価し、timing resultとdelivery resultを分離する。`004_add_maintenance_first_attempted_at.sql`で既存deliveryの`attempted_at`をbackfillし、以後のretryでは初回値を維持する。`attempted_at`は直近attemptの意味を保つ。
+
+Verification CLIはeventとdeliveryを読み、phaseごとのtarget、pass、fail、delivery status件数、reason code件数、expected timing、overall result、検証時刻を出す。emailやPIIは出さない。全timing PASSはexit 0、timing FAILは2、system errorは1とする。Timing FAILは自動停止せず、T-703のincident・escalationへ記録する。
+
+T-609にはrecipient snapshot tableやsend時target countの永続証跡がない。そのためPhase 1のT-610は、phaseに存在するdelivery record集合を実配信対象証跡として検証し、当時activeでもdeliveryが作られなかったuserを事後に完全再構成しない。このlimitationはtiming検証の完了を妨げないが、対象者網羅性を証明するものではない。
+
 ## T-608 Business-hours availability physical design
 
 `infra/monitoring.yaml`の`AWS::Synthetics::Canary`は、parameterで受け取るFrontend HTTPS URLとBackend base URLを使用する。1 runでFrontendのHTTP 2xxと`/health/ready`のHTTP 200・JSON `status = ready`を順に確認する。AWS credential、認証token、request body、PIIを扱わない。

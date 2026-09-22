@@ -113,7 +113,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | T-607 | T-007に従い、認証不要の`/health/live`・DB `SELECT 1`を使う`/health/ready`、ALB readiness契約、CloudFormationのECS・ALB・RDS metric Alarm、SNS email通知、RDS `availability`・`failure`・`backup` EventSubscription、監視runbook、四半期restore drillのescalation手順を実装する。Health API test、CloudFormation static validation、Backend全test/buildを完了条件とし、AWS resourceのlocal deployは含めない | N-06 | T-007 | 高 |
 | T-608 | Asia/Tokyoの月曜日～金曜日09:00～17:55を5分intervalで測定し、successful expected samples / expected samplesのraw ratioが99.0%以上であることを月次判定する。missingと対象時間内maintenance failureをfailure側へ数える。Frontend HTTPS 2xxとBackend `/health/ready`を確認するCloudWatch Synthetics Canary・IAM・artifact、pure calculator、CloudWatch adapter、month report CLI、runbookを実装し、100%・exact 99%・below 99%・missing、CloudFormation static validation、Backend全test/buildを完了条件とする。AWS deployと実Production月次測定は含めない | N-06 | T-607 | 高 |
 | T-609 | Amazon SESとECS Task Roleを使う運用CLIでPLANNEDのINITIAL・REMINDER、EMERGENCYの即時通知をactive usersへ配信する。event・recipient単位delivery schema、JST本文、SES transport abstraction、SENT重複抑止、FAILED retry、partial failure継続、safe failure code、runbook、実PostgreSQL fake transport Acceptance、Backend全test/buildを完了条件とし、Frontend UI・business API・scheduler・実SES送信は含めない | N-07 | T-007 | 高 |
-| T-610 | 予定maintenanceを原則3営業日前までに通知し、開始1時間前に再通知できることを検証する。緊急maintenanceは決定後の速やかな通知を確認する | N-07 | T-609 | 高 |
+| T-610 | JST月～金を営業日とし、PLANNED INITIALを開始3営業日前の同local time以前、REMINDERを開始60分前±5分、EMERGENCY初回attemptをevent作成後15分以内としてrecipient単位で検証する。pure evaluator、初回attempt保持migration、verification CLI、exit 0/2/1、A～H実PostgreSQL Acceptance、runbook、Backend全test/buildを完了条件とする。recipient snapshotがないため既存delivery集合を対象証跡とし、scheduler・実SES送信・timing result tableは追加しない | N-07 | T-609 | 高 |
 
 ## 移行・運用タスク
 

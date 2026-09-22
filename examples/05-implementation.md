@@ -590,3 +590,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `backend/src/availability`へJST expected slot生成、月境界・当月cutoff、failure・missing・duplicate、raw 99%判定を行うpure calculator、probe、CloudWatch `SuccessPercent` adapterを追加した。missingはfailure側へ計上し、予定maintenanceを自動除外しない。
 - `availability:report` CLIを追加した。過去月またはmonth-to-dateのexpected、success、failed、missing、availability、PASS/FAILをJSONで出力し、測定FAILはexit code 2、system errorは1とする。
 - `docs/operations/availability-measurement.md`へ測定契約、Canary、月次report、99%未達時のT-703 escalationを記録し、統合operations manualから参照した。AWS resource、Frontend、DB schema、business APIは変更していない。
+
+## 2026-09-22 T-610 Maintenance notification timing
+
+- DB・SESから分離したtiming evaluatorを追加した。JST月～金だけを数えるINITIALの3営業日前deadline、REMINDERの開始60分前±5分、EMERGENCYのevent作成後15分以内をrecipient単位で判定し、安全なreason codeと集計を返す。
+- `004_add_maintenance_first_attempted_at.sql`を追加し、既存`attempted_at`を初回値としてbackfillした。新規deliveryでは初回claim時だけ`first_attempted_at`を設定し、retryでは維持する。`attempted_at`は直近attemptを示す既存の意味を保つ。
+- `maintenance:verify-timing` CLIを追加した。event・phase・target・pass・fail・delivery status・reason・expected timing・検証時刻を出力し、timing PASSはexit 0、FAILは2、system errorは1とする。recipient emailは出力しない。
+- 実E2E PostgreSQLでA～Hの境界値、CLI exit code、retry後の初回attempt保持、cleanupを検証した。`maintenance-notification.md`へ配信後のverificationとT-703 escalationを追加し、scheduler・実SES送信・timing result tableは追加していない。
