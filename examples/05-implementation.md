@@ -583,3 +583,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `docs/operations/operations-manual.md`をPhase 1運用の入口として追加した。Production構成、daily operation、health判断、Alarm初動、SEV1〜3、incident response、backup・restore、maintenance通知、secret rotation、release・migration、四半期restore drill、証跡・情報保護を整理し、既存3 runbookへ接続した。
 - `docs/operations/incident-contacts.md`へOperations Primary/Secondary、Application Owner、Database Owner、Security Contact、Business / Service Owner、AWS Supportのrole-based matrixとseverity別escalationを記録した。実連絡先はGit外のアクセス制御されたProduction operations contact rosterで管理する。
 - 10の運用scenarioについて、検知、初動、runbook、escalation、利用者通知、復旧確認、証跡をwalkthroughした。Production code、DB schema、Frontend、AWS resourceは変更していない。
+
+## 2026-09-22 T-608 Business-hours availability
+
+- `infra/monitoring.yaml`へCloudWatch Synthetics Canary、最小権限IAM Role、暗号化・public access遮断・31日retention付きartifact bucketを追加した。CanaryはUTC平日00:00～08:55に5分間隔で、Frontend HTTPS 2xxとBackend `/health/ready`の200・`status = ready`を確認する。
+- `backend/src/availability`へJST expected slot生成、月境界・当月cutoff、failure・missing・duplicate、raw 99%判定を行うpure calculator、probe、CloudWatch `SuccessPercent` adapterを追加した。missingはfailure側へ計上し、予定maintenanceを自動除外しない。
+- `availability:report` CLIを追加した。過去月またはmonth-to-dateのexpected、success、failed、missing、availability、PASS/FAILをJSONで出力し、測定FAILはexit code 2、system errorは1とする。
+- `docs/operations/availability-measurement.md`へ測定契約、Canary、月次report、99%未達時のT-703 escalationを記録し、統合operations manualから参照した。AWS resource、Frontend、DB schema、business APIは変更していない。

@@ -7,6 +7,7 @@
 - 監視とAlarm対応: [Production monitoring runbook](production-monitoring.md)
 - DB backup・restore: [Production backup・restore runbook](production-backup-restore.md)
 - Maintenance通知: [Maintenance notification runbook](maintenance-notification.md)
+- 業務時間稼働率: [Availability measurement](availability-measurement.md)
 - 障害時連絡体系: [Incident contacts](incident-contacts.md)
 
 ## 2. Production構成概要

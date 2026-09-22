@@ -856,3 +856,26 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - 既存runbookを重複コピーせず、統合manualを状況判断の入口として接続した。全10 scenarioでdetection、first action、runbook、escalation、通知要否、recovery、evidenceを追跡できる。
 - 実在人物の連絡先はrepositoryへ置かず、Git外のアクセス制御されたProduction operations contact rosterを正式な管理先とした。
 - 統合operations manual、monitoring procedure、incident response、severity、contact matrix、backup・restore、maintenance、secret rotation、release・migration、scenario walkthroughが揃ったため、T-703はPASS・完了と判定する。
+
+## 2026-09-22 T-608 Business-hours availability受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Expected slot | JST月～金、09:00・17:55を含む5分interval。18:00と週末を除外 | PASS |
+| JST / UTC boundary | 2026-09のJST月境界とUTC変換、CanaryのUTC 00:00～08:55を確認 | PASS |
+| Month handling | 過去月全体、当月は現在時刻以前、未来月error | PASS |
+| 100% fixture | success 100 / expected 100、100%、PASS | PASS |
+| Exact 99% fixture | success 99 / expected 100、99%、PASS | PASS |
+| Below 99% fixture | success 98 / expected 100、98%、FAIL | PASS |
+| Missing | 分母を維持し、missingをfailure側へ計上 | PASS |
+| Failure / duplicate | 明示failureを分離し、duplicateを二重countせずfailure優先 | PASS |
+| Synthetic probe | Frontend 2xx + ready 200/status readyだけ成功 | PASS |
+| Probe failure | Frontend failure、ready 503、malformed JSON、非readyを拒否 | PASS |
+| CloudWatch adapter | `SuccessPercent`、CanaryName、300秒periodを確認 | PASS |
+| CloudFormation | YAML parse、Canary、IAM、S3 artifact、URL parameter、cron、secret非混入 | PASS |
+| AWS CLI validation | local環境にAWS CLIなし | 未実施（static validationで代替） |
+| AWS deploy / Production実測 | localでは実施しない | 未実施（完了条件外） |
+
+- T-608関連テストは4 files・20/20 PASS。Backend全テストは60 files・411/411 PASS、Backend buildはPASSした。
+- Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施である。DB schemaと既存T-607 Health・Alarm契約も変更していない。
+- 平日・時間帯、5分interval、formula、missing、Synthetics probe、月次calculator、CLI、runbook、static validation、Backend回帰が揃ったため、T-608はPASS・完了と判定する。実Production availabilityはAWS deploy後の月次運用で継続測定する。

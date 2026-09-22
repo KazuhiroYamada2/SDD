@@ -208,7 +208,10 @@
 
 ### 可用性
 
-- 平日9:00-18:00の稼働率99%以上
+- Phase 1の稼働率はAsia/Tokyoのcalendar month単位で測定する。対象は月曜日から金曜日の`09:00 <= time < 18:00`で、5分ごとのexpected sampleに対する成功sampleの割合を99.0%以上とする。祝日・会社休日は自動除外しない。
+- expected sampleに対応するCloudWatch Synthetics datapointがない場合はmissingとしてfailure側へ数え、分母から除外しない。予定maintenance中のfailureも自動除外しない。判定には丸め前のratioを使用する。
+- Synthetics Canaryは1 runでCloudFront経由のFrontend HTTPSが2xxであることと、Backendの`GET /health/ready`が200かつ`status = ready`であることを確認する。認証やproduction data更新を伴う業務操作は実行しない。
+- 過去月は月全体、当月は実行時点以前のslotをmonth-to-dateとして算出し、未来月は拒否する。月次reportにはexpected、success、failed、missing、availability、PASS/FAILを記録する。
 - Phase 1のproductionはAWS `ap-northeast-1`に配置する。FrontendはAmazon S3とAmazon CloudFront、BackendはApplication Load Balancer配下のAmazon ECS on Fargate、DatabaseはMulti-AZのAmazon RDS for PostgreSQL 16とし、self-hosted PostgreSQLは採用しない。
 - Public通信はHTTPSとし、CloudFrontまたはALBでTLSを終端する。HTTPはHTTPSへredirectする。BackendからRDSへの接続もTLSを必須とし、AWS RDS CA certificateでserver certificateを検証する。productionでTLS検証を無効化してはならない。
 - `DATABASE_URL`またはDB credential、`JWT_SECRET`、`CUSTOMER_ENCRYPTION_CURRENT_KEY_ID`、`CUSTOMER_ENCRYPTION_KEYS_JSON`はAWS Secrets Managerで管理し、ECS Taskへinjectする。secret値をGit、source code、Docker image、DB、CloudWatch Logs、examples文書へ保存しない。`.env`はlocal development専用とし、production deployment sourceには使用しない。

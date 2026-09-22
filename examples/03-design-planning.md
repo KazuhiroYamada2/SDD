@@ -313,7 +313,7 @@ request bodyで許可するfieldは次のとおりとする。
 - T-603は各scenarioでHTTP 200とpagination response schemaの成功率100%、期待外status 0件、p95が3,000ms以下の場合に合格とする。この基準はN-02のエラー率1%未満をより厳しく満たす。全scenarioを混ぜたp95では判定しない。
 - HTTP concurrency 50に対して`pg.Pool` max 10を維持し、benchmark processから`totalCount`、`idleCount`、`waitingCount`を観測する。pool待ちを含むAPI wall-clock時間、T-602で取得したSQL execution time、request errorを区別する。測定終了後にwaiting 0かつ全connectionがidleへ戻ることを確認し、T-603の結果だけを理由にpool値を変更しない。
 - DB接続プール、ページング、検索インデックスを使用する。
-- 平日9:00〜18:00の稼働率99%以上を、監視サービスの稼働記録で測定する。
+- T-608はAsia/Tokyoの月曜日～金曜日、09:00～17:55に5分間隔のexpected slotを生成する。稼働率はsuccessful expected samples / total expected samplesで算出し、missing datapointと予定maintenance中のfailureを分母から除外しない。raw ratioが99.0%以上ならPASSとする。
 - メンテナンス通知、監視、backup、restore、incident responseは、次節のPhase 1 production運用設計に従う。
 
 ## Phase 1 production運用設計
@@ -459,6 +459,16 @@ PLANNEDはINITIALとREMINDER、EMERGENCYはEMERGENCYだけを許可する。送�
 Serviceはdeliveryを短いDB操作でPENDINGへclaimしてからtransaction外でSES送信し、成功時SENT、失敗時FAILEDと`SES_SEND_FAILED`だけを保存する。recipientごとの失敗は後続送信を止めない。SENTは再実行時にskipし、FAILEDだけをretryする。PENDINGは送信結果が不明なため自動再送せず、SES記録との照合後に運用判断する。CLIは集計だけを出し、failedがあればnon-zero終了する。
 
 schema migrationは`003_create_maintenance_notifications.sql`としてoffline適用し、Production起動時に自動実行しない。snapshot、migration、validation、rolloutの順序を維持する。運用手順は`docs/operations/maintenance-notification.md`とし、failure未解消時はT-607のincident経路へescalationする。
+
+## T-608 Business-hours availability physical design
+
+`infra/monitoring.yaml`の`AWS::Synthetics::Canary`は、parameterで受け取るFrontend HTTPS URLとBackend base URLを使用する。1 runでFrontendのHTTP 2xxと`/health/ready`のHTTP 200・JSON `status = ready`を順に確認する。AWS credential、認証token、request body、PIIを扱わない。
+
+Canary scheduleはAWSのUTC cron `cron(0/5 0-8 ? * MON-FRI *)`とする。これはJSTの月曜日～金曜日09:00～17:55に対応し、18:00を含まない。専用IAM Roleはartifact S3、CloudWatch Synthetics metric、CloudWatch Logsに必要な最小actionだけを許可する。Artifact bucketはpublic accessを遮断し、server-side encryptionと31日retentionを設定する。
+
+月次CLIはCloudWatchの`CloudWatchSynthetics` namespaceにある`SuccessPercent`をCanaryName dimension、300秒periodで取得する。AWS adapterとpure calculatorを分離し、calculatorがJST月境界、weekday・business-hours slot、failure、missing、duplicate、99%閾値を判定する。過去月は全期間、当月は現在時刻以前、未来月はerrorとする。FAILはexit code 2、system errorは1で区別する。
+
+運用手順は`docs/operations/availability-measurement.md`を正本とする。T-607 Alarmはリアルタイム障害検知、T-608 reportは月次稼働率測定を担う。AWS deployと実Production月次値はlocal Acceptanceへ含めず、CloudFormation static validation、synthetic metric fixture、Backend test/buildで実装を検証する。
 
 ## T-607 Health・monitoring physical design
 

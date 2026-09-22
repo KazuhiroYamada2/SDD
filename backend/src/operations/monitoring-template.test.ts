@@ -24,6 +24,9 @@ const requiredParameters = [
   'TargetGroupFullName',
   'RdsDbInstanceIdentifier',
   'NotificationEmail',
+  'FrontendHealthUrl',
+  'BackendBaseUrl',
+  'AvailabilityCanaryName',
 ];
 
 describe('infra/monitoring.yaml', () => {
@@ -69,5 +72,22 @@ describe('infra/monitoring.yaml', () => {
   it('defines the ALB readiness contract', () => {
     expect(template.Parameters.AlbHealthCheckPath?.Default).toBe('/health/ready');
     expect(template.Outputs.RequiredAlbHealthCheckSuccessCode?.Value).toBe('200');
+  });
+
+  it('defines a weekday JST business-hours Synthetics canary without credentials', () => {
+    expect(template.Resources.AvailabilityCanaryRole?.Type).toBe('AWS::IAM::Role');
+    expect(template.Resources.AvailabilityArtifactBucket?.Type).toBe('AWS::S3::Bucket');
+    expect(template.Resources.BusinessHoursAvailabilityCanary).toMatchObject({
+      Type: 'AWS::Synthetics::Canary',
+      Properties: {
+        Name: 'AvailabilityCanaryName',
+        StartCanaryAfterCreation: true,
+        Schedule: { Expression: 'cron(0/5 0-8 ? * MON-FRI *)', DurationInSeconds: 0 },
+        RunConfig: { EnvironmentVariables: { FRONTEND_HEALTH_URL: 'FrontendHealthUrl', BACKEND_BASE_URL: 'BackendBaseUrl' } },
+      },
+    });
+    expect(source).toContain("new URL('/health/ready'");
+    expect(source).toContain("body.status !== 'ready'");
+    expect(source).not.toMatch(/AWS_ACCESS_KEY|AWS_SECRET_ACCESS_KEY|Authorization:/);
   });
 });
