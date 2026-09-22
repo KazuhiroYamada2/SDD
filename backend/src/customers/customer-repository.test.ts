@@ -236,4 +236,62 @@ describe('createCustomerRepository', () => {
     const repository = createCustomerRepository({ query: vi.fn().mockResolvedValue({ rows: [] }) });
     await expect(repository.logicalDeleteActiveById('8a1f2d44-1234-4abc-8def-123456789abc')).resolves.toBe(false);
   });
+
+  it.each(['update', 'delete'] as const)('commits Customer %s and mandatory audit on one client', async (operation) => {
+    const id = '8a1f2d44-1234-4abc-8def-123456789abc';
+    const updated = {
+      id, name: 'After', name_kana: null, email: null, phone: null, address: null, category: 'A',
+      owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+      created_at: new Date(), updated_at: new Date(), deleted_at: operation === 'delete' ? new Date() : null,
+    };
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('UPDATE customers')) return { rows: operation === 'update' ? [updated] : [{ id }] };
+      return { rows: [] };
+    });
+    const client = { query, release: vi.fn() };
+    const database = { query: vi.fn(), connect: vi.fn().mockResolvedValue(client) };
+    const audit = vi.fn(async (usedClient) => usedClient.query('AUDIT INSERT'));
+    const repository = createCustomerRepository(database);
+
+    if (operation === 'update') {
+      await repository.updateActiveById(id, { category: 'A' }, audit);
+    } else {
+      await repository.logicalDeleteActiveById(id, audit);
+    }
+
+    expect(audit).toHaveBeenCalledExactlyOnceWith(client);
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'BEGIN', expect.stringContaining('UPDATE customers'), 'AUDIT INSERT', 'COMMIT',
+    ]);
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
+  it.each(['update', 'delete'] as const)('rolls back Customer %s when mandatory audit fails', async (operation) => {
+    const id = '8a1f2d44-1234-4abc-8def-123456789abc';
+    const updated = {
+      id, name: 'After', name_kana: null, email: null, phone: null, address: null, category: 'A',
+      owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
+      created_at: new Date(), updated_at: new Date(), deleted_at: operation === 'delete' ? new Date() : null,
+    };
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('UPDATE customers')) return { rows: operation === 'update' ? [updated] : [{ id }] };
+      return { rows: [] };
+    });
+    const client = { query, release: vi.fn() };
+    const database = { query: vi.fn(), connect: vi.fn().mockResolvedValue(client) };
+    const audit = vi.fn().mockRejectedValue(new Error('audit failed'));
+    const repository = createCustomerRepository(database);
+
+    const result = operation === 'update'
+      ? repository.updateActiveById(id, { category: 'A' }, audit)
+      : repository.logicalDeleteActiveById(id, audit);
+    await expect(result).rejects.toThrow('audit failed');
+
+    expect(audit).toHaveBeenCalledExactlyOnceWith(client);
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'BEGIN', expect.stringContaining('UPDATE customers'), 'ROLLBACK',
+    ]);
+    expect(query.mock.calls.map(([sql]) => sql)).not.toContain('COMMIT');
+    expect(client.release).toHaveBeenCalledOnce();
+  });
 });

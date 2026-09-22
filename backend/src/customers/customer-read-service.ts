@@ -32,6 +32,13 @@ export class CustomerNotFoundError extends Error {
   }
 }
 
+export class CustomerScopeDeniedError extends CustomerNotFoundError {
+  constructor() {
+    super();
+    this.name = 'CustomerScopeDeniedError';
+  }
+}
+
 export type CustomerReadService = {
   list(authenticatedUser: AuthenticatedUser, query?: CustomerListQuery): Promise<CustomerListResponse>;
   findById(id: string, authenticatedUser: AuthenticatedUser): Promise<CustomerReadDto>;
@@ -64,9 +71,8 @@ export const createCustomerReadService = (
   async findById(id, authenticatedUser) {
     assertOperationAllowed(authenticatedUser, 'customer.read');
     const customer = await repository.findActiveById(id);
-    if (customer === null || !isCustomerInScope(authenticatedUser, customer.owner_user_id)) {
-      throw new CustomerNotFoundError();
-    }
+    if (customer === null) throw new CustomerNotFoundError();
+    if (!isCustomerInScope(authenticatedUser, customer.owner_user_id)) throw new CustomerScopeDeniedError();
 
     return toCustomerReadDto(customerCrypto.decryptCustomer(customer));
   },

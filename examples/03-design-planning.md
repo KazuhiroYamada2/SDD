@@ -81,6 +81,15 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 - 共通error handlerはmalformed JSON、既知のapplication error、予期しないerrorを扱う。Loginのmalformed JSONは既存の400 `VALIDATION_ERROR`を維持し、それ以外は400 `{ "code": "INVALID_REQUEST", "message": "Request body is invalid." }`とする。予期しないerrorはgeneric 500へ変換し、parser内部message、stack trace、DB error、secret、credential、PII、完全なciphertextを公開しない。各APIが定義済みのstatus、code、message、business validationは変更しない。
 - T-108は`request.requestId`をaccess logとaudit logの共通correlation IDとして使用し、`audit_logs.request_id`へ同じ値を保存する。T-106ではlog永続化を実装せず、request context interfaceまでを提供する。
 
+### T-108 Access・audit logging
+
+- Request ID確定直後のaccess middlewareは開始時刻を保持し、response `finish`時に1件だけJSONを標準出力する。`HTTP_ACCESS`、`request_id`、method、明示されたroute templateまたは`UNMATCHED`、status、duration、actor user IDまたは`null`、共通IP helperの`req.ip`、timestampだけを含める。Queryやrequest/response payloadをloggerへ渡さない。Logger failureは握りつぶしてbusiness responseを維持する。
+- Audit repositoryは既存`audit_logs`へUUIDを採番して`user_id`、action、resource type・ID、`req.requestId`、共通request IPをinsertし、Poolとtransaction clientの同じquery interfaceを受け付ける。Schemaの`user_id`と`resource_id`は既にnullableであるためmigrationは追加しない。
+- Mandatory auditは`LOGIN_SUCCESS/AUTH/null`、`CUSTOMER_LIST/CUSTOMER_COLLECTION/null`、`CUSTOMER_READ/CUSTOMER/customerId`、`CUSTOMER_UPDATE/CUSTOMER/customerId`、`CUSTOMER_DELETE/CUSTOMER/customerId`、`USER_ROLE_CHANGE/USER/targetUserId`とする。Actorは認証済みuserである。ReadとLoginはaudit成功後だけDTO・tokenを返し、Customer update・deleteとrole変更はBEGIN → business write → audit insert → COMMITを同じclientで実行する。Audit失敗はrollbackまたはgeneric 500とする。
+- Best-effort auditは`LOGIN_FAILURE/AUTH/null`、`AUTHENTICATION_REQUIRED/AUTHORIZATION/null`、`AUTHORIZATION_DENIED/AUTHORIZATION/null`、`AUTHORIZATION_SCOPE_DENIED/CUSTOMER/null`とする。前2件のactorは`null`、後2件は認証済みactorとする。Insert失敗時も元の401・403・scope-hidden 404を維持し、sanitized operational logにはrequest ID、action、安全なfailure codeだけを許可する。
+- Customer list成功、detail成功、update成功、delete成功、role変更成功だけをbusiness audit対象とする。Customer scope拒否ではrequested UUIDを保存せず、通常の不存在404はauditしない。Authentication → operation Authorization → validation/resource fetch → scope Authorization → business processingの順序は変更しない。
+- Access・audit・operational logへAuthorization、Cookie、JWT、password・hash、request/response body、query、Customer PII、暗号鍵、完全なciphertext、DB・AWS credential、stack traceを含めない。IPはsecurity metadataとして保存する。Access loggerとaudit recorderは同じrequestから新しい相関IDを生成しない。
+
 Phase 1では`POST /api/v1/auth/login`と`GET /health`をPublicとし、その他の業務APIは現在実装済みか今後実装するかを問わずAuthenticationを必須とする。新しいPublic APIは仕様へ明示してから追加する。ExpressではPublic routeを先に登録し、その後の`/api/v1`業務APIに共通Authentication middlewareを適用する。認証成功は操作権限を意味しない。roleとデータ範囲の認可・403はT-105と対象機能Taskで扱う。
 
 | エンドポイント | 用途 | 要件 |

@@ -78,4 +78,29 @@ describe('Login Service', () => {
     tokenFailure.issueAccessToken.mockRejectedValue(new Error('token unavailable'));
     await expect(createLoginService(tokenFailure).login(input)).rejects.toThrow('token unavailable');
   });
+
+  it('records mandatory Login success before issuing the token', async () => {
+    const dependencies = makeDependencies();
+    const recordSuccess = vi.fn().mockResolvedValue(undefined);
+    const recordFailure = vi.fn().mockResolvedValue(undefined);
+
+    await createLoginService(dependencies).login(input, { recordSuccess, recordFailure });
+
+    expect(recordSuccess).toHaveBeenCalledExactlyOnceWith(user.id);
+    expect(recordFailure).not.toHaveBeenCalled();
+    expect(recordSuccess.mock.invocationCallOrder[0]).toBeLessThan(
+      dependencies.issueAccessToken.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('does not issue a token when mandatory Login success audit fails', async () => {
+    const dependencies = makeDependencies();
+    const auditFailure = new Error('audit failed');
+
+    await expect(createLoginService(dependencies).login(input, {
+      recordSuccess: vi.fn().mockRejectedValue(auditFailure),
+      recordFailure: vi.fn(),
+    })).rejects.toThrow(auditFailure);
+    expect(dependencies.issueAccessToken).not.toHaveBeenCalled();
+  });
 });

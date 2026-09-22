@@ -22,8 +22,14 @@ export type UpdateCustomerInput = Partial<Pick<
 >>;
 
 export type Queryable = {
-  query<Result>(sql: string, values: readonly unknown[]): Promise<{ rows: Result[] }>;
+  query<Result>(sql: string, values?: readonly unknown[]): Promise<{ rows: Result[] }>;
 };
+
+export type TransactionalQueryable = Queryable & {
+  connect?: () => Promise<Queryable & { release(): void }>;
+};
+
+export type AuditInTransaction = (query: Queryable) => Promise<void>;
 
 export type CustomerRepository = {
   create(input: CreateCustomerInput): Promise<Customer>;
@@ -50,11 +56,11 @@ export type CustomerReadRepository = {
 };
 
 export type CustomerEditRepository = CustomerReadRepository & {
-  updateActiveById(id: string, input: UpdateCustomerInput): Promise<Customer | null>;
+  updateActiveById(id: string, input: UpdateCustomerInput, audit?: AuditInTransaction): Promise<Customer | null>;
 };
 
 export type CustomerDeleteRepository = CustomerReadRepository & {
-  logicalDeleteActiveById(id: string): Promise<boolean>;
+  logicalDeleteActiveById(id: string, audit?: AuditInTransaction): Promise<boolean>;
 };
 
 type CustomerPersistenceRepository = CustomerRepository & CustomerReadRepository &
@@ -70,7 +76,26 @@ const orderBy: Record<CustomerSort, string> = {
   created_at_desc: 'created_at DESC, id ASC',
 };
 
-export const createCustomerRepository = (database: Queryable): CustomerPersistenceRepository => ({
+const runTransaction = async <Result>(
+  database: TransactionalQueryable,
+  operation: (query: Queryable) => Promise<Result>,
+): Promise<Result> => {
+  if (database.connect === undefined) throw new Error('Transactional database is required.');
+  const client = await database.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await operation(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const createCustomerRepository = (database: TransactionalQueryable): CustomerPersistenceRepository => ({
   async create(input) {
     const id = randomUUID();
     const result = await database.query<Customer>(
@@ -142,7 +167,7 @@ export const createCustomerRepository = (database: Queryable): CustomerPersisten
     );
     return result.rows[0] ?? null;
   },
-  async updateActiveById(id, input) {
+  async updateActiveById(id, input, audit) {
     const columnByField: Record<keyof UpdateCustomerInput, string> = {
       name: 'name',
       name_kana: 'name_kana',
@@ -156,23 +181,33 @@ export const createCustomerRepository = (database: Queryable): CustomerPersisten
     const assignments = entries.map(([field], index) => `${columnByField[field]} = $${index + 1}`);
     values.push(id);
 
-    const result = await database.query<Customer>(
-      `UPDATE customers
-      SET ${assignments.join(', ')}, updated_at = NOW()
-      WHERE id = $${values.length} AND deleted_at IS NULL
-      RETURNING ${customerColumns}`,
-      values,
-    );
-    return result.rows[0] ?? null;
+    const update = async (query: Queryable) => {
+      const result = await query.query<Customer>(
+        `UPDATE customers
+        SET ${assignments.join(', ')}, updated_at = NOW()
+        WHERE id = $${values.length} AND deleted_at IS NULL
+        RETURNING ${customerColumns}`,
+        values,
+      );
+      const updated = result.rows[0] ?? null;
+      if (updated !== null) await audit?.(query);
+      return updated;
+    };
+    return audit === undefined ? update(database) : runTransaction(database, update);
   },
-  async logicalDeleteActiveById(id) {
-    const result = await database.query<{ id: string }>(
-      `UPDATE customers
-      SET deleted_at = NOW(), updated_at = NOW()
-      WHERE id = $1 AND deleted_at IS NULL
-      RETURNING id`,
-      [id],
-    );
-    return result.rows.length === 1;
+  async logicalDeleteActiveById(id, audit) {
+    const logicalDelete = async (query: Queryable) => {
+      const result = await query.query<{ id: string }>(
+        `UPDATE customers
+        SET deleted_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING id`,
+        [id],
+      );
+      const deleted = result.rows.length === 1;
+      if (deleted) await audit?.(query);
+      return deleted;
+    };
+    return audit === undefined ? logicalDelete(database) : runTransaction(database, logicalDelete);
   },
 });

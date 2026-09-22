@@ -1,5 +1,9 @@
 import type { ErrorRequestHandler } from 'express';
 import { ForbiddenError, forbiddenResponse } from '../authorization/forbidden-error.js';
+import { auditRecordFor, recordBestEffortAudit } from '../audit/audit-recorder.js';
+import { noOpAuditRepository } from '../audit/audit-repository.js';
+import type { AuditRepository } from '../audit/audit-types.js';
+import { noOpStructuredLog, type StructuredLogWriter } from '../logging/structured-log.js';
 
 const invalidRequestResponse = Object.freeze({
   code: 'INVALID_REQUEST',
@@ -21,7 +25,10 @@ const isMalformedJson = (error: unknown): boolean =>
   'status' in error && error.status === 400 &&
   'type' in error && error.type === 'entity.parse.failed';
 
-export const handleApplicationError: ErrorRequestHandler = (error, request, response, next) => {
+export const createApplicationErrorHandler = (
+  auditRepository: AuditRepository = noOpAuditRepository,
+  operationalLog: StructuredLogWriter = noOpStructuredLog,
+): ErrorRequestHandler => async (error, request, response, next) => {
   if (response.headersSent) {
     next(error);
     return;
@@ -36,9 +43,16 @@ export const handleApplicationError: ErrorRequestHandler = (error, request, resp
   }
 
   if (error instanceof ForbiddenError) {
+    await recordBestEffortAudit(
+      auditRepository,
+      auditRecordFor(request, 'AUTHORIZATION_DENIED', 'AUTHORIZATION', null),
+      operationalLog,
+    );
     response.status(error.status).json(forbiddenResponse);
     return;
   }
 
   response.status(500).json(internalServerErrorResponse);
 };
+
+export const handleApplicationError = createApplicationErrorHandler();

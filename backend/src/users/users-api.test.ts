@@ -52,7 +52,12 @@ describe('Users production API', () => {
     const response = await authenticatedRequest(app).patch(`/api/v1/users/${otherId}/role`).send({ role: 'manager' });
     expect(response.status).toBe(200);
     expect(response.body.role).toBe('manager');
-    expect(userService.changeRole).toHaveBeenCalledWith(otherId, 'manager', { id: testUserId, role: 'admin' });
+    expect(userService.changeRole).toHaveBeenCalledWith(
+      otherId,
+      'manager',
+      { id: testUserId, role: 'admin' },
+      expect.any(Function),
+    );
   });
 
   it.each([
@@ -82,4 +87,3 @@ describe('Users production API', () => {
     expect(response.body).toEqual(body);
   });
 });
-

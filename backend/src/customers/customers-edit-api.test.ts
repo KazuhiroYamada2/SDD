@@ -33,7 +33,11 @@ describe('PATCH /api/v1/customers/:id', () => {
     const response = await authenticatedRequest(app).patch(`/api/v1/customers/${id}`).send({ category: 'Updated' });
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ id, name: 'Before', category: 'Updated', owner_user_id: testUserId });
-    expect(repository.updateActiveById).toHaveBeenCalledWith(id, { category: 'Updated' });
+    expect(repository.updateActiveById).toHaveBeenCalledWith(
+      id,
+      { category: 'Updated' },
+      expect.any(Function),
+    );
   });
 
   it('returns the same 404 for staff scope outside and missing customers without update', async () => {

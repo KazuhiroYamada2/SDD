@@ -633,3 +633,19 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 共通JSON parserをRequest ID middlewareの後へ配置した。Loginのmalformed JSONは既存`VALIDATION_ERROR`を維持し、その他は400 `INVALID_REQUEST / Request body is invalid.`へ変換する。既存403と予期しない500を共通error handlerへ統合し、内部errorの詳細を公開しない。
 - 既存APIのstatus、code、message、business validation、error bodyの`{ code, message }`形式は変更していない。Error bodyへ`requestId`を追加していない。T-108のaccess・audit logは先取りせず、共通request contextだけを実装した。
 - T-106 testを1 file・14 tests追加した。途中で旧403 handlerを直接参照していた既存testのimport追随漏れをTest defectとして検出し、共通handlerを参照するよう最小修正した。最終Backend全testは65 files・445 tests、Backend buildもPASSした。FrontendとPlaywright、DB fixture・setupは変更・実行していない。
+
+## 2026-09-22 T-108 Access・audit log（Specification Gapにより未着手）
+
+- examples/01～04、既存`audit_logs` schema、T-106の`request.requestId`契約、Customer・Usersのwrite処理を確認した。Schemaは`id`、`user_id`、`action`、`resource_type`、`resource_id`、`request_id`、`ip_address`、`created_at`であり、ログイン、認証・認可、顧客情報の参照・変更・削除、権限変更を記録対象としている。
+- `action`と`resource_type`の正式値、Login・認証・認可の成功・失敗記録、Customerの一覧・検索・詳細のread範囲、scope外404・403の記録内容、access logの必須fieldとhealth対象範囲、IP取得方式が未定義だった。
+- Audit insert失敗時のbusiness responseと、write処理とのtransaction境界も未定義である。Customer writeは各SQL単位、role変更はRepository内transactionでcommitするため、実装方式によってbusiness commitとaudit recordのatomicityが変わる。
+- 公開APIとdata整合性を推測で変更しないため、Production code、test code、DB schema・fixtureを変更せず停止した。Backend test・build、Frontend、Playwrightは実施していない。
+
+## 2026-09-22 T-108 Access・audit log（仕様確定後に完了）
+
+- 前回のSpecification Gapだったaction、resource、actor、失敗時動作、transaction境界をexamples/02～04へ正本化した。既存`audit_logs`の`user_id`と`resource_id`はnullableだったため、schemaとmigrationは変更していない。
+- 全HTTP requestを1 request 1 recordの`HTTP_ACCESS` JSONとして標準出力するmiddlewareを追加した。`request_id`、method、normalized route、status、duration、authenticated userまたは`null`、`req.ip`、timestampだけを記録し、query、body、header、token、secret、credential、Customer PIIは記録しない。Access log失敗はresponseとtransactionへ影響させない。
+- 既存`audit_logs`を使うrepositoryを追加し、`LOGIN_SUCCESS`、`LOGIN_FAILURE`、`AUTHENTICATION_REQUIRED`、`AUTHORIZATION_DENIED`、`AUTHORIZATION_SCOPE_DENIED`、`CUSTOMER_LIST`、`CUSTOMER_READ`、`CUSTOMER_UPDATE`、`CUSTOMER_DELETE`、`USER_ROLE_CHANGE`を実装した。Response header、access log、audit logは同じ`request.requestId`を使用する。
+- Login成功とCustomer list・detailはmandatory audit後にresponseを返す。Customer update・logical delete・role変更はbusiness変更とaudit insertを同じPostgreSQL clientのtransactionでcommitする。Audit失敗時はrollbackしてgeneric 500とする。Login失敗、未認証401、operation拒否403、scope外404はbest-effortとし、audit失敗でも元のsecurity responseを維持する。
+- 実装中にmatched routeをresponse完了時に判定するとExpressのmount後に`UNMATCHED`となるProduction defectを1件検出し、request開始時にnormalized templateを確定するよう修正した。Security testのfield名部分一致とtransaction mockの戻り値型に関するTest defectを2件修正した。
+- T-108用に3 test files・31 testsを追加した。最終Backend全testは68 files・476 tests、Backend buildはPASSした。実E2E PostgreSQLでは成功3操作のbusiness・audit同時commitと、audit失敗3操作のrollbackを確認した。検証後に安全ガード付きresetを実行し、`audit_logs`などの可変fixtureをbaselineへ戻した。FrontendとPlaywrightは変更・実行していない。

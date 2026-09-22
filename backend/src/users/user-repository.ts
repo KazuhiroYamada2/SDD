@@ -17,9 +17,11 @@ export type RoleChangeResult =
   | { status: 'updated' | 'unchanged'; user: UserDto }
   | { status: 'not_found' | 'last_active_admin' };
 
+export type UserAuditInTransaction = (client: TransactionClient) => Promise<void>;
+
 export type UserRepository = {
   list(): Promise<UserDto[]>;
-  changeRole(id: string, role: UserRole): Promise<RoleChangeResult>;
+  changeRole(id: string, role: UserRole, audit?: UserAuditInTransaction): Promise<RoleChangeResult>;
 };
 
 type UserRow = {
@@ -46,7 +48,7 @@ export const createUserRepository = (database: TransactionalDatabase): UserRepos
     return result.rows.map(toDto);
   },
 
-  async changeRole(id, role) {
+  async changeRole(id, role, audit) {
     const client = await database.connect();
     try {
       await client.query('BEGIN');
@@ -72,6 +74,7 @@ export const createUserRepository = (database: TransactionalDatabase): UserRepos
         return { status: 'not_found' };
       }
       if (current.role === role) {
+        await audit?.(client);
         await client.query('COMMIT');
         return { status: 'unchanged', user: toDto(current) };
       }
@@ -87,6 +90,7 @@ export const createUserRepository = (database: TransactionalDatabase): UserRepos
         RETURNING id, email, role, is_active`,
         [role, id],
       );
+      await audit?.(client);
       await client.query('COMMIT');
       return { status: 'updated', user: toDto(updated.rows[0]!) };
     } catch (error) {
@@ -97,4 +101,3 @@ export const createUserRepository = (database: TransactionalDatabase): UserRepos
     }
   },
 });
-

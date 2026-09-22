@@ -5,6 +5,7 @@ import type { CustomerEditService } from './customer-edit-service.js';
 import type { CustomerDeleteService } from './customer-delete-service.js';
 import {
   CustomerNotFoundError,
+  CustomerScopeDeniedError,
   customerNotFoundResponse,
   type CustomerReadService,
 } from './customer-read-service.js';
@@ -12,6 +13,10 @@ import { validateCustomerId, validateCustomerListQuery } from './customer-read-v
 import { validateCreateCustomer, validateUpdateCustomer } from './customer-validation.js';
 import type { CustomerCrypto } from './customer-crypto.js';
 import { toCustomerReadDto } from './customer-read-types.js';
+import { auditRecordFor, recordBestEffortAudit } from '../audit/audit-recorder.js';
+import { noOpAuditRepository } from '../audit/audit-repository.js';
+import type { AuditRepository } from '../audit/audit-types.js';
+import { noOpStructuredLog, type StructuredLogWriter } from '../logging/structured-log.js';
 
 const customerId = (params: unknown): string | undefined =>
   (params as { id?: string }).id;
@@ -22,6 +27,8 @@ export const createCustomersRouter = (
   customerEditService?: CustomerEditService,
   customerDeleteService?: CustomerDeleteService,
   customerCrypto?: CustomerCrypto,
+  auditRepository: AuditRepository = noOpAuditRepository,
+  operationalLog: StructuredLogWriter = noOpStructuredLog,
 ) => {
   const router = Router();
 
@@ -38,9 +45,11 @@ export const createCustomersRouter = (
     }
 
     try {
-      response.status(200).json(
-        await customerReadService.list(request.authenticatedUser!, validation.value),
+      const result = await customerReadService.list(request.authenticatedUser!, validation.value);
+      await auditRepository.insert(
+        auditRecordFor(request, 'CUSTOMER_LIST', 'CUSTOMER_COLLECTION', null),
       );
+      response.status(200).json(result);
     } catch {
       response.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve customers.' });
     }
@@ -59,10 +68,21 @@ export const createCustomersRouter = (
     }
 
     try {
-      response.status(200).json(
-        await customerReadService.findById(validation.value, request.authenticatedUser!),
+      const result = await customerReadService.findById(validation.value, request.authenticatedUser!);
+      await auditRepository.insert(
+        auditRecordFor(request, 'CUSTOMER_READ', 'CUSTOMER', validation.value),
       );
+      response.status(200).json(result);
     } catch (error) {
+      if (error instanceof CustomerScopeDeniedError) {
+        await recordBestEffortAudit(
+          auditRepository,
+          auditRecordFor(request, 'AUTHORIZATION_SCOPE_DENIED', 'CUSTOMER', null),
+          operationalLog,
+        );
+        response.status(404).json(customerNotFoundResponse);
+        return;
+      }
       if (error instanceof CustomerNotFoundError) {
         response.status(404).json(customerNotFoundResponse);
         return;
@@ -114,12 +134,26 @@ export const createCustomersRouter = (
     }
 
     try {
-      response.status(200).json(await customerEditService.update(
+      const result = await customerEditService.update(
         idValidation.value,
         bodyValidation.value,
         request.authenticatedUser!,
-      ));
+        (query) => auditRepository.insert(
+          auditRecordFor(request, 'CUSTOMER_UPDATE', 'CUSTOMER', idValidation.value),
+          query,
+        ),
+      );
+      response.status(200).json(result);
     } catch (error) {
+      if (error instanceof CustomerScopeDeniedError) {
+        await recordBestEffortAudit(
+          auditRepository,
+          auditRecordFor(request, 'AUTHORIZATION_SCOPE_DENIED', 'CUSTOMER', null),
+          operationalLog,
+        );
+        response.status(404).json(customerNotFoundResponse);
+        return;
+      }
       if (error instanceof CustomerNotFoundError) {
         response.status(404).json(customerNotFoundResponse);
         return;
@@ -140,7 +174,14 @@ export const createCustomersRouter = (
     }
 
     try {
-      await customerDeleteService.deleteById(validation.value, request.authenticatedUser!);
+      await customerDeleteService.deleteById(
+        validation.value,
+        request.authenticatedUser!,
+        (query) => auditRepository.insert(
+          auditRecordFor(request, 'CUSTOMER_DELETE', 'CUSTOMER', validation.value),
+          query,
+        ),
+      );
       response.status(204).send();
     } catch (error) {
       if (error instanceof CustomerNotFoundError) {

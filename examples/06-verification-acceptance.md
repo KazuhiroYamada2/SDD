@@ -1026,3 +1026,59 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - 途中の全回帰で、削除した旧403 handlerをauthorization middleware testが直接参照していたTest defectを1件検出した。Importと接続先を共通error handlerへ変更し、対象test、Backend全test、buildの再実行で修正を確認した。
 - Production BackendはRequest ID middleware、共通error handler、middleware wiringを変更した。Business API contract、Frontend、DB fixture・setupは変更していない。
 - すべてのAcceptanceを満たしたため、T-106はPASS・完了と判定する。依存するT-108は着手可能である。
+
+## 2026-09-22 T-108 Access・audit log受入（未完了）
+
+| 確認対象 | 正本・既存実装の状態 | 判定 |
+| --- | --- | --- |
+| Audit schema | `id`、`user_id`、`action`、`resource_type`、`resource_id`、`request_id`、`ip_address`、`created_at` | PASS（仕様確認） |
+| Request ID | Access・audit logともT-106の`request.requestId`を使用 | PASS（仕様確認） |
+| Audit対象 | ログイン、認証・認可、Customer参照・変更・削除、role変更まで定義 | PASS（範囲確認） |
+| Action・resource値 | 正式なevent名、resource type、list等のresource ID規約が未定義 | FAIL（Specification Gap） |
+| Success・failure | どの成功・失敗を記録するか、失敗時のactor・target表現が未定義 | FAIL（Specification Gap） |
+| Security拒否 | 401・403・scope外404で記録するfieldと秘匿方法が未定義 | FAIL（Specification Gap） |
+| Access log | 必須field、health対象範囲、path・IP・duration等の記録規約が未定義 | FAIL（Specification Gap） |
+| Audit失敗時 | Business成功を維持するかerrorにするか未定義 | FAIL（Specification Gap） |
+| Transaction | Customer write・role変更とaudit insertのatomicityが未定義 | FAIL（Specification Gap） |
+| Production / test / schema変更 | 推測実装を避けるため変更なし | 未実施 |
+| Backend test / build | 実装前の仕様確認で停止 | 未実施 |
+| Frontend / Playwright | T-108未実装のため実行せず | 未実施 |
+
+- Access・audit logのevent contractとtransaction契約は、選択によって公開API結果とDB整合性が変わる重大事項である。未実施項目をPASSとして扱わない。
+- T-108はSpecification Gapにより未完了と判定する。T-108へ依存するT-606は着手不可である。
+
+## 2026-09-22 T-108 Access・audit log受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Access log | 全HTTP requestを`HTTP_ACCESS`のstructured JSONで1件記録。Success、error、health、unmatchedを確認 | PASS |
+| Access field | request ID、method、normalized route、status、duration、user IDまたは`null`、`req.ip`、timestamp | PASS |
+| Route・security | Queryを含まないtemplateまたは`UNMATCHED`を記録。Header、body、token、secret、credential、Customer PII、stackを非記録 | PASS |
+| Request ID相関 | 同一requestの`X-Request-ID`、access `request_id`、audit `request_id`が一致 | PASS |
+| `LOGIN_SUCCESS` | `AUTH`、resource ID `null`、認証User。Mandatory audit後にtoken発行 | PASS |
+| `LOGIN_FAILURE` | `AUTH`、resource ID `null`、user ID `null`。Best-effortで401維持 | PASS |
+| `AUTHENTICATION_REQUIRED` | `AUTHORIZATION`、resource ID・user ID `null`。Best-effortで401維持 | PASS |
+| `AUTHORIZATION_DENIED` | `AUTHORIZATION`、resource ID `null`、actor User。Best-effortで403維持 | PASS |
+| `AUTHORIZATION_SCOPE_DENIED` | `CUSTOMER`、resource ID `null`、actor User。Best-effortでscope外404維持 | PASS |
+| `CUSTOMER_LIST` | `CUSTOMER_COLLECTION`、resource ID `null`、actor User。Mandatory | PASS |
+| `CUSTOMER_READ` | `CUSTOMER`、Customer UUID、actor User。Mandatory | PASS |
+| `CUSTOMER_UPDATE` | `CUSTOMER`、Customer UUID、actor User。Business変更とauditを同一transactionでcommit | PASS |
+| `CUSTOMER_DELETE` | `CUSTOMER`、Customer UUID、actor User。Logical deleteとauditを同一transactionでcommit | PASS |
+| `USER_ROLE_CHANGE` | `USER`、target User UUID、admin actor。Role変更とauditを同一transactionでcommit | PASS |
+| Mandatory audit failure | Login成功はtoken非返却、Customer list・detailはDTO非返却。いずれもgeneric 500 | PASS |
+| Write atomicity | Update、delete、role変更はaudit失敗時にrollback。成功時はbusiness変更とauditを両方commit | PASS |
+| Best-effort failure | Login失敗401、未認証401、operation拒否403、scope外404と既存code・messageを維持 | PASS |
+| Scope秘匿 | Scope外404では`CUSTOMER_READ`を記録せず、要求Customer UUIDもaudit・operational logへ保存しない | PASS |
+| Audit payload | 既存8 columnsだけを使用。Customer変更値、PII、password、JWT、鍵、完全ciphertextを非保存 | PASS |
+| DB schema | `user_id`・`resource_id`のnullableを確認。Schema・migration変更なし | PASS |
+| 実PostgreSQL | Correlation、成功3操作の同時commit、audit失敗3操作のrollback | PASS |
+| DB cleanup | 安全ガード付きreset後、`audit_logs`、activity、maintenance、migration ledgerは0件。基準fixture件数一致 | PASS |
+| T-108対象test | 6 files・55 tests | PASS |
+| Backend全test | 68 files・476 tests。FAIL 0、SKIP 0 | PASS |
+| Backend build | TypeScript compile成功 | PASS |
+| Frontend / Playwright | 公開HTTP response contractを維持したため対象外 | 未実施 |
+
+- Baseline 65 files・445 testsから、T-108の3 files・31 testsが増えた。既存testの削除・skipはない。
+- Production defect 1件とTest defect 2件を修正した。既知の失敗と予期しないskipは0件である。
+- Production Backendはaccess middleware、audit repository・記録処理、Authentication・Authorization・Customer・Usersへのwiring、write transactionを変更した。APIのstatus、DTO、error code・message、Authorization順序、scope外404、Request ID response contractは変更していない。
+- すべてのAcceptanceを満たしたため、T-108はPASS・完了と判定する。T-606の依存Taskは完了しており、着手可能である。

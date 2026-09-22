@@ -16,7 +16,12 @@ export type LoginResponse = {
 };
 
 export type LoginService = {
-  login(input: LoginInput): Promise<LoginResponse | null>;
+  login(input: LoginInput, audit?: LoginAuditContext): Promise<LoginResponse | null>;
+};
+
+export type LoginAuditContext = {
+  recordSuccess(userId: string): Promise<void>;
+  recordFailure(): Promise<void>;
 };
 
 export type LoginServiceDependencies = {
@@ -36,15 +41,18 @@ export const createLoginService = ({
   const getDummyHash = () => (dummyHashPromise ??= createDummyHash());
 
   return {
-    async login({ email, password }) {
+    async login({ email, password }, audit) {
       // All first requests await the same initialization; unknown users then use it for verification.
       const dummyHash = await getDummyHash();
       const user = await userRepository.findByEmail(email);
       const passwordValid = await verify(user?.password_hash ?? dummyHash, password);
 
       if (user === null || !passwordValid || !user.is_active) {
+        await audit?.recordFailure();
         return null;
       }
+
+      await audit?.recordSuccess(user.id);
 
       return {
         accessToken: await issueAccessToken(user.id),

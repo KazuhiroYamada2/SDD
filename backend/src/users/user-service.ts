@@ -1,6 +1,6 @@
 import type { AuthenticatedUser, UserRole } from '../auth/auth-types.js';
 import { assertOperationAllowed } from '../authorization/authorization-policy.js';
-import type { UserRepository } from './user-repository.js';
+import type { UserAuditInTransaction, UserRepository } from './user-repository.js';
 import type { UserDto } from './user-types.js';
 
 export class UserNotFoundError extends Error {}
@@ -19,7 +19,12 @@ export const lastActiveAdminRequiredResponse = {
 
 export type UserService = {
   list(authenticatedUser: AuthenticatedUser): Promise<UserDto[]>;
-  changeRole(id: string, role: UserRole, authenticatedUser: AuthenticatedUser): Promise<UserDto>;
+  changeRole(
+    id: string,
+    role: UserRole,
+    authenticatedUser: AuthenticatedUser,
+    audit?: UserAuditInTransaction,
+  ): Promise<UserDto>;
 };
 
 export const createUserService = (repository: UserRepository): UserService => ({
@@ -27,13 +32,15 @@ export const createUserService = (repository: UserRepository): UserService => ({
     assertOperationAllowed(authenticatedUser, 'users.read');
     return repository.list();
   },
-  async changeRole(id, role, authenticatedUser) {
+  async changeRole(id, role, authenticatedUser, audit) {
     assertOperationAllowed(authenticatedUser, 'users.changeRole');
     if (id === authenticatedUser.id && role !== authenticatedUser.role) {
       throw new SelfRoleChangeNotAllowedError();
     }
 
-    const result = await repository.changeRole(id, role);
+    const result = audit === undefined
+      ? await repository.changeRole(id, role)
+      : await repository.changeRole(id, role, audit);
     switch (result.status) {
       case 'not_found':
         throw new UserNotFoundError();

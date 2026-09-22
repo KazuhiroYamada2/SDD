@@ -214,6 +214,15 @@
 - Login以外の共通JSON parserがmalformed JSONを検出した場合は、HTTP 400 `{ "code": "INVALID_REQUEST", "message": "Request body is invalid." }`を返す。Loginの既存HTTP 400 `VALIDATION_ERROR`契約は維持する。parser内部messageやstack traceを公開しない。
 - 予期しないerrorは既存のgeneric HTTP 500契約へ変換し、stack trace、DB error、secret、credential、PII、完全なciphertextをresponseへ含めない。
 
+### Access log・audit log
+
+- Backendが受けたbusiness API、Login、health、error、unmatchedを含む全HTTP requestについて、標準出力へ1 request 1 recordのstructured JSON access logを出す。Fieldは`event = HTTP_ACCESS`、`request_id`、`method`、normalized route templateまたは`UNMATCHED`、`status_code`、`duration_ms`、認証済みactorの`user_id`または`null`、`req.ip`由来の`ip_address`、`timestamp`とする。Raw URL・pathname・query、header、Cookie、body、response bodyは記録しない。ProductionではECSからCloudWatch Logsへ収集し、出力失敗でHTTP statusやtransactionを変更しない。
+- Audit actionは`LOGIN_SUCCESS`、`LOGIN_FAILURE`、`AUTHENTICATION_REQUIRED`、`AUTHORIZATION_DENIED`、`AUTHORIZATION_SCOPE_DENIED`、`CUSTOMER_LIST`、`CUSTOMER_READ`、`CUSTOMER_UPDATE`、`CUSTOMER_DELETE`、`USER_ROLE_CHANGE`に限定する。Activity・Report等やvalidation、通常のresource不存在、conflict、500、503に別actionを追加しない。
+- Loginは`AUTH`、認証・operation拒否は`AUTHORIZATION`、scope拒否・Customer detail/writeは`CUSTOMER`、Customer listは`CUSTOMER_COLLECTION`、role変更は`USER`を`resource_type`とする。Collection・AUTH・AUTHORIZATION・scope拒否の`resource_id`は`null`、成功したdetail/write・role変更は対象UUIDとする。`user_id`はactorとし、Login失敗と未認証拒否だけ`null`とする。
+- `LOGIN_SUCCESS`、Customer list・detail・update・delete、role変更はmandatory auditとする。Insert失敗はgeneric 500とし、Customer DTOまたはtokenを返さない。Customer update・delete・role変更はbusiness changeとaudit insertを同一PostgreSQL transactionでcommitし、audit失敗時は両方rollbackする。
+- `LOGIN_FAILURE`、`AUTHENTICATION_REQUIRED`、`AUTHORIZATION_DENIED`、`AUTHORIZATION_SCOPE_DENIED`はbest-effort auditとし、insert失敗でも元の401・403・404を維持する。Scope拒否は存在を秘匿するため`resource_id = null`とする。
+- Access・auditの`request_id`はresponse `X-Request-ID`と同じ`req.requestId`、IPは共通helperが返す`req.ip`を使う。独自に`X-Forwarded-For`をparseせず、trust proxy設定を変更しない。Authorization、Cookie、JWT、password・hash、Customer PII、暗号鍵、完全なciphertext、DB・AWS credential、stack traceを保存・出力しない。
+
 ### 可用性
 
 - Phase 1の稼働率はAsia/Tokyoのcalendar month単位で測定する。対象は月曜日から金曜日の`09:00 <= time < 18:00`で、5分ごとのexpected sampleに対する成功sampleの割合を99.0%以上とする。祝日・会社休日は自動除外しない。

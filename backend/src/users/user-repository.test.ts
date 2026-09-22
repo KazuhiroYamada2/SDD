@@ -86,4 +86,55 @@ describe('UserRepository', () => {
     expect(query.mock.calls[3]![0]).toContain('UPDATE users');
     expect(query.mock.calls.at(-1)![0]).toBe('COMMIT');
   });
+
+  it('commits role change and mandatory audit on the same transaction client', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: adminId }] })
+      .mockResolvedValueOnce({ rows: [row(otherId, 'staff')] })
+      .mockResolvedValueOnce({ rows: [row(otherId, 'manager')] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const client = { query, release: vi.fn() } as unknown as TransactionClient;
+    const database = { query: vi.fn(), connect: vi.fn().mockResolvedValue(client) } as unknown as TransactionalDatabase;
+    const audit = vi.fn(async (usedClient: TransactionClient) => {
+      await usedClient.query('AUDIT INSERT');
+    });
+
+    await createUserRepository(database).changeRole(otherId, 'manager', audit);
+
+    expect(audit).toHaveBeenCalledExactlyOnceWith(client);
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'BEGIN',
+      expect.stringContaining("WHERE role = 'admin'"),
+      expect.stringContaining('WHERE id = $1'),
+      expect.stringContaining('UPDATE users'),
+      'AUDIT INSERT',
+      'COMMIT',
+    ]);
+  });
+
+  it('rolls back role change when mandatory audit fails', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: adminId }] })
+      .mockResolvedValueOnce({ rows: [row(otherId, 'staff')] })
+      .mockResolvedValueOnce({ rows: [row(otherId, 'manager')] })
+      .mockResolvedValueOnce({ rows: [] });
+    const client = { query, release: vi.fn() } as unknown as TransactionClient;
+    const database = { query: vi.fn(), connect: vi.fn().mockResolvedValue(client) } as unknown as TransactionalDatabase;
+    const audit = vi.fn().mockRejectedValue(new Error('audit failed'));
+
+    await expect(createUserRepository(database).changeRole(otherId, 'manager', audit))
+      .rejects.toThrow('audit failed');
+
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'BEGIN',
+      expect.stringContaining("WHERE role = 'admin'"),
+      expect.stringContaining('WHERE id = $1'),
+      expect.stringContaining('UPDATE users'),
+      'ROLLBACK',
+    ]);
+    expect(query.mock.calls.map(([sql]) => sql)).not.toContain('COMMIT');
+  });
 });

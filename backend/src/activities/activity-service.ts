@@ -4,6 +4,7 @@ import type { AuthenticatedUser } from '../auth/auth-types.js';
 import { isCustomerInScope } from '../authorization/authorization-policy.js';
 
 export class CustomerNotFoundError extends Error {}
+export class CustomerScopeDeniedError extends CustomerNotFoundError {}
 export class UserNotFoundError extends Error {}
 
 export type CreateActivityService = {
@@ -22,9 +23,8 @@ export const createCreateActivityService = (dependencies: {
 }): ActivityService => ({
   async execute(input, authenticatedUser) {
     const customer = await dependencies.referenceRepository.findCustomerReference(input.customer_id);
-    if (customer === null || !isCustomerInScope(authenticatedUser, customer.owner_user_id)) {
-      throw new CustomerNotFoundError();
-    }
+    if (customer === null) throw new CustomerNotFoundError();
+    if (!isCustomerInScope(authenticatedUser, customer.owner_user_id)) throw new CustomerScopeDeniedError();
 
     if (!await dependencies.referenceRepository.userExists(input.user_id)) {
       throw new UserNotFoundError();
@@ -34,9 +34,8 @@ export const createCreateActivityService = (dependencies: {
   },
   async findByCustomerId(customerId, authenticatedUser) {
     const customer = await dependencies.referenceRepository.findCustomerReference(customerId);
-    if (customer === null || !isCustomerInScope(authenticatedUser, customer.owner_user_id)) {
-      throw new CustomerNotFoundError();
-    }
+    if (customer === null) throw new CustomerNotFoundError();
+    if (!isCustomerInScope(authenticatedUser, customer.owner_user_id)) throw new CustomerScopeDeniedError();
 
     return dependencies.activityRepository.findByCustomerId(customerId);
   },

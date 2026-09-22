@@ -28,7 +28,16 @@ import { createUsersRouter } from './users/users-router.js';
 import { createCustomerCrypto, type CustomerCrypto } from './customers/customer-crypto.js';
 import { config } from './config.js';
 import { assignRequestId } from './http/request-id-middleware.js';
-import { handleApplicationError } from './http/application-error-handler.js';
+import { createApplicationErrorHandler } from './http/application-error-handler.js';
+import { createAccessLogMiddleware } from './http/access-log-middleware.js';
+import { createAuditRepository, noOpAuditRepository } from './audit/audit-repository.js';
+import type { AuditRepository } from './audit/audit-types.js';
+import {
+  noOpStructuredLog,
+  stderrStructuredLog,
+  stdoutStructuredLog,
+  type StructuredLogWriter,
+} from './logging/structured-log.js';
 
 type AppDependencies = {
   loginService?: LoginService;
@@ -47,6 +56,9 @@ type AppDependencies = {
   healthDatabase?: {
     query: (sql: string) => Promise<unknown>;
   } | null;
+  auditRepository?: AuditRepository;
+  accessLog?: StructuredLogWriter;
+  operationalLog?: StructuredLogWriter;
 };
 
 export const createApp = (dependencies: AppDependencies = {}) => {
@@ -87,11 +99,18 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     (database === undefined ? undefined : createStaffPerformanceService(createStaffPerformanceRepository(database)));
   const userService = dependencies.userService ??
     (database === undefined ? undefined : createUserService(createUserRepository(database)));
+  const auditRepository = dependencies.auditRepository ??
+    (database === undefined ? noOpAuditRepository : createAuditRepository(database));
+  const accessLog = dependencies.accessLog ??
+    (config.nodeEnv === 'test' ? noOpStructuredLog : stdoutStructuredLog);
+  const operationalLog = dependencies.operationalLog ??
+    (config.nodeEnv === 'test' ? noOpStructuredLog : stderrStructuredLog);
 
   app.use(assignRequestId);
+  app.use(createAccessLogMiddleware(accessLog));
   app.use(express.json());
 
-  app.use('/api/v1/auth', createAuthRouter(loginService));
+  app.use('/api/v1/auth', createAuthRouter(loginService, auditRepository, operationalLog));
 
   app.get('/health', (_request, response) => {
     response.status(200).json({ status: 'ok' });
@@ -115,18 +134,29 @@ export const createApp = (dependencies: AppDependencies = {}) => {
     }
   });
 
-  app.use('/api/v1', createAuthenticationMiddleware({ userRepository: authUserRepository, jwtService }));
+  app.use('/api/v1', createAuthenticationMiddleware({
+    userRepository: authUserRepository,
+    jwtService,
+    auditRepository,
+    operationalLog,
+  }));
   app.use('/api/v1/customers', createCustomersRouter(
     customerRepository,
     customerReadService,
     customerEditService,
     customerDeleteService,
     customerCrypto,
+    auditRepository,
+    operationalLog,
   ));
-  app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
+  app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(
+    activityService,
+    auditRepository,
+    operationalLog,
+  ));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
-  app.use('/api/v1/users', createUsersRouter(userService));
-  app.use(handleApplicationError);
+  app.use('/api/v1/users', createUsersRouter(userService, auditRepository));
+  app.use(createApplicationErrorHandler(auditRepository, operationalLog));
 
   return app;
 };

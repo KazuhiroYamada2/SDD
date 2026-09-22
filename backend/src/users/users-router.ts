@@ -10,10 +10,16 @@ import {
   type UserService,
 } from './user-service.js';
 import { validateRoleChange, validateUserId } from './user-validation.js';
+import { auditRecordFor } from '../audit/audit-recorder.js';
+import { noOpAuditRepository } from '../audit/audit-repository.js';
+import type { AuditRepository } from '../audit/audit-types.js';
 
 const userId = (params: unknown): string | undefined => (params as { id?: string }).id;
 
-export const createUsersRouter = (service?: UserService) => {
+export const createUsersRouter = (
+  service?: UserService,
+  auditRepository: AuditRepository = noOpAuditRepository,
+) => {
   const router = Router();
 
   router.get('/', authorizeOperation('users.read'), async (request, response) => {
@@ -45,11 +51,16 @@ export const createUsersRouter = (service?: UserService) => {
     }
 
     try {
-      response.status(200).json(await service.changeRole(
+      const result = await service.changeRole(
         idValidation.value,
         bodyValidation.value,
         request.authenticatedUser!,
-      ));
+        (query) => auditRepository.insert(
+          auditRecordFor(request, 'USER_ROLE_CHANGE', 'USER', idValidation.value),
+          query,
+        ),
+      );
+      response.status(200).json(result);
     } catch (error) {
       if (error instanceof UserNotFoundError) {
         response.status(404).json(userNotFoundResponse);
@@ -69,4 +80,3 @@ export const createUsersRouter = (service?: UserService) => {
 
   return router;
 };
-

@@ -1,13 +1,26 @@
 import { Router } from 'express';
 import { authorizeOperation } from '../authorization/authorization-middleware.js';
-import { CustomerNotFoundError, UserNotFoundError, type ActivityService } from './activity-service.js';
+import {
+  CustomerNotFoundError,
+  CustomerScopeDeniedError,
+  UserNotFoundError,
+  type ActivityService,
+} from './activity-service.js';
 import { validateCreateActivity } from './activity-validation.js';
+import { auditRecordFor, recordBestEffortAudit } from '../audit/audit-recorder.js';
+import { noOpAuditRepository } from '../audit/audit-repository.js';
+import type { AuditRepository } from '../audit/audit-types.js';
+import { noOpStructuredLog, type StructuredLogWriter } from '../logging/structured-log.js';
 
 const customerId = (params: unknown): string | undefined =>
   (params as { customerId?: string }).customerId;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const createActivitiesRouter = (activityService: ActivityService | undefined) => {
+export const createActivitiesRouter = (
+  activityService: ActivityService | undefined,
+  auditRepository: AuditRepository = noOpAuditRepository,
+  operationalLog: StructuredLogWriter = noOpStructuredLog,
+) => {
   const router = Router({ mergeParams: true });
 
   router.post('/', authorizeOperation('activity.create'), async (request, response) => {
@@ -29,6 +42,15 @@ export const createActivitiesRouter = (activityService: ActivityService | undefi
       const activity = await activityService.execute(validation.value, request.authenticatedUser!);
       response.status(201).json(activity);
     } catch (error) {
+      if (error instanceof CustomerScopeDeniedError) {
+        await recordBestEffortAudit(
+          auditRepository,
+          auditRecordFor(request, 'AUTHORIZATION_SCOPE_DENIED', 'CUSTOMER', null),
+          operationalLog,
+        );
+        response.status(404).json({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });
+        return;
+      }
       if (error instanceof CustomerNotFoundError) {
         response.status(404).json({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });
         return;
@@ -57,6 +79,15 @@ export const createActivitiesRouter = (activityService: ActivityService | undefi
     try {
       response.status(200).json(await activityService.findByCustomerId(id, request.authenticatedUser!));
     } catch (error) {
+      if (error instanceof CustomerScopeDeniedError) {
+        await recordBestEffortAudit(
+          auditRepository,
+          auditRecordFor(request, 'AUTHORIZATION_SCOPE_DENIED', 'CUSTOMER', null),
+          operationalLog,
+        );
+        response.status(404).json({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });
+        return;
+      }
       if (error instanceof CustomerNotFoundError) {
         response.status(404).json({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer was not found.' });
         return;
