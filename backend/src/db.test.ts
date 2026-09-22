@@ -15,7 +15,10 @@ vi.mock('pg', () => ({
   },
 }));
 vi.mock('./config.js', () => ({
-  config: { databaseUrl: 'postgresql://database.example.test/customer_management' },
+  config: {
+    databaseUrl: 'postgresql://database.example.test/customer_management',
+    databaseSsl: { rejectUnauthorized: true, ca: 'test-only-rds-ca-certificate' },
+  },
 }));
 
 describe('database pool', () => {
@@ -29,6 +32,10 @@ describe('database pool', () => {
     expect(Pool).toHaveBeenCalledOnce();
     expect(Pool).toHaveBeenCalledWith({
       connectionString: 'postgresql://database.example.test/customer_management',
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 10_000,
+      ssl: { rejectUnauthorized: true, ca: 'test-only-rds-ca-certificate' },
     });
     expect(database).toBeDefined();
 

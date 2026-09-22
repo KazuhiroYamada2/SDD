@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
+import { validateJwtSecret } from './auth/jwt-service.js';
 import type { CustomerEncryptionConfig } from './customers/customer-crypto.js';
 
 const parsePort = (value: string | undefined): number => {
@@ -52,11 +54,63 @@ export const parseCustomerEncryptionConfig = (
   return { currentKeyId: currentKeyIdValue, keys };
 };
 
-export const config = {
-  port: parsePort(process.env.PORT),
-  databaseUrl: process.env.DATABASE_URL,
-  customerEncryption: parseCustomerEncryptionConfig(
-    process.env.CUSTOMER_ENCRYPTION_CURRENT_KEY_ID,
-    process.env.CUSTOMER_ENCRYPTION_KEYS_JSON,
-  ),
+export type RuntimeConfig = {
+  nodeEnv: string;
+  port: number;
+  databaseUrl: string | undefined;
+  databaseSsl: { rejectUnauthorized: true; ca: string } | undefined;
+  customerEncryption: CustomerEncryptionConfig;
 };
+
+const parseDatabaseUrl = (value: string | undefined, required: boolean): string | undefined => {
+  if (value === undefined || value.trim() === '') {
+    if (required) throw new Error('Production database configuration is invalid.');
+    return undefined;
+  }
+  try {
+    const url = new URL(value);
+    if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error();
+  } catch {
+    throw new Error('Database configuration is invalid.');
+  }
+  return value;
+};
+
+export const loadConfig = (
+  environment: NodeJS.ProcessEnv = process.env,
+  readCaFile: (path: string) => string = (path) => readFileSync(path, 'utf8'),
+): RuntimeConfig => {
+  const nodeEnv = environment.NODE_ENV ?? 'development';
+  const production = nodeEnv === 'production';
+  const databaseUrl = parseDatabaseUrl(environment.DATABASE_URL, production);
+
+  let databaseSsl: RuntimeConfig['databaseSsl'];
+  if (production) {
+    validateJwtSecret(environment.JWT_SECRET);
+    const caPath = environment.DATABASE_SSL_CA_PATH;
+    if (caPath === undefined || caPath.trim() === '') {
+      throw new Error('Production database TLS configuration is invalid.');
+    }
+    let ca: string;
+    try {
+      ca = readCaFile(caPath);
+    } catch {
+      throw new Error('Production database TLS configuration is invalid.');
+    }
+    if (ca.trim() === '') throw new Error('Production database TLS configuration is invalid.');
+    databaseSsl = { rejectUnauthorized: true, ca };
+  }
+
+  return {
+    nodeEnv,
+    port: parsePort(environment.PORT),
+    databaseUrl,
+    databaseSsl,
+    customerEncryption: parseCustomerEncryptionConfig(
+      environment.CUSTOMER_ENCRYPTION_CURRENT_KEY_ID,
+      environment.CUSTOMER_ENCRYPTION_KEYS_JSON,
+    ),
+  };
+};
+
+export const config = loadConfig();

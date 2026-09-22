@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "start": "node scripts/start-production.mjs",
     "build": "tsc",
     "test": "vitest run",
     "e2e:db:migrate": "node --env-file=../.env.e2e scripts/e2e-db.mjs migrate",
@@ -16,6 +16,8 @@
     "verify:customer-encryption": "node --import tsx scripts/verify-customer-encryption.mjs",
     "migrate:customers": "node --import tsx scripts/migrate-customers-from-excel.mjs",
     "verify:customer-migration": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-customer-migration.mjs",
+    "backup:postgres": "node --import tsx scripts/backup-postgres.mjs",
+    "verify:backup-restore": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-backup-restore.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
     "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",
     "benchmark:customers:load": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs --load"

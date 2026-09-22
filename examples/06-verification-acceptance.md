@@ -762,3 +762,33 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 
 - 02/03/04へPhase 1 production運用モデルとT-702以降の責務を反映した。01、Production code、DB schema、Frontend、AWS resourceは変更していない。
 - 仕様確定TaskのためBackend/Frontend test・build、Playwright、backup/restore、AWS上の検証は未実施である。必要な運用契約が揃ったため、T-007はPASS・完了、T-702は再開可能と判定する。
+
+## 2026-09-22 T-702 Production設定・backup/restore検証（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Production entry point | `NODE_ENV=production`以外をserver import前に拒否 | PASS |
+| Required environment | DB、JWT、Customer暗号設定、RDS CAの欠落・不正を拒否 | PASS |
+| Database URL | URL parseとPostgreSQL protocolを検証。errorへcredentialなし | PASS |
+| RDS TLS | CA file読込、`rejectUnauthorized: true`。Productionで無効化不可 | PASS |
+| Secrets Manager interface | AWS SDKなし。ECS environment injection前提 | PASS |
+| Pool | max 10、min 0、idle 10秒。追加timeoutなし | PASS |
+| Backup command | custom-format `pg_dump`、passwordはargumentへ渡さない | PASS（unit） |
+| Restore command | 分離DBを指定した`pg_restore --exit-on-error` | PASS（unit） |
+| Runbook | RDS backup・PITR・snapshot・KMS・restore drill・alertを記録 | PASS |
+| Artifact protection | `.env.*`とbackup artifactをGit対象外に設定 | PASS |
+| Client tool availability | `pg_dump`・`pg_restore` 16.15を確認 | PASS |
+| Local backup artifact | custom-format artifactの生成とnon-emptyを確認 | PASS |
+| Separated restore | sourceとは別のtemporary databaseへrestoreし、接続を確認 | PASS |
+| Restored schema・table | users、customers、activities、sales_records、audit_logs、customer_migration_ledgerを確認 | PASS |
+| Restored row count・FK | sourceとrestoreの代表row countおよびFK数の一致を確認 | PASS |
+| Restored Customer envelope | 4暗号化fieldのnon-null値がvalidな`enc:v1`で、plaintext残存0を確認 | PASS |
+| Authorized decrypt | restore後の代表CustomerをT-107 test keyで復号 | PASS |
+| Secret protection | application secretをdumpへ追加せず、credentialをcommand argumentへ渡していない | PASS |
+| Cleanup | temporary restore databaseとbackup artifactを削除し、source E2E DBを維持 | PASS |
+
+- `verify:backup-restore`は専用E2E PostgreSQLを安全にresetし、実backupから分離databaseへrestoreした。6主要table、代表row count、FK、移行台帳、Customer暗号化状態、authorized decryptを検証し、924msで完了した。これはlocalでの技術的な復元確認であり、AWS本番RTOの実績ではない。
+- 関連テストは6 files・50/50 PASS、Backend全テストは52 files・370/370 PASS、Backend buildはPASSした。Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施である。AWS resourceも作成していない。
+- secret、credential、PII、完全なciphertextは出力していない。temporary restore databaseとbackup artifactは検証後に削除した。
+- RPO 5分・RTO 60分はRDS PITRと四半期restore drillで継続検証する運用目標である。local実測値だけでAWS本番RTOを保証しない。
+- Production config、TLS、secret interface、runbook、実backup・分離restore、データ整合性、暗号化状態、回帰検証がすべて揃ったため、T-702はPASS・完了と判定する。

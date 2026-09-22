@@ -21,15 +21,18 @@ export class InvalidAccessTokenError extends Error {
   }
 }
 
+export const validateJwtSecret = (secret: string | undefined): string => {
+  if (secret === undefined || secret.trim() === '' || Buffer.byteLength(secret, 'utf8') < MIN_SECRET_BYTES) {
+    throw new Error('JWT_SECRET must contain at least 32 bytes.');
+  }
+  return secret;
+};
+
 export const createJwtService = ({
   secret = process.env.JWT_SECRET,
   now = () => new Date(),
 }: JwtServiceOptions = {}): JwtService => {
-  if (secret === undefined || secret.trim() === '' || Buffer.byteLength(secret, 'utf8') < MIN_SECRET_BYTES) {
-    throw new Error('JWT_SECRET must contain at least 32 bytes.');
-  }
-
-  const key = new TextEncoder().encode(secret);
+  const key = new TextEncoder().encode(validateJwtSecret(secret));
 
   return {
     async issueAccessToken(userId) {

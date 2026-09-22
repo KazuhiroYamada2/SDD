@@ -20,7 +20,9 @@
     "migrate:customer-encryption": "npm --prefix backend run migrate:customer-encryption",
     "verify:customer-encryption": "npm --prefix backend run verify:customer-encryption",
     "migrate:customers": "npm --prefix backend run migrate:customers",
-    "verify:customer-migration": "npm --prefix backend run verify:customer-migration"
+    "verify:customer-migration": "npm --prefix backend run verify:customer-migration",
+    "backup:postgres": "npm --prefix backend run backup:postgres",
+    "verify:backup-restore": "npm --prefix backend run verify:backup-restore"
   },
   "repository": {
     "type": "git",

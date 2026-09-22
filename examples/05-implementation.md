@@ -555,3 +555,13 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - RDS automated backup・PITRのretentionを7日、重要変更前のmanual snapshotを14日とした。RDSとbackupはKMS暗号化を必須とし、RPO 5分以内、RTO 60分以内を目標にする。四半期ごとに分離したtemporary RDSでrestore drillを実施する。
 - CloudWatchでECS・ALB・RDS・applicationを監視し、重大alarmはCloudWatch AlarmからSNS経由で運用担当メールへ通知する。予定maintenanceは原則3営業日前と開始1時間前に通知し、重大incidentは検知後15分以内に一次切り分けを始める。
 - T-702へproduction config validation、RDS TLS、Secrets Manager用env interface、backup/restore procedure、restore verification、Backend regressionを引き継いだ。今回は仕様書だけを更新し、Production code、DB schema、AWS resource、testは変更・実行していない。
+
+## 2026-09-22 T-702 Production設定・backup/restore基盤（実装済み、実restore未完了）
+
+- Production起動入口は`NODE_ENV=production`を必須とし、`DATABASE_URL`、32 bytes以上の`JWT_SECRET`、Customer暗号設定、`DATABASE_SSL_CA_PATH`をserver import前に検証する。DB URLはPostgreSQL protocolだけを許可し、RDS CAはfileから読み込む。設定errorへsecret値、CA内容、credentialを出力しない。
+- `pg.Pool`へmax 10、min 0、idle timeout 10秒を明示し、Productionでは`rejectUnauthorized: true`とRDS CAを設定する。connection・statement・query timeoutは追加していない。既存のSIGINT/SIGTERM、HTTP server停止、`pool.end()`の順序も維持した。
+- AWS SDKは追加せず、Secrets ManagerからECS Task environmentへinjectされた既存変数を読むinterfaceとした。`.env.example`には変数名、必須条件、形式だけを記載した。
+- PostgreSQL標準の`pg_dump`・`pg_restore`を呼び出す共通部品とCLIを追加した。passwordはcommand argumentへ渡さずchild processの`PGPASSWORD`だけへ設定し、child environmentからapplication secretを除外する。dumpはcustom format、no-owner、no-privilegesとする。
+- 分離DB `customer_management_restore_t702`へrestoreし、主要6 table、row count、FK、Customer `enc:v1`、plaintext残存0、authorized decrypt、dump内のapplication secret非同梱を確認するscriptを追加した。source・restore DBと一時dumpのcleanupを組み込んだ。
+- `docs/operations/production-backup-restore.md`へRDS automated backup・PITR、manual snapshot、KMS、temporary restore、四半期drill、RPO 5分・RTO 60分、CloudWatch・SNS alertを記録した。`.gitignore`へenvironment fileとbackup artifactの除外を追加した。
+- local環境に`pg_dump`・`pg_restore`が存在せず、実backup/restoreはclient tool起動時に停止した。fake restoreへ置き換えていない。関連testは6 files・50/50、Backend全testは52 files・370/370、Backend buildはPASSしたが、実restore Acceptance未達のためT-702は未完了である。
