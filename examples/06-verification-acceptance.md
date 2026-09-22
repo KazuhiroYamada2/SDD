@@ -1082,3 +1082,35 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - Production defect 1件とTest defect 2件を修正した。既知の失敗と予期しないskipは0件である。
 - Production Backendはaccess middleware、audit repository・記録処理、Authentication・Authorization・Customer・Usersへのwiring、write transactionを変更した。APIのstatus、DTO、error code・message、Authorization順序、scope外404、Request ID response contractは変更していない。
 - すべてのAcceptanceを満たしたため、T-108はPASS・完了と判定する。T-606の依存Taskは完了しており、着手可能である。
+
+## 2026-09-23 T-606 監査ログ最終Acceptance（PASS）
+
+| 検証対象 | 実DB結果 | Audit件数 | 判定 |
+| --- | --- | ---: | --- |
+| `CUSTOMER_LIST` | HTTP 200。actorはadmin、resource typeは`CUSTOMER_COLLECTION`、resource IDは`null`。Response・access・auditのrequest ID、IP、作成日時を確認 | 1 | PASS |
+| `CUSTOMER_READ` | HTTP 200。actorはadmin、resource typeは`CUSTOMER`、resource IDは対象Customer UUID。Response・access・auditのrequest ID、IP、作成日時を確認 | 1 | PASS |
+| `CUSTOMER_UPDATE` | HTTP 200。Business update成功。actorはadmin、targetは対象Customer UUID。Response・access・auditのrequest ID一致を確認 | 1 | PASS |
+| `CUSTOMER_DELETE` | HTTP 204。Logical delete成功。actorはadmin、targetは対象Customer UUID。Response・access・auditのrequest ID一致を確認 | 1 | PASS |
+| `USER_ROLE_CHANGE` | HTTP 200。Role変更成功。actorはadmin user ID、resource typeは`USER`、resource IDはtarget User UUID。Response・access・auditのrequest ID一致を確認 | 1 | PASS |
+| Scope外Customer参照 | staffでHTTP 404 `CUSTOMER_NOT_FOUND`。`AUTHORIZATION_SCOPE_DENIED`、resource type `CUSTOMER`、resource ID `null`。要求Customer UUIDはauditに非保存 | 1 | PASS |
+
+| 横断確認 | 結果 | 判定 |
+| --- | --- | --- |
+| Actor・target | 5 business actionとscope拒否で期待するactor、resource type・IDに一致 | PASS |
+| Request correlation | 全6 scenarioでResponse `X-Request-ID`、access `request_id`、`audit_logs.request_id`が一致 | PASS |
+| Audit重複 | 各Acceptance requestに対する対象auditは1件。意図しない二重記録なし | PASS |
+| Schema・PII・secret | 実DBは正式8列だけ。関連security testでCustomer PII、password・hash、JWT、Authorization、Cookie、暗号鍵、完全ciphertext、DB・AWS credentialの非保存を確認 | PASS |
+| 成功時atomicity | Customer update・delete・role変更のbusiness変更とauditを同一transactionで3件commit | PASS |
+| Audit失敗時atomicity | 既存T-108失敗注入を再利用。Update・delete・role変更は各500となり、business変更を3件rollback | PASS |
+| Business guard | 自己role変更・最後のactive admin等のProduction guardは変更なし | PASS |
+| DB cleanup | 安全ガード付きreset後、`audit_logs` 0件。Customers 6件、Users 4件、Sales records 8件。その他の可変fixtureも0件 | PASS |
+| Production code | 変更なし。既存Acceptance scriptとexamples/05・06だけを変更 | PASS |
+| T-108関連回帰 | 6 files・40 tests、FAIL 0 | PASS |
+| Backend全test | 04のT-606完了条件外であり、Production code変更もないため全476 testsは再実行せず | 未実施 |
+| Backend build | 同条件により再実行せず | 未実施 |
+| Frontend / Playwright | T-606対象外 | 未実施 |
+
+- 方法: `npm.cmd run verify:audit`で安全ガード付きresetと実PostgreSQL Acceptanceを実行し、終了後に`npm.cmd run e2e:db:reset`を再実行した。関連回帰は監査API・repository、access log、Customer update・delete、role変更の6 test filesを実行した。
+- 限界: Backend全476 testsとbuildは、04がT-606の完了条件として要求せず、Production codeも変更していないため再実行していない。未実施項目をPASSとして扱わない。
+- 参照・変更・削除・権限変更、actor・target、request ID相関、scope秘匿、PII・secret非記録、atomicity、cleanupがすべてAcceptanceを満たした。T-606はPASS・完了と判定する。
+- T-602～T-610はすべてPASS・完了しているため、T-804「非機能試験の結果と合否を記録」は着手可能である。残る未完了TaskはT-804、T-805、T-806の3件である。

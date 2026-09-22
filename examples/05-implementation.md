@@ -649,3 +649,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Login成功とCustomer list・detailはmandatory audit後にresponseを返す。Customer update・logical delete・role変更はbusiness変更とaudit insertを同じPostgreSQL clientのtransactionでcommitする。Audit失敗時はrollbackしてgeneric 500とする。Login失敗、未認証401、operation拒否403、scope外404はbest-effortとし、audit失敗でも元のsecurity responseを維持する。
 - 実装中にmatched routeをresponse完了時に判定するとExpressのmount後に`UNMATCHED`となるProduction defectを1件検出し、request開始時にnormalized templateを確定するよう修正した。Security testのfield名部分一致とtransaction mockの戻り値型に関するTest defectを2件修正した。
 - T-108用に3 test files・31 testsを追加した。最終Backend全testは68 files・476 tests、Backend buildはPASSした。実E2E PostgreSQLでは成功3操作のbusiness・audit同時commitと、audit失敗3操作のrollbackを確認した。検証後に安全ガード付きresetを実行し、`audit_logs`などの可変fixtureをbaselineへ戻した。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-23 T-606 参照・変更・削除・権限変更の監査ログ検証
+
+- 既存の`backend/scripts/verify-audit-logging.mjs`を再利用し、T-606で不足していたCustomer detail参照、staffのscope外404、全対象operationのResponse・access・audit request ID相関、`created_at`、正式な8列だけで構成されるaudit schemaの実DB検証を追加した。新しい検証機構は作成していない。
+- 専用E2E PostgreSQLで`CUSTOMER_LIST`、`CUSTOMER_READ`、`CUSTOMER_UPDATE`、`CUSTOMER_DELETE`、`USER_ROLE_CHANGE`、`AUTHORIZATION_SCOPE_DENIED`を実行した。各scenarioのauditは1件で、actor、resource type・ID、request ID、IP、作成日時を確認した。Scope外404ではresource IDが`null`であり、要求Customer UUIDを保存していない。
+- Customer update・logical delete・role変更ではbusiness変更とauditの同時commitを3件確認した。既存のaudit失敗注入を再利用し、同じ3操作がgeneric 500となり、business変更をrollbackすることも確認した。
+- `audit_logs`の列が`id`、`user_id`、`action`、`resource_type`、`resource_id`、`request_id`、`ip_address`、`created_at`だけであることを実DBで確認した。関連security testと合わせて、Customer PII、password・hash、JWT、Authorization、Cookie、暗号鍵、完全ciphertext、DB・AWS credentialを保存しない契約を確認した。検証結果へCustomer PIIは出力していない。
+- Acceptance後に既存の安全ガード付きresetを実行し、`audit_logs`を0件へ戻した。Customers 6件、Users 4件、Sales records 8件とその他の可変fixtureもbaselineへ復元した。
+- Production code、DB schema・migration、Frontend、Playwrightは変更していない。変更は既存Acceptance scriptと本記録だけである。T-108関連回帰は6 files・40 tests PASS。04のT-606完了条件にBackend全test・buildは含まれないため、全476 testsとBackend buildは再実行していない。

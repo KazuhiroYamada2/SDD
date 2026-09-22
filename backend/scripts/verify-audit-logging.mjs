@@ -2,9 +2,11 @@ import pg from 'pg';
 import request from 'supertest';
 import { createApp } from '../src/app.ts';
 import { closeDatabase } from '../src/db.ts';
-import { e2eAdmin, e2eManager } from '../../e2e/fixtures/auth-users.mjs';
+import { e2eAdmin, e2eManager, e2eStaff } from '../../e2e/fixtures/auth-users.mjs';
 
 const expectedDatabase = 'customer_management_e2e';
+const customerReadId = '20000000-0000-4000-8000-000000000001';
+const scopeDeniedCustomerId = '20000000-0000-4000-8000-000000000003';
 const customerUpdateId = '20000000-0000-4000-8000-000000000001';
 const customerDeleteId = '20000000-0000-4000-8000-000000000002';
 const rollbackUpdateId = '20000000-0000-4000-8000-000000000003';
@@ -29,7 +31,7 @@ const safeConnectionString = () => {
 
 const auditFor = async (client, action, requestId) => {
   const result = await client.query(
-    `SELECT user_id, action, resource_type, resource_id, request_id, ip_address
+    `SELECT user_id, action, resource_type, resource_id, request_id, ip_address, created_at
     FROM audit_logs WHERE action = $1 AND request_id = $2`,
     [action, requestId],
   );
@@ -38,6 +40,22 @@ const auditFor = async (client, action, requestId) => {
 };
 
 const authorize = (builder, token) => builder.set('Authorization', `Bearer ${token}`);
+
+const assertAudit = ({ audit, accessRecords, response, actorId, action, resourceType, resourceId, route }) => {
+  const requestId = response.headers['x-request-id'];
+  const access = accessRecords.filter((record) => record.request_id === requestId);
+  assert(typeof requestId === 'string' && requestId.length > 0,
+    `T-606 X-Request-ID verification failed for ${action}.`);
+  assert(audit.user_id === actorId && audit.action === action &&
+    audit.resource_type === resourceType && audit.resource_id === resourceId,
+    `T-606 audit actor or target verification failed for ${action}.`);
+  assert(audit.request_id === requestId && access.length === 1 &&
+    access[0].request_id === requestId && access[0].route === route,
+    `T-606 request ID correlation verification failed for ${action}.`);
+  assert(typeof audit.ip_address === 'string' && audit.ip_address.length > 0 &&
+    audit.created_at instanceof Date && !Number.isNaN(audit.created_at.valueOf()),
+    `T-606 audit security metadata verification failed for ${action}.`);
+};
 
 const main = async () => {
   const client = new pg.Client({ connectionString: safeConnectionString() });
@@ -53,6 +71,14 @@ const main = async () => {
     assert(identityRow.database_name === expectedDatabase && identityRow.user_name === expectedDatabase && identityRow.port === 5432,
       'T-108 safety check failed: connected database identity does not match.');
 
+    const schema = await client.query(
+      `SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'audit_logs' ORDER BY ordinal_position`,
+    );
+    assert(JSON.stringify(schema.rows.map(({ column_name: columnName }) => columnName)) === JSON.stringify([
+      'id', 'user_id', 'action', 'resource_type', 'resource_id', 'request_id', 'ip_address', 'created_at',
+    ]), 'T-606 audit schema verification failed.');
+
     const app = createApp({ accessLog, operationalLog });
     const login = await request(app).post('/api/v1/auth/login').send({
       email: e2eAdmin.email,
@@ -64,14 +90,47 @@ const main = async () => {
     assert(loginAudit.user_id === e2eAdmin.id && loginAudit.resource_type === 'AUTH' && loginAudit.resource_id === null,
       'T-108 LOGIN_SUCCESS audit fields are invalid.');
 
+    const staffLogin = await request(app).post('/api/v1/auth/login').send({
+      email: e2eStaff.email,
+      password: e2eStaff.password,
+    });
+    assert(staffLogin.status === 200 && typeof staffLogin.body.accessToken === 'string',
+      'T-606 staff Login success verification failed.');
+    const staffToken = staffLogin.body.accessToken;
+
     const list = await authorize(request(app).get('/api/v1/customers?query=A'), token);
     assert(list.status === 200, 'T-108 Customer list verification failed.');
     const listAudit = await auditFor(client, 'CUSTOMER_LIST', list.headers['x-request-id']);
-    const listAccess = accessRecords.find((record) => record.request_id === list.headers['x-request-id']);
-    assert(listAudit.user_id === e2eAdmin.id && listAudit.resource_type === 'CUSTOMER_COLLECTION' && listAudit.resource_id === null,
-      'T-108 CUSTOMER_LIST audit fields are invalid.');
-    assert(listAccess?.request_id === listAudit.request_id && listAccess?.route === '/api/v1/customers',
-      'T-108 request ID correlation verification failed.');
+    assertAudit({
+      audit: listAudit, accessRecords, response: list, actorId: e2eAdmin.id,
+      action: 'CUSTOMER_LIST', resourceType: 'CUSTOMER_COLLECTION', resourceId: null,
+      route: '/api/v1/customers',
+    });
+
+    const read = await authorize(request(app).get(`/api/v1/customers/${customerReadId}`), token);
+    assert(read.status === 200 && read.body.id === customerReadId, 'T-606 Customer read verification failed.');
+    const readAudit = await auditFor(client, 'CUSTOMER_READ', read.headers['x-request-id']);
+    assertAudit({
+      audit: readAudit, accessRecords, response: read, actorId: e2eAdmin.id,
+      action: 'CUSTOMER_READ', resourceType: 'CUSTOMER', resourceId: customerReadId,
+      route: '/api/v1/customers/:id',
+    });
+
+    const scopeDenied = await authorize(
+      request(app).get(`/api/v1/customers/${scopeDeniedCustomerId}`), staffToken,
+    );
+    assert(scopeDenied.status === 404 && scopeDenied.body.code === 'CUSTOMER_NOT_FOUND',
+      'T-606 scope-hidden Customer response verification failed.');
+    const scopeAudit = await auditFor(
+      client, 'AUTHORIZATION_SCOPE_DENIED', scopeDenied.headers['x-request-id'],
+    );
+    assertAudit({
+      audit: scopeAudit, accessRecords, response: scopeDenied, actorId: e2eStaff.id,
+      action: 'AUTHORIZATION_SCOPE_DENIED', resourceType: 'CUSTOMER', resourceId: null,
+      route: '/api/v1/customers/:id',
+    });
+    assert(!JSON.stringify(scopeAudit).includes(scopeDeniedCustomerId),
+      'T-606 scope-hidden audit exposed the requested Customer ID.');
 
     const update = await authorize(request(app).patch(`/api/v1/customers/${customerUpdateId}`).send({ category: 'T108' }), token);
     const remove = await authorize(request(app).delete(`/api/v1/customers/${customerDeleteId}`), token);
@@ -81,8 +140,21 @@ const main = async () => {
     const updateAudit = await auditFor(client, 'CUSTOMER_UPDATE', update.headers['x-request-id']);
     const deleteAudit = await auditFor(client, 'CUSTOMER_DELETE', remove.headers['x-request-id']);
     const roleAudit = await auditFor(client, 'USER_ROLE_CHANGE', role.headers['x-request-id']);
-    assert(updateAudit.resource_id === customerUpdateId && deleteAudit.resource_id === customerDeleteId &&
-      roleAudit.resource_id === e2eManager.id, 'T-108 successful write audit targets are invalid.');
+    assertAudit({
+      audit: updateAudit, accessRecords, response: update, actorId: e2eAdmin.id,
+      action: 'CUSTOMER_UPDATE', resourceType: 'CUSTOMER', resourceId: customerUpdateId,
+      route: '/api/v1/customers/:id',
+    });
+    assertAudit({
+      audit: deleteAudit, accessRecords, response: remove, actorId: e2eAdmin.id,
+      action: 'CUSTOMER_DELETE', resourceType: 'CUSTOMER', resourceId: customerDeleteId,
+      route: '/api/v1/customers/:id',
+    });
+    assertAudit({
+      audit: roleAudit, accessRecords, response: role, actorId: e2eAdmin.id,
+      action: 'USER_ROLE_CHANGE', resourceType: 'USER', resourceId: e2eManager.id,
+      route: '/api/v1/users/:id/role',
+    });
     const committed = await client.query(
       `SELECT
         (SELECT category FROM customers WHERE id = $1) AS category,
@@ -117,7 +189,16 @@ const main = async () => {
     const counts = await client.query('SELECT action, COUNT(*)::int AS count FROM audit_logs GROUP BY action ORDER BY action');
     process.stdout.write(`${JSON.stringify({
       database: expectedDatabase,
+      schemaFields: schema.rows.map(({ column_name: columnName }) => columnName),
       correlation: 'PASS',
+      acceptanceScenarios: {
+        CUSTOMER_LIST: { status: 'PASS', records: 1 },
+        CUSTOMER_READ: { status: 'PASS', records: 1 },
+        CUSTOMER_UPDATE: { status: 'PASS', records: 1 },
+        CUSTOMER_DELETE: { status: 'PASS', records: 1 },
+        USER_ROLE_CHANGE: { status: 'PASS', records: 1 },
+        AUTHORIZATION_SCOPE_DENIED: { status: 'PASS', records: 1 },
+      },
       successfulAtomicWrites: 3,
       rolledBackAuditFailures: 3,
       auditActionCounts: counts.rows,
