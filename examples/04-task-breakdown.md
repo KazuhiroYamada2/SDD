@@ -112,7 +112,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |
 | T-607 | T-007に従い、認証不要の`/health/live`・DB `SELECT 1`を使う`/health/ready`、ALB readiness契約、CloudFormationのECS・ALB・RDS metric Alarm、SNS email通知、RDS `availability`・`failure`・`backup` EventSubscription、監視runbook、四半期restore drillのescalation手順を実装する。Health API test、CloudFormation static validation、Backend全test/buildを完了条件とし、AWS resourceのlocal deployは含めない | N-06 | T-007 | 高 |
 | T-608 | 平日9:00〜18:00の稼働率99%以上を測定 | N-06 | T-607 | 高 |
-| T-609 | メンテナンス通知の作成・配信・記録を実装 | N-07 | T-007 | 高 |
+| T-609 | Amazon SESとECS Task Roleを使う運用CLIでPLANNEDのINITIAL・REMINDER、EMERGENCYの即時通知をactive usersへ配信する。event・recipient単位delivery schema、JST本文、SES transport abstraction、SENT重複抑止、FAILED retry、partial failure継続、safe failure code、runbook、実PostgreSQL fake transport Acceptance、Backend全test/buildを完了条件とし、Frontend UI・business API・scheduler・実SES送信は含めない | N-07 | T-007 | 高 |
 | T-610 | 予定maintenanceを原則3営業日前までに通知し、開始1時間前に再通知できることを検証する。緊急maintenanceは決定後の速やかな通知を確認する | N-07 | T-609 | 高 |
 
 ## 移行・運用タスク

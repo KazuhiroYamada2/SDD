@@ -5,7 +5,7 @@ import * as argon2 from 'argon2';
 import { e2eAdmin, e2eManager, e2eStaff } from '../../e2e/fixtures/auth-users.mjs';
 
 const expectedDatabase = 'customer_management_e2e';
-const tables = ['customer_migration_ledger', 'audit_logs', 'sales_records', 'activities', 'customers', 'users'];
+const tables = ['maintenance_notification_deliveries', 'maintenance_events', 'customer_migration_ledger', 'audit_logs', 'sales_records', 'activities', 'customers', 'users'];
 const fixture = {
   users: [
     ['10000000-0000-4000-8000-000000000001', 'sales-a@example.com'],
@@ -55,7 +55,7 @@ async function checkConnection(client) {
 }
 
 async function migrate(client) {
-  for (const migration of ['001_create_core_schema.sql', '002_create_customer_migration_ledger.sql']) {
+  for (const migration of ['001_create_core_schema.sql', '002_create_customer_migration_ledger.sql', '003_create_maintenance_notifications.sql']) {
     const path = fileURLToPath(new URL(`../migrations/${migration}`, import.meta.url));
     await client.query(await readFile(path, 'utf8'));
   }
@@ -114,7 +114,7 @@ async function verify(client) {
     const result = await client.query(`SELECT COUNT(*)::int AS count FROM ${table}`);
     counts[table] = result.rows[0].count;
   }
-  if (JSON.stringify(counts) !== JSON.stringify({ customer_migration_ledger: 0, audit_logs: 0, sales_records: 8, activities: 0, customers: 6, users: 4 })) {
+  if (JSON.stringify(counts) !== JSON.stringify({ maintenance_notification_deliveries: 0, maintenance_events: 0, customer_migration_ledger: 0, audit_logs: 0, sales_records: 8, activities: 0, customers: 6, users: 4 })) {
     throw new Error('E2E fixture verification failed: unexpected row counts.');
   }
   const manager = await client.query(`SELECT id, email, role, is_active,

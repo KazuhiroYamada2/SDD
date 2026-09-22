@@ -60,6 +60,18 @@ export type RuntimeConfig = {
   databaseUrl: string | undefined;
   databaseSsl: { rejectUnauthorized: true; ca: string } | undefined;
   customerEncryption: CustomerEncryptionConfig;
+  awsRegion: string | undefined;
+  maintenanceFromEmail: string | undefined;
+};
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const productionValue = (value: string | undefined, production: boolean): string | undefined => {
+  if (value === undefined || value.trim() === '') {
+    if (production) throw new Error('Production maintenance notification configuration is invalid.');
+    return undefined;
+  }
+  return value.trim();
 };
 
 const parseDatabaseUrl = (value: string | undefined, required: boolean): string | undefined => {
@@ -83,6 +95,11 @@ export const loadConfig = (
   const nodeEnv = environment.NODE_ENV ?? 'development';
   const production = nodeEnv === 'production';
   const databaseUrl = parseDatabaseUrl(environment.DATABASE_URL, production);
+  const awsRegion = productionValue(environment.AWS_REGION, production);
+  const maintenanceFromEmail = productionValue(environment.MAINTENANCE_FROM_EMAIL, production);
+  if (production && (awsRegion !== 'ap-northeast-1' || !emailPattern.test(maintenanceFromEmail!))) {
+    throw new Error('Production maintenance notification configuration is invalid.');
+  }
 
   let databaseSsl: RuntimeConfig['databaseSsl'];
   if (production) {
@@ -110,6 +127,8 @@ export const loadConfig = (
       environment.CUSTOMER_ENCRYPTION_CURRENT_KEY_ID,
       environment.CUSTOMER_ENCRYPTION_KEYS_JSON,
     ),
+    awsRegion,
+    maintenanceFromEmail,
   };
 };
 

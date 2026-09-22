@@ -32,6 +32,8 @@ const productionEnvironment = (overrides: NodeJS.ProcessEnv = {}): NodeJS.Proces
   JWT_SECRET: 'production-placeholder-secret-at-least-32-bytes',
   CUSTOMER_ENCRYPTION_CURRENT_KEY_ID: 'current',
   CUSTOMER_ENCRYPTION_KEYS_JSON: JSON.stringify({ current: validKey }),
+  AWS_REGION: 'ap-northeast-1',
+  MAINTENANCE_FROM_EMAIL: 'maintenance-sender@example.test',
   ...overrides,
 });
 
@@ -53,6 +55,10 @@ describe('production runtime configuration', () => {
     ['missing current encryption key', { CUSTOMER_ENCRYPTION_CURRENT_KEY_ID: undefined }],
     ['invalid encryption key ring', { CUSTOMER_ENCRYPTION_KEYS_JSON: '{' }],
     ['missing CA path', { DATABASE_SSL_CA_PATH: undefined }],
+    ['missing AWS region', { AWS_REGION: undefined }],
+    ['wrong AWS region', { AWS_REGION: 'us-east-1' }],
+    ['missing maintenance sender', { MAINTENANCE_FROM_EMAIL: undefined }],
+    ['invalid maintenance sender', { MAINTENANCE_FROM_EMAIL: 'bad-sender' }],
   ])('rejects %s without exposing configuration values', (_name, overrides) => {
     const environment = productionEnvironment(overrides);
     let message = '';

@@ -571,3 +571,9 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `infra/monitoring.yaml`へCloudFormation templateを追加した。環境依存値と初期thresholdをparameter化し、SNS Topic・email subscription、ECS 2 alarms、ALB 4 alarms、RDS 6 alarms、RDSの`availability`・`failure`・`backup` EventSubscriptionを定義した。AlarmはALARM/OKをSNSへ送り、INSUFFICIENT_DATA actionは設定していない。
 - `docs/operations/production-monitoring.md`へsubscription confirmation、Alarm一覧、ALB・5xx・RDS異常時の一次対応、15分以内の切り分け、情報保護を記録した。既存`production-backup-restore.md`へrestore drill失敗時のSNS相当経路へのescalationを接続した。
 - CloudFormation YAMLのparseとresource wiringを検証するため、Backendのdev dependencyへ`yaml`だけを追加した。AWS CLI・AWS credentialは追加せず、AWS resourceはdeployしていない。Customer、Activity、Reports、Usersの業務contract、Frontend、DB schemaは変更していない。
+## 2026-09-22 T-609 Maintenance notification
+
+- `003_create_maintenance_notifications.sql`でmaintenance eventとrecipient単位deliveryを追加した。event type、phase、status、日時・必須文字列、FK、event・phase・recipientの一意性、status別field整合をDB constraintで固定した。
+- active usersだけを取得するRepository、event/phase validation、JST plain text生成、recipient単位の継続送信、SENT skip、FAILED retryを行うServiceを実装した。providerの生errorは保存せず、safeな`SES_SEND_FAILED`だけを記録する。
+- AWS SDK v3のSES v2 clientを使うtransport adapterと運用CLIを追加した。ProductionではECS Task Role、`AWS_REGION=ap-northeast-1`、SES verified senderの`MAINTENANCE_FROM_EMAIL`を使う。CLIは集計だけを出力し、partial failure時は成功を維持してnon-zero終了する。
+- `docs/operations/maintenance-notification.md`へ予定・緊急maintenance、INITIAL・REMINDER・EMERGENCY、delivery確認、retry、PENDING照合、incident escalationを記録した。Frontend UI、business API、scheduler、実AWS SES送信は追加していない。

@@ -10,7 +10,10 @@ import { backupPostgres, restorePostgres } from '../src/operations/postgres-back
 
 const sourceDatabase = 'customer_management_e2e';
 const restoreDatabase = 'customer_management_restore_t702';
-const tables = ['users', 'customers', 'activities', 'sales_records', 'audit_logs', 'customer_migration_ledger'];
+const tables = [
+  'users', 'customers', 'activities', 'sales_records', 'audit_logs', 'customer_migration_ledger',
+  'maintenance_events', 'maintenance_notification_deliveries',
+];
 const testCrypto = createCustomerCrypto({ currentKeyId: 'acceptance', keys: new Map([['acceptance', Buffer.alloc(32, 37)]]) });
 const sourceCustomerId = randomUUID();
 

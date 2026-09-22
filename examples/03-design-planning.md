@@ -448,6 +448,18 @@ T-701は、運用者が指定する安定した`dataset_id`とSource顧客番号
 
 logと集計には件数、dataset ID、row番号、Source顧客番号、reason code、target UUIDだけを使用する。Customerのplaintext PII、暗号鍵、完全なciphertext envelopeは出力しない。source Excel自体もsecretと同等にアクセス制御し、migration終了後の保管・削除は運用手順に従う。
 
+## T-609 Maintenance notification physical design
+
+Phase 1の利用者通知はAWS SDK for JavaScript v3のSES v2 clientを使うplain text emailとする。ProductionはECS Task Roleを使用し、`AWS_REGION=ap-northeast-1`とSES verified senderの`MAINTENANCE_FROM_EMAIL`を必須にする。Frontend UIとbusiness APIは追加せず、offline運用CLIでevent作成・phase配信を行う。
+
+`maintenance_events`はUUID、PLANNED/EMERGENCY、開始・復旧予定のtimestamptz、impact、contact、created_atを保持する。`maintenance_notification_deliveries`はevent、INITIAL/REMINDER/EMERGENCY、recipient user、PENDING/SENT/FAILED、provider message ID、attempted/sent時刻、安全なfailure codeを保持し、event・phase・recipientを主キーとする。recipient emailと本文はdelivery tableへ複製しない。
+
+PLANNEDはINITIALとREMINDER、EMERGENCYはEMERGENCYだけを許可する。送信時点のactive users全員を対象にし、inactive userとcustomers.emailを除外する。本文はeventから決定的に生成し、日時をAsia/Tokyoで表示する。3営業日前と1時間前の自動schedulerは作らず、運用者がrunbookどおりCLIを実行し、実際のattempted_at・sent_atを証跡とする。
+
+Serviceはdeliveryを短いDB操作でPENDINGへclaimしてからtransaction外でSES送信し、成功時SENT、失敗時FAILEDと`SES_SEND_FAILED`だけを保存する。recipientごとの失敗は後続送信を止めない。SENTは再実行時にskipし、FAILEDだけをretryする。PENDINGは送信結果が不明なため自動再送せず、SES記録との照合後に運用判断する。CLIは集計だけを出し、failedがあればnon-zero終了する。
+
+schema migrationは`003_create_maintenance_notifications.sql`としてoffline適用し、Production起動時に自動実行しない。snapshot、migration、validation、rolloutの順序を維持する。運用手順は`docs/operations/maintenance-notification.md`とし、failure未解消時はT-607のincident経路へescalationする。
+
 ## T-607 Health・monitoring physical design
 
 Backendは認証不要の`GET /health/live`と`GET /health/ready`を提供する。livenessはDBへqueryせずHTTP 200 `{ "status": "ok" }`を返す。readinessは`SELECT 1`だけを実行し、成功時はHTTP 200 `{ "status": "ready" }`、DB未設定・接続失敗時は詳細を隠してHTTP 503 `{ "status": "unavailable" }`を返す。既存`GET /health`は互換性のため維持する。ALB Target Groupは`/health/ready`を使用し、success codeは200とする。

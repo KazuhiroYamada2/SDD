@@ -815,3 +815,25 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - AWS CLIはlocal環境にないため`validate-template`とstack deployは未実施。YAML parse、required parameter、SNS/Alarm wiring、RDS EventSubscriptionをstatic testで検証した。AWS resource未deployはT-607の完了条件外である。
 - Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施。T-702 backup/restore Acceptanceも再実行していない。
 - Health、ALB readiness、CloudWatch Alarm、SNS通知、RDS event・backup監視、restore drill手順、runbook、static validation、Backend回帰が揃ったため、T-607はPASS・完了と判定する。
+## 2026-09-22 T-609 Maintenance notification受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Event validation | 必須値、absolute instant、復旧予定の時系列を確認 | PASS |
+| Phase validation | PLANNED + INITIAL/REMINDER、EMERGENCY + EMERGENCY | PASS |
+| 不正phase | PLANNED + EMERGENCY、EMERGENCY + INITIAL/REMINDERを拒否 | PASS |
+| Recipient | active users 4件だけ。inactive user delivery 0件 | PASS |
+| INITIAL | 4 target / 4 SENT | PASS |
+| INITIAL再実行 | 0 sent / 4 skipped。二重送信なし | PASS |
+| REMINDER | INITIALと別phaseで4 SENT | PASS |
+| EMERGENCY partial failure | 初回3 SENT / 1 FAILED。後続送信継続 | PASS |
+| FAILED retry | 1 SENT / 3 skipped。失敗recipientだけ再送 | PASS |
+| Delivery record | 実PostgreSQLへ12件、最終statusはすべてSENT | PASS |
+| SES adapter | UTF-8 plain text request、sender・recipient・subject/body、message IDを確認 | PASS |
+| Failure protection | provider生errorを保存せず`SES_SEND_FAILED`だけを記録 | PASS |
+| Secret・PII保護 | CLI summaryに件数だけを出し、credential・Customer PII・recipient一覧なし | PASS |
+| AWS SES実送信 | local環境では実施しない | 未実施（完了条件外） |
+
+- T-609関連テストは6 files・39/39 PASS。実E2E PostgreSQLとfake transportによるAcceptanceもPASSした。
+- Backend全テストは57 files・395/395 PASS、Backend buildはPASSした。Frontendは変更しておらず、Frontend test/buildとPlaywrightは対象外のため未実施である。
+- event作成、active recipient、全3 phase、SES production adapter、DB record、重複抑止、partial failure、retry、runbook、schema migration、Backend回帰が揃ったため、T-609はPASS・完了と判定する。

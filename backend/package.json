@@ -18,11 +18,14 @@
     "verify:customer-migration": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-customer-migration.mjs",
     "backup:postgres": "node --import tsx scripts/backup-postgres.mjs",
     "verify:backup-restore": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-backup-restore.mjs",
+    "maintenance": "node --import tsx scripts/maintenance-notification.mjs",
+    "verify:maintenance": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-maintenance-notifications.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
     "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",
     "benchmark:customers:load": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs --load"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1137.0",
     "argon2": "^0.45.1",
     "dotenv": "^17.0.0",
     "express": "^5.2.1",
