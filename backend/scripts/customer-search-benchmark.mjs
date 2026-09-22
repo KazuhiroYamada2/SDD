@@ -7,8 +7,12 @@ import { closeDatabase, database } from '../src/db.ts';
 const expectedDatabase = 'customer_management_e2e';
 const customerCount = 100_000;
 const activeCount = 95_000;
+const loadMode = process.argv.includes('--load');
 const warmUpRequests = 10;
 const measuredRequests = 100;
+const loadConcurrency = 50;
+const loadWarmUpWaves = 2;
+const loadMeasuredWaves = 20;
 const acceptanceMs = 3_000;
 const deepPage = 950;
 const searchTerms = Object.freeze({
@@ -179,17 +183,40 @@ function validateListResponse(body) {
   }
 }
 
-async function requestOnce(baseUrl, token, query) {
+async function requestAttempt(baseUrl, token, query) {
   const startedAt = performance.now();
-  const response = await fetch(`${baseUrl}/api/v1/customers?${query}`, {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  const text = await response.text();
-  const elapsedMs = performance.now() - startedAt;
-  if (response.status !== 200) throw new Error(`Customer benchmark request failed with HTTP ${response.status}.`);
-  const body = JSON.parse(text);
-  validateListResponse(body);
-  return elapsedMs;
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/customers?${query}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const text = await response.text();
+    const elapsedMs = performance.now() - startedAt;
+    if (response.status !== 200) {
+      return { startedAt, elapsedMs, status: response.status, errorType: 'unexpected_status' };
+    }
+    try {
+      validateListResponse(JSON.parse(text));
+      return { startedAt, elapsedMs, status: response.status, errorType: null };
+    } catch {
+      return { startedAt, elapsedMs, status: response.status, errorType: 'invalid_response' };
+    }
+  } catch {
+    return {
+      startedAt,
+      elapsedMs: performance.now() - startedAt,
+      status: null,
+      errorType: 'request_error',
+    };
+  }
+}
+
+async function requestOnce(baseUrl, token, query) {
+  const result = await requestAttempt(baseUrl, token, query);
+  if (result.errorType !== null) {
+    const status = result.status === null ? 'request error' : `HTTP ${result.status}`;
+    throw new Error(`Customer benchmark request failed with ${status}.`);
+  }
+  return result.elapsedMs;
 }
 
 function median(sorted) {
@@ -223,6 +250,106 @@ async function measureScenario(baseUrl, scenario) {
     max_ms: round(durations[durations.length - 1]),
   };
   return { ...result, status: result.p95_ms <= acceptanceMs ? 'PASS' : 'FAIL' };
+}
+
+function poolSnapshot() {
+  return {
+    total: database?.totalCount ?? 0,
+    idle: database?.idleCount ?? 0,
+    waiting: database?.waitingCount ?? 0,
+  };
+}
+
+function recordPoolObservation(observation, snapshot = poolSnapshot()) {
+  observation.max_total = Math.max(observation.max_total, snapshot.total);
+  observation.min_idle = Math.min(observation.min_idle, snapshot.idle);
+  observation.max_waiting = Math.max(observation.max_waiting, snapshot.waiting);
+}
+
+async function executeWave(baseUrl, scenario, observePool) {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const requests = Array.from({ length: loadConcurrency }, async () => {
+    await gate;
+    return requestAttempt(baseUrl, scenario.token, scenario.query);
+  });
+  const observation = { max_total: 0, min_idle: Number.POSITIVE_INFINITY, max_waiting: 0 };
+  let timer;
+  if (observePool) {
+    recordPoolObservation(observation);
+    timer = setInterval(() => recordPoolObservation(observation), 1);
+  }
+  release();
+  const results = await Promise.all(requests);
+  if (timer !== undefined) clearInterval(timer);
+  if (observePool) recordPoolObservation(observation);
+  return {
+    results,
+    pool: observation,
+    start_spread_ms: Math.max(...results.map((result) => result.startedAt)) -
+      Math.min(...results.map((result) => result.startedAt)),
+  };
+}
+
+async function waitForPoolIdle() {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const snapshot = poolSnapshot();
+    if (snapshot.waiting === 0 && snapshot.idle === snapshot.total) return snapshot;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return poolSnapshot();
+}
+
+async function measureLoadScenario(baseUrl, scenario) {
+  for (let wave = 0; wave < loadWarmUpWaves; wave += 1) {
+    const warmUp = await executeWave(baseUrl, scenario, false);
+    if (warmUp.results.some((result) => result.errorType !== null)) {
+      throw new Error(`Warm-up failed for load scenario: ${scenario.name}.`);
+    }
+  }
+
+  const results = [];
+  const pool = { max_total: 0, min_idle: Number.POSITIVE_INFINITY, max_waiting: 0 };
+  let maxStartSpreadMs = 0;
+  for (let wave = 0; wave < loadMeasuredWaves; wave += 1) {
+    const measurement = await executeWave(baseUrl, scenario, true);
+    results.push(...measurement.results);
+    pool.max_total = Math.max(pool.max_total, measurement.pool.max_total);
+    pool.min_idle = Math.min(pool.min_idle, measurement.pool.min_idle);
+    pool.max_waiting = Math.max(pool.max_waiting, measurement.pool.max_waiting);
+    maxStartSpreadMs = Math.max(maxStartSpreadMs, measurement.start_spread_ms);
+  }
+
+  const durations = results.map((result) => result.elapsedMs).sort((left, right) => left - right);
+  const unexpectedStatus = results.filter((result) => result.errorType === 'unexpected_status').length;
+  const requestErrors = results.filter((result) => result.errorType === 'request_error').length;
+  const invalidResponses = results.filter((result) => result.errorType === 'invalid_response').length;
+  const successes = results.filter((result) => result.errorType === null).length;
+  const after = await waitForPoolIdle();
+  const result = {
+    scenario: scenario.name,
+    requests: results.length,
+    successes,
+    unexpected_statuses: unexpectedStatus,
+    request_errors: requestErrors,
+    invalid_responses: invalidResponses,
+    min_ms: round(durations[0]),
+    median_ms: round(median(durations)),
+    p95_ms: round(nearestRank(durations, 0.95)),
+    p99_ms: round(nearestRank(durations, 0.99)),
+    max_ms: round(durations[durations.length - 1]),
+    max_start_spread_ms: round(maxStartSpreadMs),
+    pool: {
+      max_total: pool.max_total,
+      min_idle: pool.min_idle,
+      max_waiting: pool.max_waiting,
+      after,
+    },
+  };
+  const passed = result.successes === loadConcurrency * loadMeasuredWaves &&
+    result.unexpected_statuses === 0 && result.request_errors === 0 && result.invalid_responses === 0 &&
+    result.p95_ms <= acceptanceMs && after.waiting === 0 && after.idle === after.total;
+  return { ...result, status: passed ? 'PASS' : 'FAIL' };
 }
 
 const customerColumns = `id, name, name_kana, email, phone, address, category, owner_user_id,
@@ -299,7 +426,7 @@ async function main() {
     ]);
     const admin = adminToken;
     const staff = staffToken;
-    const scenarios = [
+    const sequentialScenarios = [
       { name: 'default list', token: admin, query: 'page=1&page_size=20' },
       { name: 'name no-hit', token: admin, query: `page=1&page_size=20&query=${searchTerms.noHit}` },
       { name: 'name low-hit', token: admin, query: `page=1&page_size=20&query=${searchTerms.lowHit}` },
@@ -312,31 +439,52 @@ async function main() {
       { name: 'deep pagination', token: admin, query: `page=${deepPage}&page_size=100` },
       { name: 'staff scope', token: staff, query: `page=1&page_size=20&query=${searchTerms.highHit}` },
     ];
+    const loadScenarios = [
+      { name: 'default list', token: admin, query: 'page=1&page_size=20' },
+      { name: 'name low-hit', token: admin, query: `page=1&page_size=20&query=${searchTerms.lowHit}` },
+      { name: 'name high-hit', token: admin, query: `page=1&page_size=20&query=${searchTerms.highHit}` },
+      { name: 'category filter', token: admin, query: 'page=1&page_size=20&category=T602-CATEGORY-01' },
+      { name: 'query + category AND', token: admin, query: `page=1&page_size=20&query=${searchTerms.highHit}&category=T602-CATEGORY-01` },
+      { name: 'created_at_desc sort', token: admin, query: 'page=1&page_size=20&sort=created_at_desc' },
+      { name: 'deep pagination', token: admin, query: `page=${deepPage}&page_size=100` },
+      { name: 'staff scope', token: staff, query: `page=1&page_size=20&query=${searchTerms.highHit}` },
+    ];
+    const scenarios = loadMode ? loadScenarios : sequentialScenarios;
     const measurements = [];
     for (const scenario of scenarios) {
-      measurements.push(await measureScenario(baseUrl, scenario));
+      measurements.push(loadMode
+        ? await measureLoadScenario(baseUrl, scenario)
+        : await measureScenario(baseUrl, scenario));
     }
 
-    const explains = {
-      'default list': await explain(client, {}),
-      'staff scope': await explain(client, { ownerScopeUserId: e2eStaff.id, query: searchTerms.highHit }),
-      'name high-hit': await explain(client, { query: searchTerms.highHit }),
-      'deep pagination': await explain(client, { limit: 100, offset: (deepPage - 1) * 100 }),
-    };
+    const explains = loadMode ? undefined : {
+        'default list': await explain(client, {}),
+        'staff scope': await explain(client, { ownerScopeUserId: e2eStaff.id, query: searchTerms.highHit }),
+        'name high-hit': await explain(client, { query: searchTerms.highHit }),
+        'deep pagination': await explain(client, { limit: 100, offset: (deepPage - 1) * 100 }),
+      };
     const output = {
+      benchmark: loadMode ? 'T-603' : 'T-602',
       environment: {
         node_version: process.version,
         postgres_version: inspection.postgres_version,
-        concurrency: 1,
+        concurrency: loadMode ? loadConcurrency : 1,
         pool_max: database?.options.max ?? null,
-        warm_up_requests: warmUpRequests,
-        measured_requests: measuredRequests,
+        ...(loadMode ? {
+          warm_up_waves: loadWarmUpWaves,
+          measured_waves: loadMeasuredWaves,
+          requests_per_wave: loadConcurrency,
+          measured_requests_per_scenario: loadConcurrency * loadMeasuredWaves,
+        } : {
+          warm_up_requests: warmUpRequests,
+          measured_requests: measuredRequests,
+        }),
         acceptance_ms: acceptanceMs,
       },
       dataset: inspection.dataset,
       deep_pagination: { page: deepPage, page_size: 100, offset: (deepPage - 1) * 100 },
       measurements,
-      explains,
+      ...(explains === undefined ? { explain_evidence: 'T-602 plans reused; concurrency does not change SQL plans.' } : { explains }),
       status: measurements.every((measurement) => measurement.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     console.log(JSON.stringify(output, null, 2));

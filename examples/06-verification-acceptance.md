@@ -572,3 +572,48 @@ RP-02の`page.route`は通信を一時保留するためだけに使用した。
 - deep paginationは現行OFFSET方式の最終有効pageでPASSした。keyset paginationへの変更は行っていない。
 - Production business code、schema、index、Customer SQL、connection pool値、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。Frontend変更・test/buildとPlaywrightはT-602対象外のため未実施。
 - 全必須scenarioがp95 3,000ms以下だったため、T-602はPASS・完了。依存条件を満たしたため、T-603 50同時ユーザー負荷試験へ着手可能と判定する。
+
+## 2026-09-22 T-603 50同時ユーザー性能試験（PASS）
+
+### 測定条件
+
+| 項目 | 実測条件 |
+| --- | --- |
+| Dataset | Customer 100,000件、active 95,000件、logical deleted 5,000件 |
+| Node.js / PostgreSQL | v24.19.0 / 16.15 |
+| HTTP concurrency | 50 |
+| Warm-up | scenarioごとに2 waves、100 requests |
+| Measurement | scenarioごとに20 waves、1,000 requests |
+| Scenario数 | 8 |
+| Connection pool | `pg.Pool` max 10 |
+| Acceptance | HTTP・schema成功率100%、期待外status 0件、scenario別p95 3,000ms以下 |
+
+### Scenario別結果
+
+| Scenario | Success | Error / unexpected | Median | p95 | p99 | Max | 判定 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| default list | 1,000/1,000 | 0 / 0 | 63.794ms | 97.440ms | 106.528ms | 116.436ms | PASS |
+| name low-hit | 1,000/1,000 | 0 / 0 | 470.333ms | 830.747ms | 855.023ms | 883.549ms | PASS |
+| name high-hit | 1,000/1,000 | 0 / 0 | 483.276ms | 842.520ms | 869.427ms | 915.130ms | PASS |
+| category filter | 1,000/1,000 | 0 / 0 | 34.933ms | 49.278ms | 52.235ms | 53.577ms | PASS |
+| query + category AND | 1,000/1,000 | 0 / 0 | 277.286ms | 469.662ms | 493.446ms | 510.053ms | PASS |
+| created_at_desc sort | 1,000/1,000 | 0 / 0 | 119.775ms | 197.627ms | 206.273ms | 214.626ms | PASS |
+| deep pagination | 1,000/1,000 | 0 / 0 | 249.800ms | 417.816ms | 432.230ms | 444.072ms | PASS |
+| staff scope | 1,000/1,000 | 0 / 0 | 35.685ms | 51.736ms | 64.555ms | 68.755ms | PASS |
+
+Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200以外の件数である。全8,000 measured requestsでrequest error、invalid response、期待外statusはいずれも0件だった。最大wave開始時刻差は2.963msで、50 requestsが同一barrierから並行開始された。
+
+### Connection poolとbottleneck評価
+
+| 観測項目 | 全scenarioの結果 | 判定 |
+| --- | ---: | --- |
+| pool max / 最大total | 10 / 10 | 設定どおり |
+| 最小idle | 0 | 50 concurrent時に全接続を使用 |
+| 最大waiting | 90 | items/countの並行queryを含むpool待ちを観測 |
+| scenario終了後 | total 10、idle 10、waiting 0 | leakなし |
+
+- T-602のEXPLAINではname high-hitのitemsが47.403ms、countが47.749msで、countはSeq Scanだった。T-603ではpool max 10に対して最大90 queriesが待機し、これらのDB実行とpool待ちを含むAPI wall-clockのp95が842.520msとなった。
+- concurrencyによってSQL plan自体は変わらないため、T-602のdefault list、staff scope、name high-hit、deep paginationのEXPLAINを証跡として再利用した。3秒閾値へ十分な余裕があり、追加EXPLAINは実施していない。
+- Production business code、schema、index、Customer SQL、pool max・timeout、pagination方式は変更していない。改善実装は不要と判断した。将来のデータ増加や性能未達時には、pool max、`pg_trgm` + GIN、count query、deep OFFSETの見直しを個別に評価する。
+- Backend全testは44 files・322/322 PASS、Backend buildはPASS。Frontend変更・test/buildとPlaywrightはT-603対象外のため未実施。
+- 全必須scenarioで成功率100%、期待外status 0件、p95 3,000ms以下となったため、T-603はPASS・完了と判定する。

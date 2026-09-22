@@ -106,7 +106,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | --- | --- | --- | --- | --- |
 | T-601 | 顧客検索のインデックス、ページング、接続プールを設定 | N-01 | T-205、T-103 | 高 |
 | T-602 | Phase 1性能受入用のCustomer 100,000件（active 95,000件、logical deleted 5,000件、owner 100 users、category 20種類と約10%のNULL、name検索0件・約100件・約10,000件hit）を決定的に生成する。concurrency 1で必須11 scenariosを各10回warm-up後に100回HTTP測定し、nearest-rank方式のscenario別p95がすべて3秒以内であることを確認する。default list、staff scope、name high-hit、deep paginationはEXPLAIN ANALYZEも記録し、production SQL・index・schema・pool・pagination方式は変更しない | N-01 | T-601 | 高 |
-| T-603 | 50同時ユーザーの負荷試験とエラー率を測定 | N-02 | T-602、T-006 | 高 |
+| T-603 | T-602の100,000 Customerを使い、barrierから50 requestsを同時開始するload benchmarkを実施する。必須8 scenariosを各2 waves warm-up後に20 waves、計1,000 requestsずつ測定し、scenarioごとにHTTP成功率100%、期待外status 0件、nearest-rank方式のp95が3秒以内であることを確認する。p99と`pg.Pool` max 10に対するtotal・idle・waitingを観測し、終了後のidle復帰も確認する。production SQL・schema・index・pool・timeout・pagination方式は変更しない | N-02 | T-602、T-006 | 高 |
 | T-604 | 顧客情報の暗号化保存と復号権限を検証 | N-04 | T-107、T-201、T-203 | 高 |
 | T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する。実DB Loginとproduction保護APIでBearerあり成功・なし401も最終確認する。Browser LoginはT-110のE2Eで検証する | N-03 | T-104、T-111 | 高 |
 | T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |

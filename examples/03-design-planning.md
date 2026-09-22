@@ -286,7 +286,10 @@ request bodyで許可するfieldは次のとおりとする。
 - 測定値を昇順に並べ、p95はnearest-rank方式の95番目、medianは中央2値の平均として算出する。default list、name no-hit・low-hit・high-hit、category filter、owner filter、queryとcategoryのAND、name降順、created_at降順、deep pagination、staff owner scopeを個別に測定し、各scenarioのp95が3,000ms以下であることを受入条件とする。全scenarioを混ぜたp95では判定しない。
 - deep paginationは現行のOFFSET方式を維持し、active 95,000件に対して`page_size=100`、最終有効ページの`page=950`を測定する。T-602ではpagination方式を変更しない。
 - T-602ではdefault list、staff scope、name high-hit、deep paginationについて`EXPLAIN (ANALYZE, BUFFERS)`を取得し、HTTP応答時間とは分けて記録する。通常のB-tree name indexが前後wildcardの部分一致へ直接利用されないことも確認するが、測定結果を理由にindexやproduction SQLを変更しない。
-- 50同時ユーザーで主要操作がエラー率1%未満となることを負荷試験で確認する。
+- T-603はT-602と同じ100,000 Customerを使用し、1 waveにつき50 HTTP requestsをbarrierから同時に解放する。2 wavesをwarm-upとして除外し、その後の20 waves、scenarioごとに1,000 requestsを測定する。login処理は測定に含めず、事前取得したadminまたはstaff tokenを再利用する。
+- T-603の必須scenarioはdefault list、name low-hit・high-hit、category filter、queryとcategoryのAND、created_at降順、`page=950`・`page_size=100`のdeep pagination、staff owner scopeとする。各requestの開始からresponse body受信完了までを個別に測り、scenarioごとにmedian、nearest-rank方式のp95・p99、maxを算出する。
+- T-603は各scenarioでHTTP 200とpagination response schemaの成功率100%、期待外status 0件、p95が3,000ms以下の場合に合格とする。この基準はN-02のエラー率1%未満をより厳しく満たす。全scenarioを混ぜたp95では判定しない。
+- HTTP concurrency 50に対して`pg.Pool` max 10を維持し、benchmark processから`totalCount`、`idleCount`、`waitingCount`を観測する。pool待ちを含むAPI wall-clock時間、T-602で取得したSQL execution time、request errorを区別する。測定終了後にwaiting 0かつ全connectionがidleへ戻ることを確認し、T-603の結果だけを理由にpool値を変更しない。
 - DB接続プール、ページング、検索インデックスを使用する。
 - 平日9:00〜18:00の稼働率99%以上を、監視サービスの稼働記録で測定する。
 - メンテナンスは実施日時、影響範囲、終了予定を少なくとも24時間前に利用者へ通知する。

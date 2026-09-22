@@ -163,7 +163,9 @@
 - 性能受入用データはactive 95,000件、logical deleted 5,000件とし、100 usersへ決定的に均等分布させる。categoryは20種類と`NULL`で構成し、全体の約10%を`NULL`、残りを20種類へおおむね均等に分布させる。nameには実個人情報を含まない決定的なsynthetic dataを使用する。
 - name部分一致検索には、active customerに対して0件、約100件（約0.1%）、約10,000件（約10%）がヒットする3種類の検索語を用意する。実ヒット件数はdataset生成後にSQLで確認する。
 - T-602は各scenarioを逐次実行し、10 requestsのwarm-up後に100 requestsを測定する。HTTP request開始からresponse受信完了までのwall-clock時間を記録し、nearest-rank方式でscenarioごとのp95を算出する。fixture生成、DB reset、login、token取得は測定時間に含めない。全必須scenarioのp95が3,000ms以下の場合に合格とする。
-- 同時アクセス数：最大50ユーザー
+- 同時アクセス数は最大50ユーザーとする。T-603ではT-602と同じ性能受入用データを使い、1 waveにつき50 requestsを同時に開始する。2 waves（100 requests）のwarm-up後、20 waves（scenarioごとに1,000 requests）を測定する。
+- T-603はdefault list、name low-hit・high-hit、category filter、queryとcategoryのAND、created_at降順、deep pagination、staff owner scopeを個別に測定する。loginとtoken取得は測定外とし、既存tokenを再利用する。各requestのHTTP開始からresponse body受信完了までのwall-clock時間を記録する。
+- T-603ではscenarioごとにHTTP成功率100%、期待外status 0件、nearest-rank方式のp95が3,000ms以下であることを受入条件とする。p99もnearest-rank方式で観測するが、合否閾値には使用しない。`pg.Pool`のmax 10は変更せず、50 concurrent requestsによるpool待ちを含むAPI応答時間を評価する。
 
 ### セキュリティ
 

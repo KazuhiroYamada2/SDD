@@ -498,3 +498,13 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - default list、staff scope、name high-hit、deep paginationでは、items queryとcount queryを分けて`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`で記録した。HTTP p95とSQL execution timeは別の値として扱う。
 - 実行環境はNode.js v24.19.0、PostgreSQL 16.15、`pg.Pool` max 10。全11 scenariosのp95は18.128～78.616msで、すべて3,000ms以下だった。最遅はname low-hitの78.616ms。name high-hitのcountはSeq Scanで、通常のB-tree name indexが前後wildcard検索へ直接利用されないことを確認した。
 - package scriptとしてrepository rootとBackendへ`benchmark:customers`を追加した。Production business code、Customer SQL、schema、index、pool値、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-22 T-603 50同時ユーザー性能試験（完了）
+
+- T-603の50 concurrent契約を02/03/04へ反映し、既存`customer-search-benchmark.mjs`へ`--load` modeを追加した。T-602と同じ100,000 Customerを生成し、8 scenariosを個別に測定する。repository rootとBackend packageへ`benchmark:customers:load`を実行入口として追加した。
+- 1 wave分の50 requestsは、先に50個のPromiseを共通barrierで待機させ、barrier解放後に一斉開始する。各scenarioは2 warm-up wavesを除外し、20 measured waves、計1,000 requestsを測定した。最大request開始時刻差は2.963msだった。
+- 各requestについてHTTP開始からresponse body受信完了までを測り、HTTP 200とpagination envelopeも検証した。admin/staff tokenは測定前に取得して再利用し、login負荷は含めていない。medianは中央2値の平均、p95・p99はnearest-rank方式で算出した。
+- 測定中は1ms間隔でproduction appと同じ`pg.Pool`の`totalCount`、`idleCount`、`waitingCount`をbenchmark processから観測した。全scenarioでpoolは最大10接続、idle最小0、waiting最大90となった。各scenario後はtotal 10、idle 10、waiting 0へ戻り、connection leakはなかった。
+- 8 scenarios、計8,000 measured requestsはすべてHTTP 200かつschema正常で、期待外status、request error、invalid responseは0件だった。scenario別p95は49.278～842.520ms。最遅はname high-hitでmedian 483.276ms、p95 842.520ms、p99 869.427ms、max 915.130msだった。
+- SQL planはconcurrencyで変化しないためT-602のEXPLAIN証跡を再利用した。name high-hitのitems/countは約47msで、countはSeq Scanだった。50 concurrentではpool max 10に対して最大90 queriesが待機したが、その待ちを含むHTTP p95も3,000ms以内だったため追加EXPLAINは取得していない。
+- Production business code、Customer SQL、schema、index、pool max・timeout、pagination方式は変更していない。Backend全testは44 files・322/322 PASS、Backend buildはPASS。FrontendとPlaywrightは変更・実行していない。

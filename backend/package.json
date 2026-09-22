@@ -13,7 +13,8 @@
     "e2e:db:reset": "node --env-file=../.env.e2e scripts/e2e-db.mjs reset",
     "e2e:api:verify": "node --env-file=../.env.e2e scripts/verify-e2e-api.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
-    "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs"
+    "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",
+    "benchmark:customers:load": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs --load"
   },
   "dependencies": {
     "argon2": "^0.45.1",
