@@ -319,7 +319,95 @@ request bodyで許可するfieldは次のとおりとする。
 
 ## 既存システムとの互換性
 
-Phase 1では外部システムとのリアルタイム連携は実装しない。既存の顧客データは、項目マッピングと検証を行ったうえでPostgreSQLへ移行できる形式を定義する。外部システム連携の方式はPhase 2で別途決定する。
+Phase 1では外部システムとのリアルタイム連携は実装しない。既存の顧客データは、T-005で承認した演習用Excelから項目mappingと検証を行い、T-701のoffline migrationでPostgreSQLへ移行する。外部システム連携の方式はPhase 2で別途決定する。
+
+### Excel source schema
+
+ExcelはOffice Open XML形式で、文字列はUnicodeとして扱う。T-701は、承認したfileの「概要」「既存顧客データ」「担当者マスタ」「カテゴリマスタ」「データ辞書」「演習ケース一覧」の6 sheetが存在し、必須headerが一致することを処理前に確認する。sheet・headerの欠落や重複はrecord rejectではなくdataset errorとして処理を開始しない。
+
+「既存顧客データ」のsource schemaは次のとおりとする。
+
+| Source field | 型 | null | 意味・検証 |
+| --- | --- | --- | --- |
+| 顧客番号 | 文字列 | 不可 | trim後のsource識別子。全件pre-scanで一意性を確認 |
+| 顧客名 | 文字列 | 不可 | trim後に非空 |
+| 顧客名カナ | 文字列 | 可 | 空欄は`null` |
+| メールアドレス | 文字列 | 可 | 空欄は`null`、non-nullは既存email validation |
+| 電話番号 | 文字列 | 可 | 空欄は`null` |
+| 住所 | 文字列 | 可 | 空欄は`null` |
+| 顧客区分コード | 文字列 | 可 | 空欄またはA/B/C/D |
+| 担当者メール | 文字列 | 不可 | 担当者マスタとcurrent usersへの完全一致key |
+| 登録日時 | Excel日時 | 不可 | `Asia/Tokyo`のwall-clock日時として解釈可能 |
+| 更新日時 | Excel日時 | 不可 | 登録日時以上 |
+| 削除フラグ | 数値 | 不可 | 0または1 |
+| 削除日時 | Excel日時 | 条件付 | flag 1では必須、flag 0では空欄、登録日時以上 |
+| 備考 | 文字列 | 可 | 移行対象外。validationやreject logへ転記しない |
+
+担当者マスタは担当者メール、表示名、role、active、備考を持つ。mappingには担当者メールとactiveだけを使い、表示名の曖昧一致を行わない。カテゴリマスタは顧客区分コードとTarget categoryを持つ。「演習ケース一覧」はacceptance用の期待値であり、migration入力としてCustomerへ保存しない。
+
+### SourceからCustomerへのmapping
+
+| Source | Target | 変換・既定値 | null / validation | 暗号化 | reject条件 |
+| --- | --- | --- | --- | --- | --- |
+| 顧客番号 | `id` | source値は照合だけに使い、UUID v4を新規採番 | Sourceは必須・trim後一意 | なし | 欠落、同一IDの複数行。重複IDを持つ全行をreject |
+| 顧客名 | `name` | trim後の値 | 必須、空欄不可 | なし | 欠落または既存Customer validation違反 |
+| 顧客名カナ | `name_kana` | trim、空欄は`null` | 任意 | AES-256-GCM | 型・既存validation違反 |
+| メールアドレス | `email` | trim、空欄は`null` | 任意、non-nullはemail形式検証 | AES-256-GCM | email形式不正または既存validation違反 |
+| 電話番号 | `phone` | trim、空欄は`null` | 任意 | AES-256-GCM | 型・既存validation違反 |
+| 住所 | `address` | trim、空欄は`null` | 任意 | AES-256-GCM | 型・既存validation違反 |
+| 顧客区分コード | `category` | 空欄は`null`。A→法人、B→個人、C→重点、D→休眠 | 任意、カテゴリマスタ完全一致 | なし | 未知のnon-nullコード、マスタの重複対応 |
+| 担当者メール | `owner_user_id` | trim後、担当者マスタ→`users.email`→`users.id` | 必須、一意なactive user | なし | 欠落、inactive、マスタ・users不存在、複数対応 |
+| 登録日時 | `created_at` | `Asia/Tokyo`からUTCへ変換 | 必須、日時として解釈可能 | なし | 欠落、invalid date |
+| 更新日時 | `updated_at` | `Asia/Tokyo`からUTCへ変換 | 必須、`created_at`以上 | なし | 欠落、invalid date、時系列矛盾 |
+| 削除フラグ・削除日時 | `deleted_at` | flag 0→`null`、flag 1→日時を`Asia/Tokyo`からUTCへ変換 | flag 0/1、flag 1の日時は`created_at`以上 | なし | flag/date不整合、invalid date、時系列矛盾 |
+| 備考 | 対象外 | 保存しない | なし | なし | なし |
+
+Customerにmigration実行日時を保存しない。sourceの登録・更新日時を維持する。Source顧客番号もCustomer列には保持せず、移行台帳とreject結果だけに保持する。
+
+### Validation・reject
+
+最初に全40行を読み、trim後のSource顧客番号で重複を検出する。重複groupの全行を`DUPLICATE_SOURCE_CUSTOMER_ID`としてrejectし、merge、後勝ち、上書きを行わない。その後、各recordを正規化し、required、型、email、日時、delete state、owner、category、既存Customer validationの順で検証する。複数違反を検出できる場合もreject結果には全reason codeを保持し、集計用primary reasonはこの順序で決める。source IDの重複は他のrecord validationより先にprimary reasonとする。
+
+| Reason code | 条件 |
+| --- | --- |
+| `DUPLICATE_SOURCE_CUSTOMER_ID` | trim後の顧客番号がsource内で複数行 |
+| `REQUIRED_FIELD_MISSING` | 顧客番号、顧客名、担当者メール、登録日時、更新日時、削除フラグの欠落 |
+| `OWNER_MAPPING_FAILED` | 担当者がinactive、マスタ・usersに存在しない、一意に解決できない |
+| `CATEGORY_MAPPING_FAILED` | 未知または一意に解決できないnon-nullカテゴリコード |
+| `INVALID_EMAIL` | non-null emailが既存形式検証に不合格 |
+| `INVALID_DATE` | 日時として解釈できない、または日時の順序が不正 |
+| `DELETE_STATE_INCONSISTENT` | flagが0/1以外、flag 1で削除日時なし、flag 0で削除日時あり |
+| `CUSTOMER_VALIDATION_FAILED` | その他の既存Customer validation違反 |
+
+reject recordの論理形式は`dataset_id`、Source顧客番号、Excel sheet名、row番号、primary reason code、全reason code、PIIを含まないreason summaryとする。Source顧客番号以外のplaintext PII、暗号鍵、完全なciphertext envelopeは含めない。
+
+### Batch transaction・retry
+
+T-701は処理前に全recordの構造・重複・data validationとmaster mappingを行い、valid recordだけを設定可能なbatchへ分割する。batch sizeは運用設定とし、T-005では固定しない。各batchは次の順序で1 transactionにする。
+
+1. 未移行であることを移行台帳で確認し、target UUID v4を採番する。
+2. `name_kana`、`email`、`phone`、`address`のnon-null値をT-107のcurrent keyで暗号化する。
+3. Customer rowと、dataset/source IDからtarget UUIDへの移行台帳recordを同じtransactionでinsertする。
+4. batch内の全insertと検証が成功した場合だけcommitする。
+
+DB、暗号化、その他のsystem errorではbatch全体をrollbackし、data rejectとして処理を続行しない。修正後は失敗batchを再実行でき、commit済みbatchは維持する。Customer tableへplaintextをcommitする中間状態は禁止する。
+
+T-701は、運用者が指定する安定した`dataset_id`とSource顧客番号を一意keyにした移行台帳を実装する。台帳はtarget UUID、Source row fingerprint、source row番号、commit日時を保持するが、plaintext PIIは保持しない。Customer insertと台帳insertを同じtransactionに含める。同一dataset・source ID・fingerprintのretryは既存target UUIDを確認して`already_migrated`とし、新規UUIDやCustomerを追加しない。移行済みsourceのfingerprintが変わっている場合は`SOURCE_RECORD_CHANGED`として自動更新せず、運用判断を要求する。reject recordは台帳へ成功として登録しないため、sourceを修正した後に同じdataset IDで再検証できる。
+
+### Reconciliation・security
+
+初回の承認済みsampleでは、`source_total = 40`、`valid = 31`、`rejected_records = 9`、`target_insert = 31`を期待値とする。rejectは8ケースだが、Source顧客番号の重複1 groupに属する2行をともにrejectするため、reject recordは9件になる。valid 31件の内訳はactive 28件、logical deleted 3件である。
+
+実行ごとに次を機械的に照合する。
+
+- `source_total = inserted + already_migrated + rejected_records`
+- 初回は`inserted = 31`、`already_migrated = 0`、`rejected_records = 9`
+- 移行台帳の成功件数とtarget UUIDの存在、実行前後のCustomer件数差分
+- primary reason別reject件数、duplicate group数・record数、owner/category mapping failure件数
+- 挿入した暗号化対象fieldのnon-null値がすべてfieldに対応するvalidな`enc:v1` envelopeであり、plaintext残存が0件であること
+- `NULL`がDB `NULL`のままで、active 28件・logical deleted 3件の状態が維持されること
+
+logと集計には件数、dataset ID、row番号、Source顧客番号、reason code、target UUIDだけを使用する。Customerのplaintext PII、暗号鍵、完全なciphertext envelopeは出力しない。source Excel自体もsecretと同等にアクセス制御し、migration終了後の保管・削除は運用手順に従う。
 
 ## テスト方針
 

@@ -31,7 +31,7 @@
 | T-002 | users、customers、activities、sales_records、audit_logsのスキーマ設計 | F-01〜F-14、N-04、N-05 | T-001 | 高 |
 | T-003 | staff・manager・adminの権限マトリクスを確定。成果物は03のRole × Operation × Scope表とし、3roleの操作可否・データ範囲、Backend API側で認可を強制する原則が揃い、レビューできることを完了条件とする | F-12〜F-14 | T-001 | 高 |
 | T-004 | Phase 1の暗号化対象を`name_kana`・`email`・`phone`・`address`、方式をAES-256-GCM、保存形式をversion・key ID・12-byte IV・16-byte tag・ciphertextからなる`enc:v1` envelopeとして確定する。環境設定のcurrent key IDとkey ring、起動時validation、rotation、one-shot plaintext migration、既存Role Matrixに従うscope確認後の復号、fail-closed error契約を02/03へ正本化する。仕様レビューとproduction変更なしの確認を完了条件とする | N-04 | T-001 | 高 |
-| T-005 | 既存データの項目マッピングと移行手順の確定 | 01の互換性制約 | T-002 | 中 |
+| T-005 | 正式な演習用Excel 6 sheetを分析し、40 Customerのsource schema、全Customer fieldへのmapping、新UUID、担当者メール・カテゴリマスタのmapping、重複・validation・reject、`Asia/Tokyo`日時変換、batch transaction、移行台帳によるretry/idempotency、T-107暗号化後のDB write、reconciliation、PIIを出さないlog契約を02/03へ確定する。実データのvalid 31件・reject 9件と理由別件数の照合、production code/schema変更なしを完了条件とする | 01の互換性制約 | T-002、T-004 | 中 |
 | T-006 | 検索性能、同時アクセス、稼働率の測定計画を確定 | N-01、N-02、N-06 | T-001 | 高 |
 | T-007 | メンテナンス通知、監視、バックアップ、障害対応手順の確定 | N-06、N-07 | T-006 | 高 |
 
@@ -119,7 +119,7 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
-| T-701 | 既存顧客データの移行スクリプトと検証手順を作成 | 01の互換性制約 | T-005、T-103、T-107 | 中 |
+| T-701 | T-005のExcel契約に従うoffline migrationを実装する。6 sheet/header preflight、全件重複検出、正規化・validation、owner/category mapping、UUID v4採番、設定可能なbatch、batch transaction、Customerと移行台帳の同時commit、retry/idempotency、reject論理record、AES-256-GCM暗号化後のwrite、件数・envelope・plaintext残存0のreconciliationを自動検証する。承認sampleで初回31 insert・9 reject、再実行0 insert、失敗batch rollback・再実行を実DBで確認する | 01の互換性制約 | T-005、T-103、T-107 | 中 |
 | T-702 | 本番環境、秘密情報、DBバックアップを設定 | N-04、N-06 | T-004、T-007 | 高 |
 | T-703 | 運用マニュアル、監視手順、障害時連絡先を作成 | N-05〜N-07 | T-607、T-609 | 高 |
 | T-704 | 本番移行リハーサルとロールバック手順を検証 | 全機能、N-06 | T-701、T-702 | 高 |

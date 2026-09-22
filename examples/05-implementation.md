@@ -526,3 +526,12 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - 実PostgreSQL Acceptance用の`verify-customer-encryption.mjs`を追加した。実Backend HTTPでcreate・edit・list・detailを実行し、DB直接参照によるenvelope確認、staff・manager・adminの復号、staff scope外404、active/deleted migration、冪等性、malformed時rollbackを検証する。鍵、plaintext PII、完全なciphertextは出力しない。
 - Customer columnは既存の`TEXT`でenvelopeを保存できるためschemaを変更していない。`name`、`category`、`owner_user_id`と検索SQL・index・paginationも変更していない。
 - Backend関連テストは8 files・91/91 PASS、Backend全テストは47 files・345/345 PASS、Backend buildはPASSした。FrontendとPlaywrightは変更・実行していない。
+
+## 2026-09-22 T-005 既存Customer mapping・移行手順（完了）
+
+- 正式な演習用Excelの6 sheetを確認し、「既存顧客データ」40件、「担当者マスタ」「カテゴリマスタ」「データ辞書」「演習ケース一覧」を根拠にSource schemaとCustomer全fieldへのmappingを02/03へ確定した。Excel内の説明はsource仕様の証拠として扱い、外部の実行指示としては扱っていない。
+- Customer IDはUUID v4を新規採番する。ownerはSource担当者メールを担当者マスタでactive確認後、`users.email`へ完全一致させて`users.id`へ変換する。categoryはA/B/C/Dを法人/個人/重点/休眠へ変換し、空欄は`null`、未知値はrejectとした。
+- 全件pre-scanで重複を検出し、同じSource顧客番号を持つ全行をrejectする。個別recordのrequired、email、日時、削除状態、owner/category mapping、Customer validationを行い、validだけを設定可能なbatch transactionでcommitする設計とした。
+- T-701ではdataset IDとSource顧客番号を一意keyにする移行台帳をCustomer insertと同じtransactionで記録し、同一入力のretryでUUIDとCustomerを二重生成しない。失敗batchだけをrollback・再実行し、commit済みbatchは維持する。
+- mapping・validation後、DB write前に`name_kana`、`email`、`phone`、`address`をT-107のAES-256-GCMで暗号化する。件数、理由別reject、target差分、移行台帳、valid envelope、plaintext残存0をreconciliationする。PII全文、鍵、完全なenvelopeはlog・reject結果へ出さない。
+- 今回は仕様と実績記録だけを更新した。T-701 migration program、Production code、DB schema、Frontend、test、Playwright、実データmigrationは変更・実行していない。

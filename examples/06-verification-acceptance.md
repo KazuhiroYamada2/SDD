@@ -672,3 +672,35 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - Docker CLIは使用せず、専用E2E PostgreSQL `127.0.0.1:55432`へ接続した。検証用Customerは終了時に削除し、production DBは使用していない。
 - Backend全テストは47 files・345/345 PASS、Backend buildはPASS。Frontend変更はなく、Frontend test/buildとPlaywrightはT-604対象外のため未実施。暗号化対象は検索fieldではないためT-601～T-603の性能benchmarkも再実行していない。
 - DB実値、復号Authorization、migration、fail-closed error、全回帰が受入条件を満たしたため、T-604はPASS・完了と判定する。
+
+## 2026-09-22 T-005 既存Customer mapping・移行仕様レビュー（PASS）
+
+| 確認対象 | 添付Excel・仕様の確認結果 | 判定 |
+| --- | --- | --- |
+| Source | Office Open XMLの演習用synthetic data。指定された6 sheetと必須headerを確認 | PASS |
+| Source件数 | Customer 40件。削除フラグ0が36件、1が4件 | PASS |
+| Mapping | Customer全11 field、移行対象外の備考、新UUID、日時・null・暗号化規則を確定 | PASS |
+| Owner | 担当者メール→active担当者マスタ→`users.email`完全一致→`users.id`。氏名照合なし | PASS |
+| Category | A→法人、B→個人、C→重点、D→休眠、空欄→`null`、未知値→reject | PASS |
+| Duplicate | Source顧客番号の重複1 group・2 recordを両方reject。email/nameは判定keyにしない | PASS |
+| Valid / reject | valid 31件、reject 9件。validはactive 28件、logical deleted 3件 | PASS |
+| Transaction | valid recordだけを設定可能なbatch単位でtransaction commit。system errorは該当batchをrollback | PASS |
+| Retry | 移行台帳をCustomerと同一transactionで記録し、同じdataset/source IDの二重insertを防止 | PASS |
+| Encryption | 4 fieldをmapping・validation後、DB write前にT-107 AES-256-GCMで暗号化 | PASS |
+| Reconciliation | source = inserted + already migrated + reject、target差分、理由別件数、envelope、plaintext残存0を照合 | PASS |
+| Security | reject/logへplaintext PII全文、鍵、完全なciphertext envelopeを出さない | PASS |
+
+| Primary reject reason | Record数 | 確認内容 |
+| --- | ---: | --- |
+| `DUPLICATE_SOURCE_CUSTOMER_ID` | 2 | 同一Source顧客番号を持つ2行をともにreject |
+| `REQUIRED_FIELD_MISSING`（顧客名） | 1 | 必須の顧客名が空欄 |
+| `REQUIRED_FIELD_MISSING`（担当者メール） | 1 | 必須の担当者メールが空欄 |
+| `INVALID_EMAIL` | 1 | email形式不正 |
+| `OWNER_MAPPING_FAILED` | 1 | 担当者マスタ・usersへ解決不能 |
+| `CATEGORY_MAPPING_FAILED` | 1 | 未知カテゴリコード |
+| `DELETE_STATE_INCONSISTENT` | 2 | flag 1/dateなし、flag 0/dateありを各1件 |
+| **合計** | **9** | 演習ケース8種類。duplicate 1ケースが2 recordのため9 record |
+
+- Excelの実データ40件と「演習ケース一覧」を突合し、初回migrationの期待値を31 insert、9 rejectと確定した。Source顧客番号、担当者、カテゴリ、日時、logical deleteの意味はデータ辞書と各masterで確認でき、仕様化を妨げる矛盾はなかった。
+- 02/03/04へ要件、詳細設計、T-005完了条件とT-701実装責務を反映した。01、Production code、DB schema、Frontendは変更していない。仕様確定TaskのためBackend/Frontend test・build、Playwright、実migrationは未実施。
+- Source schema、mapping、UUID、master mapping、duplicate、validation/reject、batch、retry/idempotency、暗号化順序、reconciliation、security/loggingが確定したため、T-005はPASS・完了と判定する。T-701は着手可能である。

@@ -190,6 +190,22 @@
 - unknown key ID、malformed envelope、不正なIV・tag・ciphertext、authentication tag mismatch、その他のdecrypt failureはfail closedとし、plaintext fallbackを禁止する。公開APIは既存のgeneric internal server error契約を使用し、crypto固有情報をresponseへ出さない。logにも暗号鍵、Customerのplaintext、完全なciphertext envelopeを出力しない。
 - アクセスログを記録
 
+### 既存顧客データ移行
+
+- Phase 1の移行元は、T-005で承認した演習用Excel `sdd_customer_migration_source.xlsx` とする。対象は「既存顧客データ」40件であり、「担当者マスタ」「カテゴリマスタ」「データ辞書」「演習ケース一覧」をmappingと検証の根拠にする。
+- 移行元の顧客番号はsource内の識別子、重複検出、移行結果の照合に使用する。Customerの`id`には流用せず、新しいUUIDを採番する。顧客番号をCustomerの列へ保存しない。
+- 担当者は、前後空白を除いたSource担当者メールを担当者マスタで確認し、`users.email`との完全一致から一意なactive userの`users.id`を取得して`owner_user_id`へ設定する。氏名による曖昧一致は禁止する。担当者メールの欠落、マスタ不存在、inactive、usersとの対応なし、複数対応はrejectとする。
+- 顧客区分コードはカテゴリマスタで名称へ変換する。空欄は`category = null`、A/B/C/Dはそれぞれ法人/個人/重点/休眠とし、未知のnon-nullコードは推測で補正せずrejectとする。
+- 顧客番号はtrim後の完全一致でsource内の一意性を判定する。同じ顧客番号が複数行に存在する場合は、そのIDを持つ全行をrejectする。emailやnameを重複判定keyにせず、merge、後勝ち、自動上書きを行わない。
+- 文字列は前後空白を除き、任意項目の空欄は`null`とする。顧客番号、顧客名、担当者メール、登録日時、更新日時、削除フラグの欠落、email形式不正、日時解釈不能、`updated_at < created_at`、削除状態の矛盾、既存Customer validation違反はrecord単位でrejectする。正常record全体をdata-quality errorでrollbackしない。
+- 削除フラグは0または1だけを許可する。0では`deleted_at = null`かつSource削除日時は空欄、1では削除日時を必須とし、その値を`deleted_at`へ設定する。削除日時は`created_at`以降でなければならない。logical deleted Customerも移行対象とする。
+- Source日時はExcelのtimezoneなしwall-clock値を`Asia/Tokyo`として解釈し、UTCへ変換してPostgreSQLの`TIMESTAMPTZ`へ保存する。登録日時と更新日時にmigration実行日時を補完しない。
+- valid recordは設定可能なbatchに分け、batch単位のtransactionでcommitする。data-quality errorは事前にrejectへ分離する。system errorが起きたbatchだけをrollbackし、修正後に再実行できるようにする。commit済みbatchは巻き戻さない。
+- T-701はsource dataset IDとSource顧客番号を一意keyとする移行台帳を使用し、Customer挿入とsource-to-target UUID対応の記録を同じtransactionでcommitする。同じ入力のretryは既存target UUIDを再利用して二重insertしない。移行済みsourceの内容が変わっていた場合は自動更新せず、運用確認が必要な不整合として扱う。
+- `name_kana`、`email`、`phone`、`address`はmapping、正規化、validation、owner/category解決の後、Customer tableへのwrite前にT-107のAES-256-GCMで暗号化する。plaintextをCustomer tableへ一時commitしない。`null`はDB `NULL`のままとする。
+- reject情報はSource顧客番号、Excel row番号、reason code、PIIを含まないreason summaryを持つ。plaintext PII全文、暗号鍵、完全なciphertext envelopeを移行log・reject情報へ出力しない。
+- 完了時はsource総数、valid数、reject数、insert数、既に移行済みとして確認した数、reject理由別件数、重複件数、owner/category mapping失敗件数、target件数差分を照合する。さらに、暗号化対象のnon-null値がすべてvalidな`enc:v1` envelopeであり、plaintext残存が0件であることを確認する。
+
 ### 可用性
 
 - 平日9:00-18:00の稼働率99%以上
