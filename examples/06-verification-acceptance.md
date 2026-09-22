@@ -1232,3 +1232,81 @@ T-106 Request IDの過去Gapは02「Request ID・共通エラー」、03「Reque
 - T-805判定: Requirement coverage 100%、全trace 100%、未実装0、未検証0、意図しない実装0、open specification difference 0のためPASS・完了とする。
 - T-806引継ぎ: Customer CRUD・Activity・Reports・Authentication/Authorization・Users/role、error/Request ID、encryption/migration、access/audit、performance/load、health/monitoring/availability、backup/restore、maintenance、Production migration rehearsalを最終顧客受入対象とする。T-806では顧客本人による実施結果と承認を取得する必要があり、AIが承認を代行・推定してはならない。
 - 次Task: T-805完了によりT-806「顧客との受入テストを実施し、承認を取得」が着手可能である。残る未完了TaskはT-806の1件である。
+
+## 2026-09-23 T-806 顧客受入テスト（未完了 — Customer approval pending）
+
+04のT-806は、全要件を対象に顧客との受入テストを実施し、承認を取得するTaskである。関連test結果を確認できることに加え、受入完了マイルストーンは顧客承認を必須とする。Technical Acceptanceと自動化済みUAT scenarioはPASSしているが、顧客本人の承認証跡はないためT-806をPASS・完了とはしない。
+
+### UAT scenario summary
+
+詳細な操作、前提、期待結果、実績、証跡、Customer comment、Approvalは[顧客受入テスト・承認記録](../docs/acceptance/customer-acceptance.md)に記録した。
+
+| Scenario | Requirement | Role | Acceptance対象 | Actual result | Status | Customer approval |
+| --- | --- | --- | --- | --- | --- | --- |
+| UAT-01 | N-03 | staff / manager / admin | Login、失敗、Logout、再読込 | Login・401・Frontend error stateを既存testで確認 | PASS | PENDING |
+| UAT-02 | F-04、F-05、F-12 | staff / manager / admin | Customer list・search・detail | 検索・filter・sort・pagination・scope外404を3 Browserで確認 | PASS | PENDING |
+| UAT-03 | F-01、F-13 | staff / manager / admin | Customer create | 登録、owner、manager拒否、入力errorを確認 | PASS | PENDING |
+| UAT-04 | F-02、F-13 | staff / manager / admin | Customer edit | edit・cancel・再取得・403・404を確認 | PASS | PENDING |
+| UAT-05 | F-03、F-13 | staff / manager / admin | Customer logical delete | admin削除、role拒否、削除後404を確認 | PASS | PENDING |
+| UAT-06 | F-06～F-08、F-12、F-13 | staff / manager / admin | Activity history・create | 登録・再取得・error・role制御を3 Browserで確認 | PASS | PENDING |
+| UAT-07 | F-09～F-12 | staff / manager / admin | Reports 3種 | ST 5、CC 5、SP 6、横断4、smoke 1を3 Browserで確認 | PASS | PENDING |
+| UAT-08 | F-14 | admin | Users・role management | 一覧・role変更・再取得・403・409を確認 | PASS | PENDING |
+| UAT-09 | F-12～F-14、N-03 | staff / manager / admin | Role Matrix横断 | UIとBackendの許可・403・scope-hidden 404一致を確認 | PASS | PENDING |
+| UAT-10 | F-01～F-05、N-05 | staff / manager / admin | Validation・error・Request ID | 400～503、network error、request correlationを確認 | PASS | PENDING |
+| UAT-11 | N-01、N-02 | 顧客承認者 / 運用担当 | Performance・concurrent load | 最遅p95 78.616ms、50同時8,000/8,000成功・最遅p95 842.520ms | PASS | PENDING |
+| UAT-12 | N-04、N-05 | 顧客承認者 / セキュリティ担当 | Encryption・migration・log | 暗号化、認可後復号、audit、atomicity、PII・secret非記録を確認 | PASS | PENDING |
+| UAT-13 | N-06 | 顧客承認者 / 運用担当 | Health・monitoring・availability・backup/restore | Implementation AcceptanceとProduction継続項目を確認 | PASS | PENDING |
+| UAT-14 | N-07 | 顧客承認者 / 運用担当 | Maintenance notification・timing | Fake SES delivery 12件、境界A～H、exit 0/2/1を確認 | PASS | PENDING |
+
+### Final Acceptance summary
+
+| 項目 | 結果 | Status |
+| --- | --- | --- |
+| Functional requirements | 14 / 14 | PASS |
+| Non-functional requirements | 7 / 7 | PASS |
+| Total requirements | 21 / 21 | PASS |
+| Backend | 68 files・476 tests、build | PASS（既存証跡） |
+| Frontend | 15 files・166 tests、build | PASS（既存証跡） |
+| E2E | 32 scenarios・92 executions | PASS（既存証跡） |
+| NFR | N-01～N-07 | PASS（implementation acceptance） |
+| Traceability | 21 / 21、全trace 100% | PASS |
+| UAT execution | 14 / 14 scenarios | PASS |
+| Acceptance package | `docs/acceptance/customer-acceptance.md` | 完成 |
+| Open defects | 0 | PASS |
+| Open specification gaps | 0 | PASS |
+| Unimplemented requirements | 0 | PASS |
+| Unverified requirements | 0 | PASS |
+| Customer validation | 顧客本人の確認証跡なし | 顧客確認待ち |
+| Customer approval | 承認者・承認日・明示decisionなし | **PENDING** |
+
+### Known limitations・Production operational follow-up
+
+| 項目 | 現在の状態 | Phase 1判定 |
+| --- | --- | --- |
+| AWS resource | CloudFormation static validation済み、未deploy | FAILではない。Production deploy後に確認 |
+| Production availability | calculatorとfixtureで99.0%基準を確認 | 運用開始後に月次継続測定 |
+| Production RPO / RTO | local backup/restoreとrehearsal済み | RPO 5分・RTO 60分をProduction drillで継続検証 |
+| 四半期restore drill | local分離DB restore済み | Productionから分離した環境で継続実施 |
+| 実SES通知 | Fake SES Acceptance済み | Productionのverified sender・実送信を確認 |
+| Production maintenance timing | E2E境界・timing判定済み | eventごとに継続確認 |
+| Initial Password Provisioning | Phase 1対象外 | Production展開前に運用方法を決定 |
+
+これらは02～04がLocal/E2E implementation Acceptanceから明示的に分離した継続運用項目または対象外事項であり、Phase 1の技術受入FAILとして扱わない。Local値をAWS Production実績として記録していない。
+
+### Customer approval・T-806判定
+
+| 項目 | 記録 |
+| --- | --- |
+| Customer decision | **PENDING** |
+| Customer approver | 未入力 |
+| Approval date | 未入力 |
+| Customer comment | 未入力 |
+| Approval evidence | Repository内になし |
+
+- Technical Acceptance: PASS。
+- Customer Acceptance package: 完成。
+- Customer Acceptance: 顧客本人の確認待ち。
+- Customer Approval: `PENDING`。技術testのPASSを顧客承認として扱っていない。
+- T-806判定: **未完了 — Customer approval pending**。
+- SDD演習判定: **未完了**。全Task完了・SDD演習完了とは判定しない。
+- 残Task: T-806のみ。顧客がUAT checklistを確認し、Customer decision、承認者、承認日、comment、承認証跡を記録する必要がある。

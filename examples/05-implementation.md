@@ -674,3 +674,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Specification difference reviewで4件を検出し、すべて解消した。03冒頭のcloud provider未決定1件と、02・03のCustomer鍵管理に残っていたcloud secret product未確定2件を、確定済みのAWS `ap-northeast-1`・Secrets Manager契約へ同期した。05のT-702「実restore未完了」は途中時点の履歴であり、後続の06「T-702 Production設定・backup/restore検証（PASS）」で実backup・分離restoreまで完了したことを本節と差分レポートへ明記した。過去履歴そのものは改変していない。
 - T-106のRequest ID GapとT-108のAudit contract Gapは、02～04への契約反映、実装、05/06のPASS証跡まで確認できたため解消済みである。Open specification differences、未実装Requirement、未検証Requirement、Requirementのない意図しない実装はいずれも0件だった。
 - Phase 1対象外のモバイルアプリ、外部システム連携、高度分析、Initial Password Provisioning・password管理は未実装であり、欠落ではなく対象外として整理した。Production code、Test code、Frontend、DB schema、AWS resourceは変更していない。既存test、build、performance・loadは再実行していない。
+
+## 2026-09-23 T-806 顧客受入パッケージ（顧客承認待ち）
+
+- 04のT-806原文、全要件依存、受入完了マイルストーンを確認し、[顧客受入テスト・承認記録](../docs/acceptance/customer-acceptance.md)を作成した。Authentication、Customer、Activity、Reports、Users、Authorization、validation・error、N-01～N-07を14個のUAT scenarioへ整理し、各scenarioにRole、前提、操作、期待結果、実績、合否、証跡、Customer comment、Approvalを設けた。
+- Technical AcceptanceにはT-801 Backend 68 files・476 tests、T-802 Frontend 15 files・166 tests、T-803 Playwright 32 scenarios・92 executions、T-804 NFR 7/7、T-805 traceability 21/21の既存PASS証跡を再利用した。Functional 14/14、NFR 7/7、Total 21/21、UAT executionはPASSであり、受入パッケージは完成した。T-806のためのtest・build・performance測定は再実行していない。
+- Open defects、Open specification gaps、未実装Requirement、未検証Requirementはいずれも0件である。AWS resource未deploy、Production availability、Production RPO/RTO・四半期restore drill、実SES送信、Production maintenance timing、Initial Password Provisioningは正本どおりKnown limitationsまたは継続運用項目として明示した。
+- Repository内にCustomer approver、approval date、`APPROVED`または同等の実在する顧客承認証跡はなかった。Customer decisionを`PENDING`、承認者・承認日・commentを未入力とし、技術testのPASSを顧客承認として扱っていない。T-806は「未完了 — Customer approval pending」、SDD演習も未完了で、残TaskはT-806のみである。
+- Production code、Test code、Frontend、DB schema、AWS resourceは変更していない。変更は受入文書とexamples/05・06の記録だけである。
