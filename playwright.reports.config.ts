@@ -5,8 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 const e2eEnv = parseEnv(readFileSync(resolve(__dirname, '.env.e2e'), 'utf8'));
 const databaseUrl = e2eEnv.DATABASE_URL;
-if (e2eEnv.NODE_ENV !== 'e2e' || !databaseUrl) {
-  throw new Error('Report E2E requires NODE_ENV=e2e and DATABASE_URL in .env.e2e.');
+if (e2eEnv.NODE_ENV !== 'e2e' || !databaseUrl ||
+    !e2eEnv.CUSTOMER_ENCRYPTION_CURRENT_KEY_ID || !e2eEnv.CUSTOMER_ENCRYPTION_KEYS_JSON) {
+  throw new Error('Report E2E requires the dedicated database and Customer encryption settings in .env.e2e.');
 }
 
 let database: URL;
@@ -23,6 +24,7 @@ if (database.pathname !== '/customer_management_e2e' ||
 export default defineConfig({
   testDir: 'e2e/reports',
   retries: 0,
+  workers: 3,
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:5173',
@@ -39,7 +41,14 @@ export default defineConfig({
     {
       command: 'npm --prefix backend run dev',
       url: 'http://127.0.0.1:3000/health',
-      env: { NODE_ENV: 'e2e', DATABASE_URL: databaseUrl, PORT: '3000', JWT_SECRET: e2eEnv.JWT_SECRET },
+      env: {
+        NODE_ENV: 'e2e',
+        DATABASE_URL: databaseUrl,
+        PORT: '3000',
+        JWT_SECRET: e2eEnv.JWT_SECRET,
+        CUSTOMER_ENCRYPTION_CURRENT_KEY_ID: e2eEnv.CUSTOMER_ENCRYPTION_CURRENT_KEY_ID,
+        CUSTOMER_ENCRYPTION_KEYS_JSON: e2eEnv.CUSTOMER_ENCRYPTION_KEYS_JSON,
+      },
       reuseExistingServer: false,
       timeout: 30_000,
     },

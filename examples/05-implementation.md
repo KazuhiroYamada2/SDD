@@ -618,3 +618,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Login、Customer一覧・検索・sort・pagination・詳細・登録・編集・削除、Activity履歴・登録、Reports 3種、Users・role管理の既存testを確認した。
 - required・empty・invalid input、cancel、submit success・failure、loading・empty state、API error表示、staff・manager・adminのRole別表示制御を確認した。
 - 新規不具合は見つからなかった。Frontend Production codeとtest codeは変更していない。Frontend production buildはPASSし、Backend testとPlaywrightはT-802対象外のため実行していない。
+
+## 2026-09-22 T-803 Playwright主要シナリオ
+
+- Login smoke、Authorization、Customer CRUD・一覧・検索、Activity、Reportsの既存Playwright 32 scenariosを対象とした。最終実行はLogin API 2件に加え、Chromium・Firefox・WebKitで各30件、合計92 test executionsがPASSした。
+- E2E setup defectを2件修正した。PlaywrightからBackendへE2E用Customer暗号化設定が渡らず起動できなかったため、configの必須確認とWebServer environmentへの引き渡しを追加した。Reports全browserを6 workersで実行するとFirefox・WebKitのcontext teardownが競合したため、timeoutを変えず3 workersへ制限した。
+- Activityの旧Playwright 2件がLogin導入前の画面遷移に依存していたE2E test defectを修正し、staff Login後に既存scenarioを実行するよう変更した。Production codeとAPI contractは変更していない。
+- 最終実行後に安全ガード付きE2E DB resetを行い、maintenance event・delivery、migration ledger、audit log、activityの残存0件と基準fixture件数を確認した。Backend・Frontendのunit/component testとbuildはProduction code変更がないため再実行していない。

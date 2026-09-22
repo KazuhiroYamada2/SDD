@@ -6,6 +6,26 @@ const customer = {
   owner_user_id: 'c0a80101-1234-4abc-8def-123456789abc',
 };
 
+const loginAsStaff = async (page: Page) => {
+  await page.route('**/api/v1/auth/login', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accessToken: 'e2e-activity-token',
+        tokenType: 'Bearer',
+        expiresIn: 1800,
+        user: { id: customer.owner_user_id, email: 'activity-staff@example.test', role: 'staff' },
+      }),
+    });
+  });
+  await page.goto('/');
+  await page.getByLabel('メールアドレス').fill('activity-staff@example.test');
+  await page.getByLabel('パスワード').fill('e2e-only-activity-password');
+  await page.getByRole('button', { name: 'ログイン' }).click();
+  await expect(page.getByRole('heading', { name: '顧客管理システム' })).toBeVisible();
+};
+
 type Activity = {
   id: string;
   customer_id: string;
@@ -66,7 +86,7 @@ test('顧客詳細から営業活動を登録し、再読み込み後もAPIに�
   const activities: Activity[] = [];
   await installActivityApi(page, activities);
 
-  await page.goto('/');
+  await loginAsStaff(page);
   await page.getByLabel('顧客名', { exact: true }).fill(customer.name);
   await page.getByLabel('担当ユーザーID').fill(customer.owner_user_id);
   await page.getByRole('button', { name: '登録する' }).click();
@@ -110,7 +130,7 @@ test('営業活動履歴の取得APIエラーを表示する', async ({ page }) 
     });
   });
 
-  await page.goto('/');
+  await loginAsStaff(page);
   await page.getByLabel('顧客名', { exact: true }).fill(customer.name);
   await page.getByLabel('担当ユーザーID').fill(customer.owner_user_id);
   await page.getByRole('button', { name: '登録する' }).click();

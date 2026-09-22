@@ -972,3 +972,31 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 
 - 新規不具合は0件だった。Frontend Production code、test code、Backend API contractは変更していない。
 - 既知の失敗0件、予期しないskip 0件、主要画面・入力validation・Role UX・API error handling・Frontend buildがすべてPASSしたため、T-802はPASS・完了と判定する。
+
+## 2026-09-22 T-803 Playwright主要シナリオ受入（PASS）
+
+| Suite | Unique scenarios | API | Chromium | Firefox | WebKit | 判定 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Login smoke | 2 | 2 PASS | 対象外 | 対象外 | 対象外 | PASS |
+| Authorization | 4 | 対象外 | 4 PASS | 4 PASS | 4 PASS | PASS |
+| Customer CRUD・list・search | 3 | 対象外 | 3 PASS | 3 PASS | 3 PASS | PASS |
+| Activity history・create | 2 | 対象外 | 2 PASS | 2 PASS | 2 PASS | PASS |
+| Reports | 21 | 対象外 | 21 PASS | 21 PASS | 21 PASS | PASS |
+| Total | 32 | 2 PASS | 30 PASS | 30 PASS | 30 PASS | PASS |
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Authentication | Login成功・失敗、protected API 401 | PASS |
+| Authorization | staff・manager・admin、scope外404、operation-level 403 | PASS |
+| Customer | list、search/filter/sort、pagination、detail、create、edit、logical delete | PASS |
+| Activity | history、create・再取得、API error、Role別登録制御 | PASS |
+| Reports | sales trend、customer categories、staff performance、staff禁止、manager/admin許可 | PASS |
+| Users | admin入口・一覧・role操作、staff/manager非表示 | PASS |
+| Known failure / unexpected skip | 0 / 0 | PASS |
+| DB cleanup | 安全ガード付きreset後、可変table残存0件・基準fixture件数一致 | PASS |
+| Backend / Frontend regression | Production code変更なしのため再実行しない | 未実施（完了条件外） |
+
+- 再現1: Backend WebServerがE2E暗号化設定不足で起動失敗。configとlocal E2E fixture設定を補い、Login smoke 2/2 PASSで修正確認した。
+- 再現2: Activity 2件がLogin画面で顧客名入力を待ちtimeout。staff Loginを通すようtestを修正し、3 browser 6/6 PASSで確認した。
+- 再現3: Reportsの全browser 6 workers実行で3件がassertion後のcontext teardown timeout。各caseは単独PASSし、3 workersへ制限後に63/63 PASSした。timeout値は変更していない。
+- Production code・Backend API contractは変更していない。既知の失敗0件、予期しないskip 0件、全主要scenarioとDB cleanupがPASSしたため、T-803はPASS・完了と判定する。
