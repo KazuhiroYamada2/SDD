@@ -692,15 +692,52 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 
 | Primary reject reason | Record数 | 確認内容 |
 | --- | ---: | --- |
-| `DUPLICATE_SOURCE_CUSTOMER_ID` | 2 | 同一Source顧客番号を持つ2行をともにreject |
-| `REQUIRED_FIELD_MISSING`（顧客名） | 1 | 必須の顧客名が空欄 |
-| `REQUIRED_FIELD_MISSING`（担当者メール） | 1 | 必須の担当者メールが空欄 |
+| `DUPLICATE_SOURCE_ID` | 2 | 同一Source顧客番号を持つ2行をともにreject |
+| `NAME_REQUIRED` | 1 | 必須の顧客名が空欄 |
+| `OWNER_EMAIL_REQUIRED` | 1 | 必須の担当者メールが空欄 |
 | `INVALID_EMAIL` | 1 | email形式不正 |
 | `OWNER_MAPPING_FAILED` | 1 | 担当者マスタ・usersへ解決不能 |
-| `CATEGORY_MAPPING_FAILED` | 1 | 未知カテゴリコード |
+| `UNKNOWN_CATEGORY` | 1 | 未知カテゴリコード |
 | `DELETE_STATE_INCONSISTENT` | 2 | flag 1/dateなし、flag 0/dateありを各1件 |
 | **合計** | **9** | 演習ケース8種類。duplicate 1ケースが2 recordのため9 record |
 
 - Excelの実データ40件と「演習ケース一覧」を突合し、初回migrationの期待値を31 insert、9 rejectと確定した。Source顧客番号、担当者、カテゴリ、日時、logical deleteの意味はデータ辞書と各masterで確認でき、仕様化を妨げる矛盾はなかった。
 - 02/03/04へ要件、詳細設計、T-005完了条件とT-701実装責務を反映した。01、Production code、DB schema、Frontendは変更していない。仕様確定TaskのためBackend/Frontend test・build、Playwright、実migrationは未実施。
 - Source schema、mapping、UUID、master mapping、duplicate、validation/reject、batch、retry/idempotency、暗号化順序、reconciliation、security/loggingが確定したため、T-005はPASS・完了と判定する。T-701は着手可能である。
+
+## 2026-09-22 T-701 既存Customer data migration Acceptance（PASS）
+
+| 実行 | Source | Inserted | Already migrated | Rejected | Reconciliation | 判定 |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| First run | 40 | 31 | 0 | 9 | 40 = 31 + 0 + 9 | PASS |
+| Second run | 40 | 0 | 31 | 9 | 40 = 0 + 31 + 9 | PASS |
+
+| Reject reason | Record数 | 判定 |
+| --- | ---: | --- |
+| `DUPLICATE_SOURCE_ID` | 2 | PASS |
+| `NAME_REQUIRED` | 1 | PASS |
+| `OWNER_EMAIL_REQUIRED` | 1 | PASS |
+| `OWNER_MAPPING_FAILED` | 1 | PASS |
+| `UNKNOWN_CATEGORY` | 1 | PASS |
+| `INVALID_EMAIL` | 1 | PASS |
+| `DELETE_STATE_INCONSISTENT` | 2 | PASS |
+| **合計** | **9** | **PASS** |
+
+| Acceptance | 実測結果 | 判定 |
+| --- | --- | --- |
+| Excel fixture | 正式fixtureの6 sheet・必須header、「既存顧客データ」40件を解析 | PASS |
+| UUID | 31件すべてに新しいUUID v4を採番 | PASS |
+| Owner / category | active担当者masterと`users.email`の完全一致、A/B/C/D・空欄のmapping | PASS |
+| Active / deleted | active 28件、logical deleted 3件 | PASS |
+| Duplicate | 重複groupの2 recordをrejectし、Customer・ledgerへ未登録 | PASS |
+| Batch transaction | Customerとledgerを同一transactionでcommit。失敗batchはrollbackし、以前のcommit済みbatchを維持 | PASS |
+| Retry / idempotency | Second runで31件を`already_migrated`とし、Customer二重登録なし | PASS |
+| Source変更 | fingerprint相違を`SOURCE_CHANGED_AFTER_MIGRATION`としてrejectし、既存Customerを未更新 | PASS |
+| Encryption | 4 fieldのnon-null DB値はplaintextと不一致で、validな`enc:v1` envelope | PASS |
+| Plaintext残存 | migration対象31件で0 | PASS |
+| Authorized read | 代表active Customerを既存read serviceで復号し、source内容・owner/category mappingと一致 | PASS |
+| Reject security | reject JSONにplaintext PII全文、鍵、完全なciphertext envelopeなし | PASS |
+
+- Docker CLIは使用せず、専用E2E PostgreSQL `127.0.0.1:55432`で実Excelを2回処理した。Acceptance終了時にmigration対象Customer、ledger、検証用owner usersを削除し、既存fixtureを維持した。
+- 関連テストは4 files・10/10 PASS、Backend全テストは50 files・353/353 PASS、Backend buildはPASSした。Frontendは変更しておらず、Frontend test/buildとPlaywrightはT-701対象外のため未実施。
+- schema変更はmigration ledgerの追加だけで、既存Customers schema・indexとCustomer API behaviorは変更していない。全Acceptanceを満たしたため、T-701はPASS・完了と判定する。

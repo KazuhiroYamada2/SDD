@@ -14,6 +14,8 @@
     "e2e:api:verify": "node --env-file=../.env.e2e scripts/verify-e2e-api.mjs",
     "migrate:customer-encryption": "node --import tsx scripts/encrypt-customer-data.mjs",
     "verify:customer-encryption": "node --import tsx scripts/verify-customer-encryption.mjs",
+    "migrate:customers": "node --import tsx scripts/migrate-customers-from-excel.mjs",
+    "verify:customer-migration": "npm run e2e:db:reset && node --env-file=../.env.e2e --import tsx scripts/verify-customer-migration.mjs",
     "benchmark:customers:prepare": "npm run e2e:db:reset",
     "benchmark:customers": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs",
     "benchmark:customers:load": "npm run benchmark:customers:prepare && node --env-file=../.env.e2e --import tsx scripts/customer-search-benchmark.mjs --load"
@@ -23,7 +25,8 @@
     "dotenv": "^17.0.0",
     "express": "^5.2.1",
     "jose": "^6.2.12",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "read-excel-file": "^9.3.10"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

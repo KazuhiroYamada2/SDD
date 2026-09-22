@@ -18,7 +18,9 @@
     "benchmark:customers": "npm --prefix backend run benchmark:customers",
     "benchmark:customers:load": "npm --prefix backend run benchmark:customers:load",
     "migrate:customer-encryption": "npm --prefix backend run migrate:customer-encryption",
-    "verify:customer-encryption": "npm --prefix backend run verify:customer-encryption"
+    "verify:customer-encryption": "npm --prefix backend run verify:customer-encryption",
+    "migrate:customers": "npm --prefix backend run migrate:customers",
+    "verify:customer-migration": "npm --prefix backend run verify:customer-migration"
   },
   "repository": {
     "type": "git",

@@ -535,3 +535,15 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - T-701ではdataset IDとSource顧客番号を一意keyにする移行台帳をCustomer insertと同じtransactionで記録し、同一入力のretryでUUIDとCustomerを二重生成しない。失敗batchだけをrollback・再実行し、commit済みbatchは維持する。
 - mapping・validation後、DB write前に`name_kana`、`email`、`phone`、`address`をT-107のAES-256-GCMで暗号化する。件数、理由別reject、target差分、移行台帳、valid envelope、plaintext残存0をreconciliationする。PII全文、鍵、完全なenvelopeはlog・reject結果へ出さない。
 - 今回は仕様と実績記録だけを更新した。T-701 migration program、Production code、DB schema、Frontend、test、Playwright、実データmigrationは変更・実行していない。
+
+## 2026-09-22 T-701 既存Customer data migration（完了）
+
+- 正式なsynthetic Excelを`examples/fixtures/sdd_customer_migration_source.xlsx`へ配置した。6 sheetと必須headerをpreflightし、「既存顧客データ」40件、担当者・カテゴリmaster、データ辞書を`read-excel-file`で読み込む。`exceljs`は正式fixtureのnamespace付きworkbook XMLを読めなかったため採用せず、Excel dependencyは1種類に限定した。
+- mapping・normalization・validationを`backend/src/customer-migration`へ実装した。全件pre-scanでSource顧客番号の重複groupを検出し、ownerは担当者メールとactive担当者masterを確認して`users.email`へ完全一致させる。categoryはA/B/C/Dを法人/個人/重点/休眠へ変換し、Excel日時は`Asia/Tokyo`からUTCへ変換する。
+- migration ledger用に`002_create_customer_migration_ledger.sql`を追加した。`dataset_id`と`source_customer_id`をprimary key、Customer UUIDをuniqueな外部keyとし、正規化済みsourceのSHA-256 fingerprint、source row番号、移行日時を保存する。plaintext source recordは保存しない。
+- valid recordを既定100件、指定可能範囲1～10,000件のbatchへ分割する。各batchでCustomerとledgerを同一transactionにinsertし、system error時はそのbatchだけをrollbackする。commit済みbatchは維持する。
+- 初回はUUID v4を採番する。同じdataset/source ID・fingerprintの再実行は`already_migrated`、fingerprint相違は`SOURCE_CHANGED_AFTER_MIGRATION`としてCustomerを更新しない。Customerを二重登録せず、失敗batchを再実行できる。
+- T-107 crypto componentを再利用し、`name_kana`、`email`、`phone`、`address`をDB write前にAES-256-GCMで暗号化する。Customer tableへplaintextを一時commitしない。
+- `migrate:customers` CLIに`--input`、`--dataset-id`、任意の`--batch-size`・`--reject-output`を追加した。summaryとrejectをJSONで出力し、rejectにはSource顧客番号、row番号、reason code、PIIを含まないsummaryだけを含める。
+- 実Excelと専用E2E PostgreSQLを使う`verify:customer-migration`を追加した。初回・再実行、31 Customer、active 28件・logical deleted 3件、暗号化対象のplaintext残存0、代表recordのauthorized readを検証し、検証後は追加dataを削除する。
+- schema変更はmigration ledgerの追加だけである。既存Customers schema・index、Customer API、Frontendは変更していない。

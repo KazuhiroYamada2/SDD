@@ -366,24 +366,27 @@ Customerにmigration実行日時を保存しない。sourceの登録・更新日
 
 ### Validation・reject
 
-最初に全40行を読み、trim後のSource顧客番号で重複を検出する。重複groupの全行を`DUPLICATE_SOURCE_CUSTOMER_ID`としてrejectし、merge、後勝ち、上書きを行わない。その後、各recordを正規化し、required、型、email、日時、delete state、owner、category、既存Customer validationの順で検証する。複数違反を検出できる場合もreject結果には全reason codeを保持し、集計用primary reasonはこの順序で決める。source IDの重複は他のrecord validationより先にprimary reasonとする。
+最初に全40行を読み、trim後のSource顧客番号で重複を検出する。重複groupの全行を`DUPLICATE_SOURCE_ID`としてrejectし、merge、後勝ち、上書きを行わない。その後、各recordを正規化し、required、型、email、日時、delete state、owner、category、既存Customer validationの順で検証する。複数違反を検出できる場合もreject結果には全reason codeを保持し、集計用primary reasonはこの順序で決める。source IDの重複は他のrecord validationより先にprimary reasonとする。
 
 | Reason code | 条件 |
 | --- | --- |
-| `DUPLICATE_SOURCE_CUSTOMER_ID` | trim後の顧客番号がsource内で複数行 |
-| `REQUIRED_FIELD_MISSING` | 顧客番号、顧客名、担当者メール、登録日時、更新日時、削除フラグの欠落 |
+| `DUPLICATE_SOURCE_ID` | trim後の顧客番号がsource内で複数行 |
+| `SOURCE_ID_REQUIRED` | 顧客番号が欠落 |
+| `NAME_REQUIRED` | 顧客名が欠落 |
+| `OWNER_EMAIL_REQUIRED` | 担当者メールが欠落 |
 | `OWNER_MAPPING_FAILED` | 担当者がinactive、マスタ・usersに存在しない、一意に解決できない |
-| `CATEGORY_MAPPING_FAILED` | 未知または一意に解決できないnon-nullカテゴリコード |
+| `UNKNOWN_CATEGORY` | 未知または一意に解決できないnon-nullカテゴリコード |
 | `INVALID_EMAIL` | non-null emailが既存形式検証に不合格 |
 | `INVALID_DATE` | 日時として解釈できない、または日時の順序が不正 |
 | `DELETE_STATE_INCONSISTENT` | flagが0/1以外、flag 1で削除日時なし、flag 0で削除日時あり |
 | `CUSTOMER_VALIDATION_FAILED` | その他の既存Customer validation違反 |
+| `SOURCE_CHANGED_AFTER_MIGRATION` | 同じdataset/source IDが移行済みで、正規化済みsource内容のfingerprintが異なる |
 
 reject recordの論理形式は`dataset_id`、Source顧客番号、Excel sheet名、row番号、primary reason code、全reason code、PIIを含まないreason summaryとする。Source顧客番号以外のplaintext PII、暗号鍵、完全なciphertext envelopeは含めない。
 
 ### Batch transaction・retry
 
-T-701は処理前に全recordの構造・重複・data validationとmaster mappingを行い、valid recordだけを設定可能なbatchへ分割する。batch sizeは運用設定とし、T-005では固定しない。各batchは次の順序で1 transactionにする。
+T-701は処理前に全recordの構造・重複・data validationとmaster mappingを行い、valid recordだけを設定可能なbatchへ分割する。batch sizeの既定値は100件とし、CLIの`--batch-size`で1～10,000件の範囲を指定できる。各batchは次の順序で1 transactionにする。
 
 1. 未移行であることを移行台帳で確認し、target UUID v4を採番する。
 2. `name_kana`、`email`、`phone`、`address`のnon-null値をT-107のcurrent keyで暗号化する。
@@ -392,7 +395,9 @@ T-701は処理前に全recordの構造・重複・data validationとmaster mappi
 
 DB、暗号化、その他のsystem errorではbatch全体をrollbackし、data rejectとして処理を続行しない。修正後は失敗batchを再実行でき、commit済みbatchは維持する。Customer tableへplaintextをcommitする中間状態は禁止する。
 
-T-701は、運用者が指定する安定した`dataset_id`とSource顧客番号を一意keyにした移行台帳を実装する。台帳はtarget UUID、Source row fingerprint、source row番号、commit日時を保持するが、plaintext PIIは保持しない。Customer insertと台帳insertを同じtransactionに含める。同一dataset・source ID・fingerprintのretryは既存target UUIDを確認して`already_migrated`とし、新規UUIDやCustomerを追加しない。移行済みsourceのfingerprintが変わっている場合は`SOURCE_RECORD_CHANGED`として自動更新せず、運用判断を要求する。reject recordは台帳へ成功として登録しないため、sourceを修正した後に同じdataset IDで再検証できる。
+T-701は、運用者が指定する安定した`dataset_id`とSource顧客番号を一意keyにした移行台帳を実装する。台帳はtarget UUID、Source row fingerprint、source row番号、commit日時を保持するが、plaintext PIIは保持しない。Customer insertと台帳insertを同じtransactionに含める。同一dataset・source ID・fingerprintのretryは既存target UUIDを確認して`already_migrated`とし、新規UUIDやCustomerを追加しない。移行済みsourceのfingerprintが変わっている場合は`SOURCE_CHANGED_AFTER_MIGRATION`として自動更新せず、運用判断を要求する。reject recordは台帳へ成功として登録しないため、sourceを修正した後に同じdataset IDで再検証できる。
+
+物理schemaは`customer_migration_ledger`とし、`dataset_id`、`source_customer_id`、`customer_id`、`source_fingerprint`、`source_row_number`、`migrated_at`を保持する。primary keyは`(dataset_id, source_customer_id)`、`customer_id`はuniqueかつ`customers.id`への外部key、fingerprintは正規化済みsource内容のSHA-256 hexとする。
 
 ### Reconciliation・security
 
