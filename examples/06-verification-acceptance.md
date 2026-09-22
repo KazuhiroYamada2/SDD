@@ -1000,3 +1000,29 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - 再現2: Activity 2件がLogin画面で顧客名入力を待ちtimeout。staff Loginを通すようtestを修正し、3 browser 6/6 PASSで確認した。
 - 再現3: Reportsの全browser 6 workers実行で3件がassertion後のcontext teardown timeout。各caseは単独PASSし、3 workersへ制限後に63/63 PASSした。timeout値は変更していない。
 - Production code・Backend API contractは変更していない。既知の失敗0件、予期しないskip 0件、全主要scenarioとDB cleanupがPASSしたため、T-803はPASS・完了と判定する。
+
+## 2026-09-22 T-106 共通validation・error・request ID受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Request ID生成 | Node.js標準`crypto.randomUUID()`によるrequest単位のUUID v4。連続requestで異なるID | PASS |
+| Response header | Success、400、401、403、404、409、500、503で`X-Request-ID`を返却 | PASS |
+| Client指定ID | validation・canonical採用・echoをせず、Serverが別UUIDを生成 | PASS |
+| Request context | 型付き`request.requestId`を後続handlerから参照し、response headerと同じ値 | PASS |
+| Middleware order | Request ID → JSON parser → Authentication → Authorization → routing/business processing → error handling | PASS |
+| Validation | 既存400 `VALIDATION_ERROR`のstatus・code・messageを維持 | PASS |
+| Malformed JSON | Loginは既存`VALIDATION_ERROR`、その他は400 `INVALID_REQUEST / Request body is invalid.`。Parser内部情報を非公開 | PASS |
+| Existing error contract | `AUTHENTICATION_REQUIRED`、`FORBIDDEN`、`USER_NOT_FOUND`、2種類の409、503等のbodyを維持 | PASS |
+| Error body | 従来の`{ code, message }`形式を維持し、`requestId`を追加しない | PASS |
+| Unexpected error | Generic 500へ変換し、内部error、secret、credential、PIIを非公開 | PASS |
+| T-108連携 | Access・audit logで共用できる`request.requestId` interfaceを提供。Log処理は未実装 | PASS |
+| 対象test | 初回2 files・31 tests、修正後2 files・20 tests | PASS |
+| 関連test | 42 files・334 tests | PASS |
+| Backend全test | 65 files・445 tests。FAIL 0、SKIP 0 | PASS |
+| Backend build | TypeScript compile成功 | PASS |
+| Frontend / Playwright | T-106対象外 | 未実施 |
+
+- Baseline 64 files・431 testsから、T-106の1 file・14 testsが増えた。既存testの削除・skipはない。
+- 途中の全回帰で、削除した旧403 handlerをauthorization middleware testが直接参照していたTest defectを1件検出した。Importと接続先を共通error handlerへ変更し、対象test、Backend全test、buildの再実行で修正を確認した。
+- Production BackendはRequest ID middleware、共通error handler、middleware wiringを変更した。Business API contract、Frontend、DB fixture・setupは変更していない。
+- すべてのAcceptanceを満たしたため、T-106はPASS・完了と判定する。依存するT-108は着手可能である。

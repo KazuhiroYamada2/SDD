@@ -73,6 +73,14 @@ FrontendとBackendはREST APIで通信する。FrontendからDatabaseへ直接�
 
 業務APIとLogin APIは`/api/v1`配下に置き、JSONを使用する。health checkは`GET /health`とする。認証が必要なAPIでは`Authorization: Bearer <JWT>`を必須とする。エラーは`{ "code": "エラーコード", "message": "説明" }`形式で返す。
 
+### Request ID・共通HTTP処理
+
+- 最初の共通middlewareでNode.js標準`crypto.randomUUID()`をrequestごとに1回だけ呼び、UUID v4のcanonical request IDを生成する。Express Requestの型を拡張して`request.requestId`へ保持し、同一requestの後続middlewareとserviceはこの値を参照する。別のrequest IDを生成しない。
+- Clientから受け取った`X-Request-ID`は参照・validation・echoせず、canonical request IDやlog correlation keyに使わない。ResponseにはBackendが生成した値を`X-Request-ID` headerとしてSuccess・errorを問わず設定する。Error JSONへ`requestId`は追加しない。
+- Middleware順序はRequest ID確定 → JSON/body parsing → Authentication → Authorization → routing/business processing → error handlingとする。Request ID middlewareをJSON parserより前に置き、malformed JSON、400、401、403、404、409、500、503でもresponse headerを設定済みにする。
+- 共通error handlerはmalformed JSON、既知のapplication error、予期しないerrorを扱う。Loginのmalformed JSONは既存の400 `VALIDATION_ERROR`を維持し、それ以外は400 `{ "code": "INVALID_REQUEST", "message": "Request body is invalid." }`とする。予期しないerrorはgeneric 500へ変換し、parser内部message、stack trace、DB error、secret、credential、PII、完全なciphertextを公開しない。各APIが定義済みのstatus、code、message、business validationは変更しない。
+- T-108は`request.requestId`をaccess logとaudit logの共通correlation IDとして使用し、`audit_logs.request_id`へ同じ値を保存する。T-106ではlog永続化を実装せず、request context interfaceまでを提供する。
+
 Phase 1では`POST /api/v1/auth/login`と`GET /health`をPublicとし、その他の業務APIは現在実装済みか今後実装するかを問わずAuthenticationを必須とする。新しいPublic APIは仕様へ明示してから追加する。ExpressではPublic routeを先に登録し、その後の`/api/v1`業務APIに共通Authentication middlewareを適用する。認証成功は操作権限を意味しない。roleとデータ範囲の認可・403はT-105と対象機能Taskで扱う。
 
 | エンドポイント | 用途 | 要件 |

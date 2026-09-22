@@ -625,3 +625,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - E2E setup defectを2件修正した。PlaywrightからBackendへE2E用Customer暗号化設定が渡らず起動できなかったため、configの必須確認とWebServer environmentへの引き渡しを追加した。Reports全browserを6 workersで実行するとFirefox・WebKitのcontext teardownが競合したため、timeoutを変えず3 workersへ制限した。
 - Activityの旧Playwright 2件がLogin導入前の画面遷移に依存していたE2E test defectを修正し、staff Login後に既存scenarioを実行するよう変更した。Production codeとAPI contractは変更していない。
 - 最終実行後に安全ガード付きE2E DB resetを行い、maintenance event・delivery、migration ledger、audit log、activityの残存0件と基準fixture件数を確認した。Backend・Frontendのunit/component testとbuildはProduction code変更がないため再実行していない。
+
+## 2026-09-22 T-106 共通validation・error・request ID（完了）
+
+- 初回確認ではrequest IDのHTTP契約が未定義だったため、推測で実装せずSpecification Gapとして停止した。その後に確定した契約をexamples/02～04へ反映し、T-106を再開した。
+- Node.js標準`crypto.randomUUID()`でrequestごとにUUID v4を生成する最初段middlewareを追加した。Canonical IDを型付き`request.requestId`へ保持し、Success・errorの両方で`X-Request-ID` response headerへ返す。Clientの同名headerはvalidation・採用・echoしない。
+- 共通JSON parserをRequest ID middlewareの後へ配置した。Loginのmalformed JSONは既存`VALIDATION_ERROR`を維持し、その他は400 `INVALID_REQUEST / Request body is invalid.`へ変換する。既存403と予期しない500を共通error handlerへ統合し、内部errorの詳細を公開しない。
+- 既存APIのstatus、code、message、business validation、error bodyの`{ code, message }`形式は変更していない。Error bodyへ`requestId`を追加していない。T-108のaccess・audit logは先取りせず、共通request contextだけを実装した。
+- T-106 testを1 file・14 tests追加した。途中で旧403 handlerを直接参照していた既存testのimport追随漏れをTest defectとして検出し、共通handlerを参照するよう最小修正した。最終Backend全testは65 files・445 tests、Backend buildもPASSした。FrontendとPlaywright、DB fixture・setupは変更・実行していない。

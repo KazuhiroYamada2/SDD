@@ -206,6 +206,14 @@
 - reject情報はSource顧客番号、Excel row番号、reason code、PIIを含まないreason summaryを持つ。plaintext PII全文、暗号鍵、完全なciphertext envelopeを移行log・reject情報へ出力しない。
 - 完了時はsource総数、valid数、reject数、insert数、既に移行済みとして確認した数、reject理由別件数、重複件数、owner/category mapping失敗件数、target件数差分を照合する。さらに、暗号化対象のnon-null値がすべてvalidな`enc:v1` envelopeであり、plaintext残存が0件であることを確認する。
 
+### Request ID・共通エラー
+
+- Backend applicationが生成するすべてのHTTP responseへ`X-Request-ID` headerを付与する。canonical request IDはrequestごとにBackendがNode.js標準`crypto.randomUUID()`で生成するUUID v4とし、PII、secret、credentialを含めない。
+- Clientが`X-Request-ID`を送信してもcanonical request IDには採用しない。Client値はvalidationせず、入力不正として400を返さず、responseへechoせず、log correlation keyにも使わない。BackendはClient値の有無や内容にかかわらず新しいrequest IDを生成する。
+- Successとerrorの両方で同じrequestの`X-Request-ID`をresponse headerへ返す。既存のerror bodyは`{ "code": "...", "message": "..." }`のままとし、`requestId` fieldを追加しない。既存APIのstatus、code、message、business validationも変更しない。
+- Login以外の共通JSON parserがmalformed JSONを検出した場合は、HTTP 400 `{ "code": "INVALID_REQUEST", "message": "Request body is invalid." }`を返す。Loginの既存HTTP 400 `VALIDATION_ERROR`契約は維持する。parser内部messageやstack traceを公開しない。
+- 予期しないerrorは既存のgeneric HTTP 500契約へ変換し、stack trace、DB error、secret、credential、PII、完全なciphertextをresponseへ含めない。
+
 ### 可用性
 
 - Phase 1の稼働率はAsia/Tokyoのcalendar month単位で測定する。対象は月曜日から金曜日の`09:00 <= time < 18:00`で、5分ごとのexpected sampleに対する成功sampleの割合を99.0%以上とする。祝日・会社休日は自動除外しない。

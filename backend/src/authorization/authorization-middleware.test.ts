@@ -5,9 +5,9 @@ import type { AuthUserRepository } from '../auth/auth-user-repository.js';
 import type { UserRole } from '../auth/auth-types.js';
 import { createAuthenticationMiddleware } from '../auth/authentication-middleware.js';
 import { createJwtService } from '../auth/jwt-service.js';
+import { handleApplicationError } from '../http/application-error-handler.js';
 import { authorizeOperation } from './authorization-middleware.js';
 import type { AuthorizationOperation } from './authorization-policy.js';
-import { handleForbiddenError } from './forbidden-error-handler.js';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const jwtService = createJwtService({ secret: 'test-only-authorization-secret-at-least-32-bytes' });
@@ -30,7 +30,7 @@ const makeApp = (currentRole: () => UserRole, operation: AuthorizationOperation 
       handler();
       res.status(200).json(req.authenticatedUser);
     });
-  app.use(handleForbiddenError);
+  app.use(handleApplicationError);
   return { app, userRepository, handler };
 };
 

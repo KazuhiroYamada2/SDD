@@ -15,7 +15,6 @@ import { createCustomerReadService, type CustomerReadService } from './customers
 import { createCustomerEditService, type CustomerEditService } from './customers/customer-edit-service.js';
 import { createCustomerDeleteService, type CustomerDeleteService } from './customers/customer-delete-service.js';
 import { database } from './db.js';
-import { handleForbiddenError } from './authorization/forbidden-error-handler.js';
 import { createCustomerCategoryRepository } from './reports/customer-category-repository.js';
 import { createCustomerCategoryService, type CustomerCategoryService } from './reports/customer-category-service.js';
 import { createReportsRouter } from './reports/reports-router.js';
@@ -28,6 +27,8 @@ import { createUserService, type UserService } from './users/user-service.js';
 import { createUsersRouter } from './users/users-router.js';
 import { createCustomerCrypto, type CustomerCrypto } from './customers/customer-crypto.js';
 import { config } from './config.js';
+import { assignRequestId } from './http/request-id-middleware.js';
+import { handleApplicationError } from './http/application-error-handler.js';
 
 type AppDependencies = {
   loginService?: LoginService;
@@ -87,9 +88,10 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   const userService = dependencies.userService ??
     (database === undefined ? undefined : createUserService(createUserRepository(database)));
 
-  // Auth parses JSON in its own router so malformed login bodies use the auth error DTO.
-  app.use('/api/v1/auth', createAuthRouter(loginService));
+  app.use(assignRequestId);
   app.use(express.json());
+
+  app.use('/api/v1/auth', createAuthRouter(loginService));
 
   app.get('/health', (_request, response) => {
     response.status(200).json({ status: 'ok' });
@@ -124,7 +126,7 @@ export const createApp = (dependencies: AppDependencies = {}) => {
   app.use('/api/v1/customers/:customerId/activities', createActivitiesRouter(activityService));
   app.use('/api/v1/reports', createReportsRouter(salesTrendService, customerCategoryService, staffPerformanceService));
   app.use('/api/v1/users', createUsersRouter(userService));
-  app.use(handleForbiddenError);
+  app.use(handleApplicationError);
 
   return app;
 };

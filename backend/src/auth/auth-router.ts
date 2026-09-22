@@ -1,26 +1,9 @@
-import { Router, json } from 'express';
-import type { NextFunction, Request, Response } from 'express';
+import { Router } from 'express';
 import type { LoginService } from './login-service.js';
 import { validateLogin } from './login-validation.js';
 
-const isMalformedJson = (error: unknown): boolean =>
-  error instanceof SyntaxError &&
-  'status' in error && error.status === 400 &&
-  'type' in error && error.type === 'entity.parse.failed';
-
 export const createAuthRouter = (loginService: LoginService | undefined) => {
   const router = Router();
-
-  router.use(json());
-
-  // Preserve the existing error DTO for malformed JSON on this endpoint only.
-  router.use((error: unknown, _request: Request, response: Response, next: NextFunction) => {
-    if (isMalformedJson(error)) {
-      response.status(400).json({ code: 'VALIDATION_ERROR', message: 'Request body must be valid JSON.' });
-      return;
-    }
-    next(error);
-  });
 
   router.post('/login', async (request, response) => {
     const validation = validateLogin(request.body);
