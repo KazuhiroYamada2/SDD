@@ -741,3 +741,24 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 - Docker CLIは使用せず、専用E2E PostgreSQL `127.0.0.1:55432`で実Excelを2回処理した。Acceptance終了時にmigration対象Customer、ledger、検証用owner usersを削除し、既存fixtureを維持した。
 - 関連テストは4 files・10/10 PASS、Backend全テストは50 files・353/353 PASS、Backend buildはPASSした。Frontendは変更しておらず、Frontend test/buildとPlaywrightはT-701対象外のため未実施。
 - schema変更はmigration ledgerの追加だけで、既存Customers schema・indexとCustomer API behaviorは変更していない。全Acceptanceを満たしたため、T-701はPASS・完了と判定する。
+
+## 2026-09-22 T-007 運用・監視・backup・障害対応仕様レビュー（PASS）
+
+| 確認対象 | 確定内容 | 判定 |
+| --- | --- | --- |
+| Production | AWS `ap-northeast-1`。S3・CloudFront、ECS Fargate・ALB、Multi-AZ RDS PostgreSQL 16 | PASS |
+| TLS | Public HTTPS、HTTP redirect、Backend・RDS間TLS、AWS RDS CAによるserver certificate検証 | PASS |
+| Secrets | AWS Secrets ManagerからECS Taskへinject。Git・image・DB・log・文書へ値を保存しない | PASS |
+| Rotation | DB credential・JWT 90日、Customer key 180日、incident時は即時 | PASS |
+| Backup | RDS automated backup・PITR、7日retention、重要変更前snapshot 14日 | PASS |
+| Backup security | RDS・backupのKMS encryption、最小権限、Customer key非同梱 | PASS |
+| Restore | 四半期に分離temporary RDSへrestoreし、schema・table・FK・件数・envelope・decryptを確認 | PASS |
+| RPO / RTO | 5分以内 / 60分以内。local実測だけではAWS本番保証としない | PASS |
+| Monitoring | CloudWatchでECS・ALB・RDS・applicationを監視 | PASS |
+| Alert | CloudWatch Alarm → SNS → 運用担当メール | PASS |
+| Maintenance | 原則3営業日前と開始1時間前。緊急時は決定後速やかに通知 | PASS |
+| Incident | 検知後15分以内に一次切り分け。temporary restore後に復旧判断 | PASS |
+| T-702引継ぎ | production validation、RDS TLS、env interface、backup/restore・restore検証を具体化 | PASS |
+
+- 02/03/04へPhase 1 production運用モデルとT-702以降の責務を反映した。01、Production code、DB schema、Frontend、AWS resourceは変更していない。
+- 仕様確定TaskのためBackend/Frontend test・build、Playwright、backup/restore、AWS上の検証は未実施である。必要な運用契約が揃ったため、T-007はPASS・完了、T-702は再開可能と判定する。

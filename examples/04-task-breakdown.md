@@ -33,7 +33,7 @@
 | T-004 | Phase 1の暗号化対象を`name_kana`・`email`・`phone`・`address`、方式をAES-256-GCM、保存形式をversion・key ID・12-byte IV・16-byte tag・ciphertextからなる`enc:v1` envelopeとして確定する。環境設定のcurrent key IDとkey ring、起動時validation、rotation、one-shot plaintext migration、既存Role Matrixに従うscope確認後の復号、fail-closed error契約を02/03へ正本化する。仕様レビューとproduction変更なしの確認を完了条件とする | N-04 | T-001 | 高 |
 | T-005 | 正式な演習用Excel 6 sheetを分析し、40 Customerのsource schema、全Customer fieldへのmapping、新UUID、担当者メール・カテゴリマスタのmapping、重複・validation・reject、`Asia/Tokyo`日時変換、batch transaction、移行台帳によるretry/idempotency、T-107暗号化後のDB write、reconciliation、PIIを出さないlog契約を02/03へ確定する。実データのvalid 31件・reject 9件と理由別件数の照合、production code/schema変更なしを完了条件とする | 01の互換性制約 | T-002、T-004 | 中 |
 | T-006 | 検索性能、同時アクセス、稼働率の測定計画を確定 | N-01、N-02、N-06 | T-001 | 高 |
-| T-007 | メンテナンス通知、監視、バックアップ、障害対応手順の確定 | N-06、N-07 | T-006 | 高 |
+| T-007 | AWS `ap-northeast-1`のS3・CloudFront、ECS Fargate・ALB、Multi-AZ RDS PostgreSQL 16をproduction構成として確定する。TLS、Secrets Manager、secret rotation、RDS automated backup・PITR・manual snapshot、7日・14日のretention、KMS encryption、四半期restore drill、RPO 5分・RTO 60分、CloudWatch・SNS、3営業日前と1時間前のmaintenance通知、15分以内に開始するincident一次切り分けを02/03へ正本化する。仕様確定のみでProduction code・AWS resourceを変更しないことを完了条件とする | N-06、N-07 | T-006 | 高 |
 
 ## 共通基盤タスク
 
@@ -110,17 +110,17 @@ T-104のBackend Authentication部品と、N-03のproduction統合は区別する
 | T-604 | `name_kana`・`email`・`phone`・`address`について、create・edit・`null`、DBの`enc:v1`実値、authorized list/detail/create/edit responseの復号を検証する。staff own、staff otherの復号前404、manager・adminの全active readを確認し、Authentication→operation Authorization→DB scope/resource判定→scope Authorization→decrypt→DTOの順序を証明する。tamper、unknown・wrong key、malformed envelope、plaintext混在をfail closedとし、鍵・plaintext・完全なenvelopeが公開response・log・test outputへ漏れないこと、one-shot migration、Customer検索契約、全Backend regressionを最終Acceptanceする | N-04 | T-107、T-201、T-203 | 高 |
 | T-605 | Login成功、email不存在・password不一致・無効ユーザーの共通401、入力不正400、token欠落・Bearer形式不正・JWT形式不正・署名不正・期限切れ・`sub`のユーザー不存在の401、token発行後のユーザー無効化による次requestの401、現在roleの再取得を検証する。実DB Loginとproduction保護APIでBearerあり成功・なし401も最終確認する。Browser LoginはT-110のE2Eで検証する | N-03 | T-104、T-111 | 高 |
 | T-606 | 参照・変更・削除・権限変更の監査ログを検証 | N-05 | T-108、T-204、T-503 | 高 |
-| T-607 | ヘルスチェック、監視、バックアップ、復旧手順を設定 | N-06 | T-007 | 高 |
+| T-607 | T-007に従い、ヘルスチェック、CloudWatch監視・Alarm、SNS通知、RDS backup event監視、restore drillの実施・記録手順を設定する | N-06 | T-007 | 高 |
 | T-608 | 平日9:00〜18:00の稼働率99%以上を測定 | N-06 | T-607 | 高 |
 | T-609 | メンテナンス通知の作成・配信・記録を実装 | N-07 | T-007 | 高 |
-| T-610 | メンテナンス通知を24時間前に受け取れることを検証 | N-07 | T-609 | 高 |
+| T-610 | 予定maintenanceを原則3営業日前までに通知し、開始1時間前に再通知できることを検証する。緊急maintenanceは決定後の速やかな通知を確認する | N-07 | T-609 | 高 |
 
 ## 移行・運用タスク
 
 | ID | タスク | 要件 | 依存 | 優先度 |
 | --- | --- | --- | --- | --- |
 | T-701 | T-005のExcel契約に従うoffline migrationを実装する。6 sheet/header preflight、全件重複検出、正規化・validation、owner/category mapping、UUID v4採番、設定可能なbatch、batch transaction、Customerと移行台帳の同時commit、retry/idempotency、reject論理record、AES-256-GCM暗号化後のwrite、件数・envelope・plaintext残存0のreconciliationを自動検証する。承認sampleで初回31 insert・9 reject、再実行0 insert、失敗batch rollback・再実行を実DBで確認する | 01の互換性制約 | T-005、T-103、T-107 | 中 |
-| T-702 | 本番環境、秘密情報、DBバックアップを設定 | N-04、N-06 | T-004、T-007 | 高 |
+| T-702 | T-007のAWS構成を前提に、`NODE_ENV=production`、必須secret、AWS RDS CAによるTLS、T-601のpool max 10、Secrets Manager injection用env interfaceを実装・検証する。production起動時の設定不備をfailさせ、`.env.example`・`.gitignore`・backup/restore scriptまたはrunbookを整備する。local PostgreSQLでbackup生成、分離DBへのrestore、schema・table・FK・row count・`enc:v1`・authorized decryptを再現可能に検証し、Backend全test/buildを完了条件とする。AWS resource作成とlocal実測によるAWS RTO保証は含めない | N-04、N-06 | T-004、T-007 | 高 |
 | T-703 | 運用マニュアル、監視手順、障害時連絡先を作成 | N-05〜N-07 | T-607、T-609 | 高 |
 | T-704 | 本番移行リハーサルとロールバック手順を検証 | 全機能、N-06 | T-701、T-702 | 高 |
 

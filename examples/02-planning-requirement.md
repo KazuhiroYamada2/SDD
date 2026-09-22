@@ -209,7 +209,19 @@
 ### 可用性
 
 - 平日9:00-18:00の稼働率99%以上
-- メンテナンスは事前に通知
+- Phase 1のproductionはAWS `ap-northeast-1`に配置する。FrontendはAmazon S3とAmazon CloudFront、BackendはApplication Load Balancer配下のAmazon ECS on Fargate、DatabaseはMulti-AZのAmazon RDS for PostgreSQL 16とし、self-hosted PostgreSQLは採用しない。
+- Public通信はHTTPSとし、CloudFrontまたはALBでTLSを終端する。HTTPはHTTPSへredirectする。BackendからRDSへの接続もTLSを必須とし、AWS RDS CA certificateでserver certificateを検証する。productionでTLS検証を無効化してはならない。
+- `DATABASE_URL`またはDB credential、`JWT_SECRET`、`CUSTOMER_ENCRYPTION_CURRENT_KEY_ID`、`CUSTOMER_ENCRYPTION_KEYS_JSON`はAWS Secrets Managerで管理し、ECS Taskへinjectする。secret値をGit、source code、Docker image、DB、CloudWatch Logs、examples文書へ保存しない。`.env`はlocal development専用とし、production deployment sourceには使用しない。
+- DB credentialとJWT secretは90日、Customer encryption current keyは180日を定期rotation周期とする。漏えいまたはその疑いがある場合は周期を待たずにrotationする。JWT secret rotationで既存の30分tokenが無効になることはmaintenance運用上許容する。
+- Customer encryption key rotationは、新key追加、current key変更、one-shot re-encryption、旧key IDのciphertext 0件確認、旧key削除の順に行う。旧keyを使用するciphertextが残る間は削除しない。
+- RDS automated backupとPoint-in-Time Recoveryを有効にし、retentionは7日とする。重要release、schema migration、Customer migrationの前にはmanual RDS snapshotを取得し、pre-change snapshotは14日保持する。Phase 1のRPOは5分以内、RTOは60分以内とする。
+- Production RDS、automated backup、snapshotはAWS KMSで暗号化する。backup accessはproduction運用管理者へ最小権限で付与する。Customer encryption keyをDB backupへ含めず、Secrets ManagerとRDS backupを同一artifactとして扱わない。cross-region backupはPhase 1の必須要件にしない。
+- 四半期に1回、productionから分離したtemporary RDS instanceまたはdatabaseへrestore drillを行う。restore、schema・主要table、FK、代表row count、Customerの`enc:v1` envelope、authorized decryptを検証し、完了後にtemporary環境を削除する。production DBへrestore testを直接実行しない。
+- Amazon CloudWatchでECS task数・restart・CPU・memory、ALB target health・4xx/5xx・latency、RDS CPU・connection・memory・storage・read/write latency・event、applicationの5xx・認証認可error増加・異常終了・migration/backup failureを監視する。monitoring logへsecretやplaintext PIIを出力しない。
+- 重大alarmはCloudWatch AlarmからAmazon SNSを経由して運用担当メールへ通知する。Backend available task 0、ALB unhealthy、継続的なHTTP 5xx、DB unavailable、DB storage critical、automated backup failure、restore verification failureを対象とする。PagerDuty等のthird-party paging serviceはPhase 1の必須要件にしない。
+- 利用者影響を伴う予定maintenanceは原則3営業日前までに通知し、開始1時間前に再通知する。日時、影響、復旧予定、問い合わせ先を運用メールまたは既存案内channelで伝える。緊急maintenanceは実施決定後、可能な限り速やかに通知する。Phase 1で新しい通知UIは作らない。
+- 重大incidentの検知後15分以内に一次切り分けを開始する。alarm、incident認定、影響確認、application・DB・network切り分け、rollbackまたはrestore判断、service recovery、data reconciliation、関係者報告、事後分析の順を基本とする。DB破損・誤更新ではproductionへ直接上書きせず、temporary restoreでdataを確認してから復旧方法を決める。
+- automated backup failureはalert対象とする。restore drill failureは未解消incidentとして扱い、原因解消後に成功を再確認する。backupの存在だけでrecoverableとは判定しない。
 
 ## 未決定事項
 

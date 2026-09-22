@@ -547,3 +547,11 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - `migrate:customers` CLIに`--input`、`--dataset-id`、任意の`--batch-size`・`--reject-output`を追加した。summaryとrejectをJSONで出力し、rejectにはSource顧客番号、row番号、reason code、PIIを含まないsummaryだけを含める。
 - 実Excelと専用E2E PostgreSQLを使う`verify:customer-migration`を追加した。初回・再実行、31 Customer、active 28件・logical deleted 3件、暗号化対象のplaintext残存0、代表recordのauthorized readを検証し、検証後は追加dataを削除する。
 - schema変更はmigration ledgerの追加だけである。既存Customers schema・index、Customer API、Frontendは変更していない。
+
+## 2026-09-22 T-007 Production運用仕様（完了）
+
+- Phase 1のproductionをAWS `ap-northeast-1`とし、FrontendはS3・CloudFront、BackendはECS on Fargate・ALB、DatabaseはMulti-AZ RDS for PostgreSQL 16と確定した。Public HTTPSとBackend・RDS間TLSを必須とし、RDS CAによるserver certificate検証を行う。
+- production secretはAWS Secrets ManagerからECS Taskへinjectする。DB credential・JWT secretは90日、Customer encryption current keyは180日でrotationし、incident時は即時rotationする。Customer keyはT-004/T-107のone-shot re-encryption手順に従う。
+- RDS automated backup・PITRのretentionを7日、重要変更前のmanual snapshotを14日とした。RDSとbackupはKMS暗号化を必須とし、RPO 5分以内、RTO 60分以内を目標にする。四半期ごとに分離したtemporary RDSでrestore drillを実施する。
+- CloudWatchでECS・ALB・RDS・applicationを監視し、重大alarmはCloudWatch AlarmからSNS経由で運用担当メールへ通知する。予定maintenanceは原則3営業日前と開始1時間前に通知し、重大incidentは検知後15分以内に一次切り分けを始める。
+- T-702へproduction config validation、RDS TLS、Secrets Manager用env interface、backup/restore procedure、restore verification、Backend regressionを引き継いだ。今回は仕様書だけを更新し、Production code、DB schema、AWS resource、testは変更・実行していない。

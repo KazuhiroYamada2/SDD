@@ -314,8 +314,42 @@ request bodyで許可するfieldは次のとおりとする。
 - HTTP concurrency 50に対して`pg.Pool` max 10を維持し、benchmark processから`totalCount`、`idleCount`、`waitingCount`を観測する。pool待ちを含むAPI wall-clock時間、T-602で取得したSQL execution time、request errorを区別する。測定終了後にwaiting 0かつ全connectionがidleへ戻ることを確認し、T-603の結果だけを理由にpool値を変更しない。
 - DB接続プール、ページング、検索インデックスを使用する。
 - 平日9:00〜18:00の稼働率99%以上を、監視サービスの稼働記録で測定する。
-- メンテナンスは実施日時、影響範囲、終了予定を少なくとも24時間前に利用者へ通知する。
-- バックアップ、ヘルスチェック、アプリケーションログ、DBログを運用環境に設定する。
+- メンテナンス通知、監視、backup、restore、incident responseは、次節のPhase 1 production運用設計に従う。
+
+## Phase 1 production運用設計
+
+### AWS architecture・network
+
+- primary regionはAWS `ap-northeast-1`とする。FrontendはAmazon S3とAmazon CloudFront、BackendはApplication Load Balancer配下のAmazon ECS on Fargate、DatabaseはMulti-AZのAmazon RDS for PostgreSQL 16で構成する。productionにself-hosted PostgreSQLを採用しない。
+- CloudFrontとALBでTLSを終端し、HTTPはHTTPSへredirectする。BackendとRDS間もTLSを必須とし、AWS RDS CA certificateによるserver certificate検証を行う。productionでTLS validationを無効化する設定は禁止する。
+- ECS Taskは`NODE_ENV=production`で起動する。`DATABASE_URL`、`JWT_SECRET`、`CUSTOMER_ENCRYPTION_CURRENT_KEY_ID`、`CUSTOMER_ENCRYPTION_KEYS_JSON`を必須とし、欠落または不正時はHTTP server起動前にfailさせる。development用fallbackでproduction serverを起動しない。
+- PostgreSQL connection poolはT-601の`pg.Pool` max 10を維持する。connection timeout等はT-007で推測せず、T-702のproduction configuration実装時にTLSとともに確認する。schema migrationをapplication起動時に自動実行しない。
+
+### Secret management・rotation
+
+- production secretはAWS Secrets Managerで管理し、ECS Task definitionのsecret injectionを使って環境変数interfaceへ渡す。`.env`はlocal development専用であり、productionのdeployment sourceにしない。secret値をGit、source code、Docker image、DB、CloudWatch Logs、examples文書へ保存・出力しない。
+- DB credentialとJWT secretの定期rotationは90日、Customer encryption current keyは180日とする。security incidentまたは漏えい疑い時は即時rotationする。JWT secret rotation時は既存の30分tokenが無効になることを許容し、maintenanceとして利用者へ案内する。
+- Customer encryption keyは、新keyをkey ringへ追加し、current keyを切り替え、one-shot re-encryption migrationを実行する。旧key IDを使用するciphertextが0件であることを確認してから旧keyを削除する。RDS backupにCustomer encryption keyを格納せず、Secrets ManagerとRDS backupを別管理にする。
+
+### Backup・restore
+
+- RDS automated backupとPoint-in-Time Recoveryを有効にし、retentionを7日とする。重要release、schema migration、Customer migrationの直前にはmanual RDS snapshotを取得し、14日間保持する。運用procedureに従い、保持期間経過後に削除できる。
+- Production RDSはAWS KMSによるat-rest encryptionを必須とし、automated backupとsnapshotも暗号化状態を維持する。accessはproduction運用管理者の最小権限に限定する。cross-region backupはPhase 1の必須要件にしない。
+- restore drillは四半期に1回行う。productionと分離したtemporary RDS instanceまたはdatabaseへ復元し、restore成功、schema、主要table、FK、代表row count、Customer暗号化fieldの`enc:v1` envelope、Customer keyを使ったauthorized decryptを確認する。検証後はtemporary restore環境を削除する。production DBへrestore testを直接実行しない。
+- RPOは5分以内、RTOは60分以内をPhase 1の目標とする。T-702ではbackup/restore procedureを再現可能に検証するが、local PostgreSQLのrestore時間だけでAWS productionのRTO達成を保証したとは扱わない。
+- deploymentはsnapshotまたはbackupの確認、schema migration、migration結果検証、application deploymentの順とする。migration失敗時はapplication rolloutを続行しない。
+
+### Monitoring・alert
+
+- Amazon CloudWatchで、ECS task desired/running count、task restart、CPU、memory、ALB target health、ALB 4xx/5xx、response latencyを監視する。RDSはCPU、`DatabaseConnections`、`FreeableMemory`、`FreeStorageSpace`、read/write latency、RDS eventsを監視する。
+- applicationはHTTP 5xx、authentication/authorization errorの増加傾向、unexpected process termination、migration failure、backup failureを監視対象にする。logへDB password、JWT secret、Customer encryption key、credentialを含む完全な`DATABASE_URL`、plaintext PII、完全なciphertext envelopeを出力しない。
+- 重大alarmはCloudWatch AlarmからAmazon SNSを経由して運用担当メールへ送る。Backend available task 0、ALB unhealthy、継続的なHTTP 5xx、DB unavailable、DB storage critical、automated backup failure、restore verification failureを含める。個別thresholdはCloudWatch設定Taskで確定し、PagerDuty等はPhase 1の必須要件にしない。
+
+### Maintenance・incident response
+
+- 利用者影響を伴う予定maintenanceは原則3営業日前までに通知し、開始1時間前に再通知する。通知には日時、expected impact、expected recovery time、問い合わせ先を含め、運用メールまたは既存案内channelを使う。緊急maintenanceは3営業日前の規則を適用せず、決定後できるだけ早く通知する。新しい通知UIはT-007で作らない。
+- 重大incidentの検知後15分以内に一次切り分けを開始する。alarm、incident認定、影響確認、application・DB・networkの切り分け、rollbackまたはrestore判断、service recovery、data reconciliation、利用者・関係者報告、事後分析を基本flowとする。
+- DB破損・誤更新ではPITRまたはsnapshot restoreを候補とする。production DBへ即時上書きせず、temporary restore、data確認、recovery判断の順に進める。automated backup failureはalert対象、restore drill failureは未解消incidentとし、原因解消後に次の成功を確認する。
 
 ## 既存システムとの互換性
 
@@ -441,7 +475,7 @@ logと集計には件数、dataset ID、row番号、Source顧客番号、reason 
 - 暗号化対象、鍵管理、監査ログ保存期間
 - 性能・可用性の測定方法と合格基準
 - 既存データの移行元項目と移行手順
-- 本番クラウド、監視、バックアップ、通知手段
+- T-007で承認したAWS本番構成、監視、backup、restore、通知、incident response
 
 ---
 
