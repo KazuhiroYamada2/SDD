@@ -951,3 +951,24 @@ Error欄はrequest errorとinvalid responseの合計、unexpected欄はHTTP 200�
 
 - Production code、test code、DB fixture・setupは変更していない。Production API contractと業務仕様の回帰はなかった。
 - 既知の失敗0件、予期しないskip 0件、DB cleanup PASS、Backend build PASSのため、T-801はPASS・完了と判定する。
+
+## 2026-09-22 T-802 Frontend主要画面・入力エラー受入（PASS）
+
+| 検証対象 | 結果 | 判定 |
+| --- | --- | --- |
+| Frontend全test | 15 files・166 tests。FAIL 0、SKIP 0 | PASS |
+| Login | 入力、成功、400・401・server・network error、送信中の二重操作防止 | PASS |
+| Customer list / search | query・category・sort・page size・前後page・状態保持 | PASS |
+| Customer detail | loading、business field、一覧復帰、404・500・network error | PASS |
+| Customer create | required・UUID validation、成功、API failure | PASS |
+| Customer edit / delete | 保存・削除成功、cancel、loading、API failure、詳細再取得・一覧復帰 | PASS |
+| Activity | 履歴・empty state・登録成功・取得/登録failure | PASS |
+| Reports | 売上推移・顧客分類・営業担当者別実績、期間validation、loading・empty・API error | PASS |
+| Users / role | active・inactive表示、role変更・再取得、403・409、自己変更UI無効化 | PASS |
+| Role UX | staff・manager・adminの登録、編集、削除、Activity登録、Reports、Users表示制御 | PASS |
+| API error handling | 400・401・403・404・409・500・503・network error | PASS |
+| Frontend build | TypeScript compileとVite production bundle成功 | PASS |
+| Backend / Playwright / AWS / Production DB | T-802対象外 | 未実施 |
+
+- 新規不具合は0件だった。Frontend Production code、test code、Backend API contractは変更していない。
+- 既知の失敗0件、予期しないskip 0件、主要画面・入力validation・Role UX・API error handling・Frontend buildがすべてPASSしたため、T-802はPASS・完了と判定する。

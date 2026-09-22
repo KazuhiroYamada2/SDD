@@ -611,3 +611,10 @@ Backendを単独起動する場合は、`backend`から `node --env-file=../.env
 - Authentication、Authorization、Customer CRUD・検索、Activity、Reports、Users・role、暗号化、Customer migration、Production設定、backup・restore、Health・monitoring、maintenance通知・timing、availability、migration rehearsalの既存testを確認した。
 - 新規不具合は見つからなかった。Production code、test code、DB fixture・setupは変更していない。
 - 専用E2E PostgreSQLを既存の安全ガード付きresetで初期化し、maintenance event・delivery、migration ledger、audit log、activityの残存0件と基準fixture件数を確認した。Backend buildもPASSした。
+
+## 2026-09-22 T-802 Frontend主要画面・入力エラー検証
+
+- Frontend全15 test files・166 testsを今回あらためて実行し、全件PASSした。既知の失敗と予期しないskipは0件だった。
+- Login、Customer一覧・検索・sort・pagination・詳細・登録・編集・削除、Activity履歴・登録、Reports 3種、Users・role管理の既存testを確認した。
+- required・empty・invalid input、cancel、submit success・failure、loading・empty state、API error表示、staff・manager・adminのRole別表示制御を確認した。
+- 新規不具合は見つからなかった。Frontend Production codeとtest codeは変更していない。Frontend production buildはPASSし、Backend testとPlaywrightはT-802対象外のため実行していない。
