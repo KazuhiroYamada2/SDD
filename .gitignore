@@ -1,5 +1,9 @@
 .DS_Store
 
+# Python cache
+__pycache__/
+*.py[cod]
+
 # Claude AI のローカル設定（個人設定を含むため、リポジトリに含めない）
 .claude/
 
